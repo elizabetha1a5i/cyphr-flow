@@ -458,15 +458,22 @@ function rFiles() {
   const p = gp();
   return `<div class="card">
     <div class="card-title">Drop meeting files</div>
-    <div class="card-sub">Paste transcript text or file content — Claude extracts the project context automatically.</div>
-    <div class="hint hint-warn"><span>💡</span><span>Attach PDFs or paste notes below. Works with Gemini transcripts, email threads, briefing docs — anything with project context.</span></div>
+    <div class="card-sub">Upload files or paste text — Claude extracts the project context automatically.</div>
+    <div class="hint hint-warn"><span>💡</span><span>Supports .txt, .docx, .pdf (text-based). Also works with Gemini transcripts, email threads, briefing docs pasted below.</span></div>
+    <div id="drop-zone" class="drop-zone" onclick="$('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      <div style="font-size:24px;margin-bottom:8px;color:var(--ink3)">↑</div>
+      <div style="font-size:13px;color:var(--ink2);font-weight:500">Click to upload or drag files here</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:4px;font-family:var(--mono)">.txt · .docx · .pdf</div>
+    </div>
+    <input type="file" id="file-input" multiple accept=".txt,.docx,.pdf,.doc" style="display:none" onchange="handleFileSelect(event)">
+    <div id="file-list" style="margin-bottom:10px"></div>
     <div class="field-group">
-      <label class="field-label">Paste transcript or notes</label>
-      <textarea id="f-raw" style="min-height:120px" placeholder="Meeting notes, transcripts, email threads, brief docs…">${p.rawText||''}</textarea>
+      <label class="field-label">Or paste transcript / notes</label>
+      <textarea id="f-raw" style="min-height:100px" placeholder="Meeting notes, transcripts, email threads, brief docs…">${p.rawText||''}</textarea>
     </div>
     ${p.extractedContext ? `<div class="hint"><span>✓</span><span>${p.extractedContext.split('\n')[0]}</span></div>` : ''}
     <div id="ext-out" class="output-box" style="display:${p.extractedContext?'block':'none'};margin-bottom:10px">${p.extractedContext||''}</div>
-    <div id="ext-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Extracting context…</span></div>
+    <div id="ext-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Reading files and extracting context…</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="btn btn-ai" id="btn-ext" onclick="extractContext()">✦ Extract context</button>
       <button class="btn btn-ghost" onclick="advance()">Skip — enter manually</button>
@@ -475,11 +482,107 @@ function rFiles() {
   <div class="nav-row"><button class="btn btn-ghost" onclick="showDashboard()">← Dashboard</button><button class="btn btn-primary" onclick="saveFiles();advance()">Next: requirements →</button></div>`;
 }
 
+function handleDragOver(e) {
+  e.preventDefault();
+  $('drop-zone').style.borderColor = 'var(--accent)';
+  $('drop-zone').style.background = 'var(--accent-light)';
+}
+
+function handleDragLeave(e) {
+  $('drop-zone').style.borderColor = '';
+  $('drop-zone').style.background = '';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  handleDragLeave(e);
+  const files = Array.from(e.dataTransfer.files);
+  processFiles(files);
+}
+
+function handleFileSelect(e) {
+  const files = Array.from(e.target.files);
+  processFiles(files);
+}
+
+async function processFiles(files) {
+  if (!files.length) return;
+  const listEl = $('file-list');
+  listEl.innerHTML = '';
+  let combined = sv('f-raw');
+
+  for (const file of files) {
+    const pill = document.createElement('div');
+    pill.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--ink2);margin-bottom:4px';
+    pill.innerHTML = `<span style="color:var(--accent)">📄</span><span>${file.name}</span><span style="color:var(--ink3);font-family:var(--mono);font-size:11px">${(file.size/1024).toFixed(0)}kb</span>`;
+    listEl.appendChild(pill);
+
+    try {
+      const text = await readFileText(file);
+      combined += '\n\n--- ' + file.name + ' ---\n' + text;
+    } catch(e) {
+      pill.innerHTML += `<span style="color:#d9534f;font-size:11px">Could not read</span>`;
+    }
+  }
+
+  // Update textarea with combined content
+  $('f-raw').value = combined.trim();
+  saveProjectData({ rawText: combined.trim() });
+  toast(`${files.length} file${files.length>1?'s':''} loaded ✓`, 'success');
+}
+
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    if (file.name.endsWith('.pdf')) {
+      // For PDFs use ArrayBuffer then extract text via basic parsing
+      reader.onload = (e) => {
+        try {
+          const arr = new Uint8Array(e.target.result);
+          let str = '';
+          for (let i = 0; i < arr.length; i++) {
+            str += String.fromCharCode(arr[i]);
+          }
+          // Extract readable text from PDF raw bytes (basic approach)
+          const matches = str.match(/\(([^\)]{2,})\)/g) || [];
+          const text = matches
+            .map(m => m.slice(1,-1))
+            .filter(t => /[a-zA-Z]{2,}/.test(t))
+            .join(' ')
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, ' ')
+            .substring(0, 8000);
+          resolve(text || '[PDF — could not extract text. Please paste content manually.]');
+        } catch(e) { reject(e); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    } else {
+      // txt, docx (extract readable text), etc.
+      reader.onload = (e) => {
+        let text = e.target.result;
+        // For docx — strip XML tags and get readable content
+        if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+          text = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        resolve(text.substring(0, 12000));
+      };
+      reader.onerror = reject;
+      if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsText(file);
+      }
+    }
+  });
+}
+
 async function extractContext() {
   if (busy) return; busy = true;
   const raw = sv('f-raw');
   saveProjectData({ rawText: raw });
-  if (!raw.trim()) { toast('Paste some text first'); busy=false; return; }
+  if (!raw.trim()) { toast('Upload a file or paste some text first'); busy=false; return; }
   $('ext-load').style.display='flex'; $('btn-ext').disabled=true;
   const prompt = `Extract project context from this text. Return ONLY valid JSON, no markdown, no preamble:
 {"clientName":"","projectName":"","sector":"","budget":"","timeline":"","requirements":"","bgNotes":""}
@@ -487,7 +590,7 @@ async function extractContext() {
 - requirements: 3-5 bullet points of key goals
 - bgNotes: decision makers, constraints, objections
 
-Text: ${raw}`;
+Text: ${raw.substring(0, 6000)}`;
   const out = await callClaude(prompt);
   try {
     const clean = out.replace(/```json|```/g,'').trim();
