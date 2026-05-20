@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyphr — Project Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a18;
+  --ink2: #4a4a44;
+  --ink3: #8a8a82;
+  --paper: #f7f6f1;
+  --surface: #ffffff;
+  --border: #e2e0d8;
+  --border2: #ccc9bc;
+  --accent: #2d5a3d;
+  --accent-light: #e8f0eb;
+  --accent2: #8b3a2a;
+  --warn: #f5f0e8;
+  --mono: 'DM Mono', monospace;
+  --serif: 'Instrument Serif', serif;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+/* ── layout ── */
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--ink); padding: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.logo-mark { font-family: var(--serif); font-size: 22px; color: #fff; letter-spacing: -0.5px; }
+.logo-sub { font-size: 11px; color: rgba(255,255,255,0.35); font-family: var(--mono); letter-spacing: 0.08em; margin-top: 2px; }
+.sidebar-projects { flex: 1; padding: 16px 0; }
+.sidebar-section { font-size: 10px; font-family: var(--mono); letter-spacing: 0.1em; color: rgba(255,255,255,0.3); padding: 0 20px 8px; text-transform: uppercase; }
+.proj-item { padding: 8px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; border-left: 2px solid transparent; }
+.proj-item:hover { background: rgba(255,255,255,0.05); }
+.proj-item.active { background: rgba(255,255,255,0.08); border-left-color: #7fb893; }
+.proj-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); flex-shrink: 0; }
+.proj-dot.progress { background: #7fb893; }
+.proj-dot.done { background: #5a9e6e; }
+.proj-name-side { font-size: 13px; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-item.active .proj-name-side { color: #fff; }
+.new-proj-btn { margin: 12px 16px; padding: 8px 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius); color: rgba(255,255,255,0.7); font-size: 12px; font-family: var(--sans); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; width: calc(100% - 32px); }
+.new-proj-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
+.settings-btn { font-size: 12px; color: rgba(255,255,255,0.4); cursor: pointer; display: flex; align-items: center; gap: 6px; background: none; border: none; font-family: var(--sans); transition: color 0.15s; }
+.settings-btn:hover { color: rgba(255,255,255,0.7); }
+
+/* ── main ── */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { padding: 16px 32px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.topbar-title { font-size: 15px; font-weight: 500; color: var(--ink); }
+.topbar-meta { font-size: 12px; color: var(--ink3); font-family: var(--mono); }
+.content { flex: 1; padding: 32px; max-width: 780px; }
+
+/* ── progress ── */
+.stage-nav { display: flex; align-items: center; gap: 0; margin-bottom: 32px; overflow-x: auto; padding-bottom: 4px; }
+.sn-item { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.sn-dot { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border2); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--ink3); cursor: pointer; transition: all 0.2s; font-family: var(--mono); }
+.sn-dot.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sn-dot.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sn-label { font-size: 10px; color: var(--ink3); margin-top: 4px; white-space: nowrap; font-family: var(--mono); }
+.sn-label.active { color: var(--accent); font-weight: 500; }
+.sn-label.done { color: var(--accent); }
+.sn-line { width: 24px; height: 1px; background: var(--border); flex-shrink: 0; margin-bottom: 14px; }
+.sn-line.done { background: var(--accent); }
+
+/* ── cards ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 16px; }
+.card-title { font-size: 15px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.card-sub { font-size: 13px; color: var(--ink3); margin-bottom: 16px; }
+.field-group { margin-bottom: 14px; }
+.field-label { font-size: 11px; font-family: var(--mono); color: var(--ink3); letter-spacing: 0.06em; display: block; margin-bottom: 5px; text-transform: uppercase; }
+.field-group input, .field-group select, .field-group textarea { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; font-family: var(--sans); color: var(--ink); outline: none; transition: border-color 0.15s; }
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
+.field-group textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.output-box { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ink2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-height: 48px; }
+.output-label { font-size: 10px; font-family: var(--mono); color: var(--ink3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+
+/* ── buttons ── */
+.btn { padding: 8px 18px; border-radius: var(--radius); font-size: 13px; font-family: var(--sans); cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.btn-primary { background: var(--accent); color: #fff; border: none; }
+.btn-primary:hover { background: #1f4129; }
+.btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--ink); }
+.btn-ghost:hover { background: var(--paper); }
+.btn-ai { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+.btn-ai:hover { background: var(--accent-light); }
+.btn-danger { background: transparent; border: 1px solid #d9534f; color: #d9534f; font-size: 12px; padding: 6px 12px; }
+.nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+
+/* ── hints & badges ── */
+.hint { background: var(--accent-light); border: 1px solid #c5dcc9; border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: var(--accent); margin-bottom: 14px; display: flex; align-items: flex-start; gap: 8px; }
+.hint-warn { background: var(--warn); border-color: #e0d5b8; color: #7a6a3a; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-family: var(--mono); }
+.badge-green { background: #e0f0e5; color: #1f6b35; }
+.badge-amber { background: #fdf3dc; color: #8a6a1a; }
+.badge-gray { background: var(--paper); color: var(--ink3); border: 1px solid var(--border); }
+
+/* ── drop zone ── */
+.drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius-lg); padding: 28px 20px; text-align: center; background: var(--paper); cursor: pointer; transition: border-color 0.15s; margin-bottom: 14px; }
+.drop-zone:hover { border-color: var(--accent); }
+.drop-icon { font-size: 28px; margin-bottom: 8px; }
+.drop-label { font-size: 13px; color: var(--ink3); }
+.drop-sub { font-size: 11px; color: var(--ink3); margin-top: 3px; font-family: var(--mono); }
+
+/* ── skill card ── */
+.skill-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+.skill-card:hover { border-color: var(--accent); }
+.skill-card.selected { border: 2px solid var(--accent); background: var(--accent-light); }
+.skill-card-title { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
+.skill-card-desc { font-size: 12px; color: var(--ink3); line-height: 1.5; }
+.skill-inputs { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+.skill-pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--paper); border: 1px solid var(--border); color: var(--ink2); font-family: var(--mono); }
+.skill-detail { background: var(--accent-light); border: 1px solid #c5dcc9; border-radius: var(--radius-lg); padding: 16px; margin-bottom: 14px; }
+.skill-detail-title { font-size: 13px; font-weight: 500; color: var(--accent); margin-bottom: 10px; }
+.checklist { list-style: none; margin-bottom: 12px; }
+.checklist li { font-size: 12px; color: var(--ink2); padding: 5px 0; border-bottom: 1px solid #c5dcc9; display: flex; align-items: center; gap: 7px; }
+.checklist li:last-child { border-bottom: none; }
+.check-icon { color: var(--accent); font-size: 13px; }
+.outputs-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.out-pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #fff; border: 1px solid #c5dcc9; color: var(--accent); font-family: var(--mono); }
+
+/* ── project setup ── */
+.summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.summary-row:last-child { border-bottom: none; }
+.summary-key { color: var(--ink3); font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; }
+.summary-val { color: var(--ink); font-weight: 500; }
+.output-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--paper); border-radius: var(--radius); margin-bottom: 6px; }
+.output-item-label { font-size: 13px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.file-btn { font-size: 11px; padding: 4px 10px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; font-family: var(--sans); }
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.action-btn { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer; font-size: 12px; font-family: var(--sans); color: var(--ink2); display: flex; align-items: center; gap: 7px; transition: all 0.15s; }
+.action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* ── loading ── */
+.loading-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink3); margin-top: 8px; }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── settings panel ── */
+.settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: flex-end; }
+.settings-overlay.open { display: flex; }
+.settings-panel { background: var(--surface); border-left: 1px solid var(--border); width: 340px; height: 100vh; padding: 24px; overflow-y: auto; animation: slideIn 0.2s ease; }
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } }
+.settings-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.settings-sub { font-size: 12px; color: var(--ink3); margin-bottom: 20px; }
+.settings-section { font-size: 10px; font-family: var(--mono); letter-spacing: 0.1em; color: var(--ink3); text-transform: uppercase; margin: 16px 0 8px; }
+
+/* ── dashboard ── */
+.dashboard { padding: 32px; }
+.dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+.dash-title { font-family: var(--serif); font-size: 28px; color: var(--ink); line-height: 1.2; }
+.dash-sub { font-size: 13px; color: var(--ink3); margin-top: 4px; }
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.proj-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; cursor: pointer; transition: all 0.15s; }
+.proj-card:hover { border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.proj-card-name { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
+.proj-card-meta { font-size: 11px; color: var(--ink3); margin-bottom: 10px; font-family: var(--mono); }
+.prog-strip { display: flex; gap: 2px; margin-bottom: 10px; }
+.prog-seg { height: 3px; flex: 1; border-radius: 2px; background: var(--border); }
+.prog-seg.done { background: var(--accent); }
+.prog-seg.active { background: #7fb893; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--ink3); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.empty-title { font-size: 15px; color: var(--ink2); margin-bottom: 6px; }
+.empty-sub { font-size: 13px; }
+
+/* ── notification toast ── */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 12px 18px; border-radius: var(--radius-lg); font-size: 13px; z-index: 200; opacity: 0; transform: translateY(8px); transition: all 0.3s; pointer-events: none; max-width: 320px; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Cyphr</div>
+      <div class="logo-sub">Project Flow</div>
+    </div>
+    <div class="sidebar-projects">
+      <div class="sidebar-section">Projects</div>
+      <div id="sidebar-list"></div>
+      <button class="new-proj-btn" onclick="newProject()">＋ New project</button>
+    </div>
+    <div class="sidebar-footer">
+      <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main-area">
+    <div id="view-dashboard" class="dashboard">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">Good morning.</div>
+          <div class="dash-sub">All your active projects in one place.</div>
+        </div>
+        <button class="btn btn-primary" onclick="newProject()">＋ New project</button>
+      </div>
+      <div id="dash-projects" class="proj-grid"></div>
+    </div>
+
+    <div id="view-flow" style="display:none">
+      <div class="topbar">
+        <div class="topbar-title" id="flow-title">New project</div>
+        <div class="topbar-meta" id="flow-meta"></div>
+      </div>
+      <div class="content">
+        <div class="stage-nav" id="stage-nav"></div>
+        <div id="stage-content"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settings-overlay" onclick="closeSettingsIfBg(event)">
+  <div class="settings-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="settings-title">Settings</div>
+      <button onclick="closeSettings()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink3)">✕</button>
+    </div>
+    <div class="settings-sub">Configure integrations. These are saved locally in your browser.</div>
+
+    <div class="settings-section">Anthropic API</div>
+    <div class="field-group">
+      <label class="field-label">API Key</label>
+      <input type="password" id="s-apikey" placeholder="sk-ant-..." oninput="saveSetting('apiKey', this.value)">
+    </div>
+
+    <div class="settings-section">Slack notifications</div>
+    <div class="hint hint-warn" style="margin-bottom:12px">
+      <span>⚡</span>
+      <span>Paste your Slack incoming webhook URL here when ready. Notifications will switch on automatically. <a href="https://api.slack.com/apps" target="_blank" style="color:inherit;font-weight:500">Get one at api.slack.com/apps →</a></span>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Webhook URL</label>
+      <input type="text" id="s-slack" placeholder="https://hooks.slack.com/services/..." oninput="saveSetting('slackWebhook', this.value)">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Slack channel (optional)</label>
+      <input type="text" id="s-slackchan" placeholder="#projects" oninput="saveSetting('slackChannel', this.value)">
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:4px;justify-content:center" onclick="testSlack()">Test notification</button>
+
+    <div class="settings-section">Team</div>
+    <div class="field-group">
+      <label class="field-label">Your name</label>
+      <input type="text" id="s-name" placeholder="e.g. Elizabeth" oninput="saveSetting('userName', this.value)">
+    </div>
+
+    <div class="settings-section">Danger zone</div>
+    <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="clearAllData()">Clear all project data</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+const STAGES = [
+  { id:'files',    label:'Files' },
+  { id:'req',      label:'Requirements' },
+  { id:'brief',    label:'Brief' },
+  { id:'skill',    label:'Skill' },
+  { id:'estimate', label:'Estimate' },
+  { id:'proposal', label:'Proposal' },
+  { id:'sow',      label:'SOW' },
+  { id:'setup',    label:'Setup' },
+];
+
+const SKILLS = [
+  {
+    id: 'blarney',
+    name: 'Blarney brand onboarding',
+    desc: 'Onboard a new brand onto the Blarney conversational commerce platform.',
+    inputs: ['Brand name and store URL','Geography and currency','Visual identity (colours, fonts)','Category structure'],
+    outputs: ['brand-record.md','categories.md','Product CSVs','Decision tree CSV'],
+    prompt: 'Run the Blarney brand onboarding skill',
+  },
+];
+
+const SECTORS = ['Consumer electronics','Beauty & wellness','Fashion','Grocery','Home & furniture','Automotive','Hospitality','Financial services','Travel','Healthcare','Other'];
+
+let projects = JSON.parse(localStorage.getItem('cyphr_projects') || '[]');
+let settings = JSON.parse(localStorage.getItem('cyphr_settings') || '{}');
+let activeProjectId = null;
+let currentStage = 0;
+let doneStages = new Set();
+let busy = false;
+
+// shorthand
+const $ = id => document.getElementById(id);
+const sv = id => $(id)?.value || '';
+const gp = () => projects.find(p => p.id === activeProjectId);
+
+// ── PERSISTENCE ────────────────────────────────────────────────────────────
+function saveProjects() { localStorage.setItem('cyphr_projects', JSON.stringify(projects)); }
+function saveSetting(k, v) { settings[k] = v; localStorage.setItem('cyphr_settings', JSON.stringify(settings)); }
+function loadSettings() {
+  $('s-apikey').value  = settings.apiKey       || '';
+  $('s-slack').value   = settings.slackWebhook || '';
+  $('s-slackchan').value = settings.slackChannel || '';
+  $('s-name').value    = settings.userName     || '';
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function toast(msg, type='') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' '+type : '');
+  setTimeout(() => el.className = 'toast', 3000);
+}
+
+// ── SLACK ──────────────────────────────────────────────────────────────────
+async function slackNotify(text) {
+  const url = settings.slackWebhook;
+  if (!url || !url.startsWith('https://hooks.slack.com')) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+  } catch(e) { console.warn('Slack notify failed', e); }
+}
+
+async function testSlack() {
+  const url = settings.slackWebhook;
+  if (!url) { toast('Add a webhook URL first'); return; }
+  await slackNotify('✅ Cyphr Flow is connected. Notifications are working.');
+  toast('Test sent — check Slack', 'success');
+}
+
+// ── CLAUDE API ─────────────────────────────────────────────────────────────
+async function callClaude(prompt) {
+  const key = settings.apiKey;
+  if (!key) return 'Add your Anthropic API key in Settings to enable AI generation.';
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] }),
+  });
+  const d = await res.json();
+  if (d.error) return `Error: ${d.error.message}`;
+  return d.content?.map(b => b.text || '').join('') || 'No response.';
+}
+
+// ── PROJECTS ───────────────────────────────────────────────────────────────
+function newProject() {
+  const id = 'proj_' + Date.now();
+  const proj = {
+    id, stage: 0, done: [],
+    clientName:'', sector:'', budget:'', timeline:'', requirements:'', bgNotes:'',
+    rawText:'', extractedContext:'',
+    briefOutput:'', selectedSkill:null, skillOutputNotes:'',
+    rate:'850', days:'', roles:'', estimateOutput:'',
+    proposalNotes:'', proposalOutput:'',
+    sowOutput:'',
+    projectName:'',
+    startDate: new Date().toISOString().split('T')[0],
+    phases:[], ganttTasks:[],
+    createdAt: new Date().toISOString(),
+  };
+  projects.unshift(proj);
+  saveProjects();
+  openProject(id);
+}
+
+function openProject(id) {
+  activeProjectId = id;
+  const p = gp();
+  currentStage = p.stage || 0;
+  doneStages = new Set(p.done || []);
+  $('view-dashboard').style.display = 'none';
+  $('view-flow').style.display = 'block';
+  updateFlowTitle();
+  buildNav();
+  renderStage();
+  renderSidebar();
+}
+
+function showDashboard() {
+  activeProjectId = null;
+  $('view-dashboard').style.display = 'block';
+  $('view-flow').style.display = 'none';
+  renderDashboard();
+  renderSidebar();
+}
+
+function updateFlowTitle() {
+  const p = gp(); if (!p) return;
+  $('flow-title').textContent = p.clientName ? `${p.clientName}${p.projectName ? ' / '+p.projectName : ''}` : 'New project';
+  $('flow-meta').textContent = p.budget ? `£${Number(p.budget).toLocaleString()} · ${p.timeline || '—'}` : '';
+}
+
+function saveProjectData(fields) {
+  const p = gp(); if (!p) return;
+  Object.assign(p, fields);
+  p.stage = currentStage;
+  p.done = [...doneStages];
+  saveProjects();
+  updateFlowTitle();
+}
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function buildNav() {
+  const el = $('stage-nav'); el.innerHTML = '';
+  STAGES.forEach((s, i) => {
+    const wrap = document.createElement('div'); wrap.className = 'sn-item';
+    const dot = document.createElement('div');
+    dot.className = 'sn-dot' + (i===currentStage?' active':doneStages.has(i)?' done':'');
+    dot.textContent = doneStages.has(i) ? '✓' : (i+1);
+    dot.onclick = () => { if (doneStages.has(i)||i===currentStage) goTo(i); };
+    const lbl = document.createElement('div');
+    lbl.className = 'sn-label' + (i===currentStage?' active':doneStages.has(i)?' done':'');
+    lbl.textContent = s.label;
+    wrap.appendChild(dot); wrap.appendChild(lbl); el.appendChild(wrap);
+    if (i < STAGES.length-1) {
+      const line = document.createElement('div');
+      line.className = 'sn-line' + (doneStages.has(i)?' done':'');
+      line.style.marginBottom = '14px';
+      el.appendChild(line);
+    }
+  });
+}
+
+function goTo(i) { currentStage=i; buildNav(); renderStage(); }
+
+function advance() {
+  doneStages.add(currentStage);
+  const p = gp();
+  if (p) { p.done = [...doneStages]; p.stage = currentStage+1; saveProjects(); }
+  if (currentStage < STAGES.length-1) { currentStage++; buildNav(); renderStage(); }
+}
+
+function back() {
+  if (currentStage > 0) { currentStage--; buildNav(); renderStage(); }
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderStage() {
+  const id = STAGES[currentStage].id;
+  const fns = { files:rFiles, req:rReq, brief:rBrief, skill:rSkill, estimate:rEstimate, proposal:rProposal, sow:rSOW, setup:rSetup };
+  $('stage-content').innerHTML = fns[id]();
+}
+
+// ── STAGE: FILES ──────────────────────────────────────────────────────────
+function rFiles() {
+  const p = gp();
+  return `<div class="card">
+    <div class="card-title">Drop meeting files</div>
+    <div class="card-sub">Upload files or paste text — Claude extracts the project context automatically.</div>
+    <div class="hint hint-warn"><span>💡</span><span>Supports .txt, .docx, .pdf (text-based). Also works with Gemini transcripts, email threads, briefing docs pasted below.</span></div>
+    <div id="drop-zone" class="drop-zone" onclick="$('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      <div style="font-size:24px;margin-bottom:8px;color:var(--ink3)">↑</div>
+      <div style="font-size:13px;color:var(--ink2);font-weight:500">Click to upload or drag files here</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:4px;font-family:var(--mono)">.txt · .docx · .pdf</div>
+    </div>
+    <input type="file" id="file-input" multiple accept=".txt,.docx,.pdf,.doc" style="display:none" onchange="handleFileSelect(event)">
+    <div id="file-list" style="margin-bottom:10px"></div>
+    <div class="field-group">
+      <label class="field-label">Or paste transcript / notes</label>
+      <textarea id="f-raw" style="min-height:100px" placeholder="Meeting notes, transcripts, email threads, brief docs…">${p.rawText||''}</textarea>
+    </div>
+    ${p.extractedContext ? `<div class="hint"><span>✓</span><span>${p.extractedContext.split('\n')[0]}</span></div>` : ''}
+    <div id="ext-out" class="output-box" style="display:${p.extractedContext?'block':'none'};margin-bottom:10px">${p.extractedContext||''}</div>
+    <div id="ext-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Reading files and extracting context…</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-ai" id="btn-ext" onclick="extractContext()">✦ Extract context</button>
+      <button class="btn btn-ghost" onclick="advance()">Skip — enter manually</button>
+    </div>
+  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="showDashboard()">← Dashboard</button><button class="btn btn-primary" onclick="saveFiles();advance()">Next: requirements →</button></div>`;
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  $('drop-zone').style.borderColor = 'var(--accent)';
+  $('drop-zone').style.background = 'var(--accent-light)';
+}
+
+function handleDragLeave(e) {
+  $('drop-zone').style.borderColor = '';
+  $('drop-zone').style.background = '';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  handleDragLeave(e);
+  const files = Array.from(e.dataTransfer.files);
+  processFiles(files);
+}
+
+function handleFileSelect(e) {
+  const files = Array.from(e.target.files);
+  processFiles(files);
+}
+
+async function processFiles(files) {
+  if (!files.length) return;
+  const listEl = $('file-list');
+  listEl.innerHTML = '';
+  let combined = sv('f-raw');
+
+  for (const file of files) {
+    const pill = document.createElement('div');
+    pill.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--ink2);margin-bottom:4px';
+    pill.innerHTML = `<span style="color:var(--accent)">📄</span><span>${file.name}</span><span style="color:var(--ink3);font-family:var(--mono);font-size:11px">${(file.size/1024).toFixed(0)}kb</span>`;
+    listEl.appendChild(pill);
+
+    try {
+      const text = await readFileText(file);
+      combined += '\n\n--- ' + file.name + ' ---\n' + text;
+    } catch(e) {
+      pill.innerHTML += `<span style="color:#d9534f;font-size:11px">Could not read</span>`;
+    }
+  }
+
+  // Update textarea with combined content
+  $('f-raw').value = combined.trim();
+  saveProjectData({ rawText: combined.trim() });
+  toast(`${files.length} file${files.length>1?'s':''} loaded ✓`, 'success');
+}
+
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    if (file.name.endsWith('.pdf')) {
+      // For PDFs use ArrayBuffer then extract text via basic parsing
+      reader.onload = (e) => {
+        try {
+          const arr = new Uint8Array(e.target.result);
+          let str = '';
+          for (let i = 0; i < arr.length; i++) {
+            str += String.fromCharCode(arr[i]);
+          }
+          // Extract readable text from PDF raw bytes (basic approach)
+          const matches = str.match(/\(([^\)]{2,})\)/g) || [];
+          const text = matches
+            .map(m => m.slice(1,-1))
+            .filter(t => /[a-zA-Z]{2,}/.test(t))
+            .join(' ')
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, ' ')
+            .substring(0, 8000);
+          resolve(text || '[PDF — could not extract text. Please paste content manually.]');
+        } catch(e) { reject(e); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    } else {
+      // txt, docx (extract readable text), etc.
+      reader.onload = (e) => {
+        let text = e.target.result;
+        // For docx — strip XML tags and get readable content
+        if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+          text = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        resolve(text.substring(0, 12000));
+      };
+      reader.onerror = reject;
+      if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsText(file);
+      }
+    }
+  });
+}
+
+async function extractContext() {
+  if (busy) return; busy = true;
+  const raw = sv('f-raw');
+  saveProjectData({ rawText: raw });
+  if (!raw.trim()) { toast('Upload a file or paste some text first'); busy=false; return; }
+  $('ext-load').style.display='flex'; $('btn-ext').disabled=true;
+  const prompt = `Extract project context from this text. Return ONLY valid JSON, no markdown, no preamble:
+{"clientName":"","projectName":"","sector":"","budget":"","timeline":"","requirements":"","bgNotes":""}
+- budget: number only, no currency symbol
+- requirements: 3-5 bullet points of key goals
+- bgNotes: decision makers, constraints, objections
+
+Text: ${raw.substring(0, 6000)}`;
+  const out = await callClaude(prompt);
+  try {
+    const clean = out.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    saveProjectData(parsed);
+    const p = gp();
+    const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}`;
+    saveProjectData({ extractedContext: summary });
+    $('ext-out').textContent = summary; $('ext-out').style.display='block';
+    toast('Context extracted ✓', 'success');
+  } catch(e) {
+    $('ext-out').textContent = out; $('ext-out').style.display='block';
+    toast('Could not parse — check the output above');
+  }
+  $('ext-load').style.display='none'; $('btn-ext').disabled=false; busy=false;
+}
+
+function saveFiles() { saveProjectData({ rawText: sv('f-raw') }); }
+
+// ── STAGE: REQUIREMENTS ───────────────────────────────────────────────────
+function rReq() {
+  const p = gp();
+  return `<div class="card">
+    <div class="card-title">Requirements</div>
+    <div class="card-sub">${p.extractedContext ? 'Pre-filled from your files — review and edit.' : 'Enter the project basics.'}</div>
+    ${p.extractedContext ? `<div class="hint"><span>✓</span><span>Context extracted — review and correct anything below.</span></div>` : ''}
+    <div class="two-col">
+      <div class="field-group"><label class="field-label">Client name</label><input id="f-cn" value="${p.clientName||''}" placeholder="e.g. Currys"/></div>
+      <div class="field-group"><label class="field-label">Project name</label><input id="f-pn" value="${p.projectName||''}" placeholder="e.g. In-Store AI Assistant"/></div>
+    </div>
+    <div class="two-col">
+      <div class="field-group"><label class="field-label">Budget (£)</label><input type="number" id="f-bud" value="${p.budget||''}" placeholder="45000"/></div>
+      <div class="field-group"><label class="field-label">Timeline</label><input id="f-tl" value="${p.timeline||''}" placeholder="8–10 weeks"/></div>
+    </div>
+    <div class="two-col">
+      <div class="field-group"><label class="field-label">Sector</label><select id="f-sec">${SECTORS.map(s=>`<option ${p.sector===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field-group"><label class="field-label">Start date</label><input type="date" id="f-sd" value="${p.startDate||''}"/></div>
+    </div>
+    <div class="field-group"><label class="field-label">Requirements</label><textarea id="f-req" placeholder="Key goals, must-haves, constraints…">${p.requirements||''}</textarea></div>
+    <div class="field-group"><label class="field-label">Background & considerations</label><textarea id="f-bg" placeholder="Decision makers, objections, context…">${p.bgNotes||''}</textarea></div>
+  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveReq();advance()">Next: brief →</button></div>`;
+}
+
+function saveReq() {
+  saveProjectData({
+    clientName:sv('f-cn'), projectName:sv('f-pn'), budget:sv('f-bud'),
+    timeline:sv('f-tl'), sector:sv('f-sec'), startDate:sv('f-sd'),
+    requirements:sv('f-req'), bgNotes:sv('f-bg'),
+  });
+}
+
+// ── STAGE: BRIEF ──────────────────────────────────────────────────────────
+function rBrief() {
+  const p = gp();
+  return `<div class="card">
+    <div class="card-title">Generate brief</div>
+    <div class="card-sub">Turn requirements into a structured response to brief.</div>
+    <div class="output-label">Client</div>
+    <div class="output-box" style="margin-bottom:14px">${p.clientName||'—'} · ${p.sector||'—'} · £${Number(p.budget||0).toLocaleString()} · ${p.timeline||'—'}</div>
+    <div class="output-label">Brief output</div>
+    <div class="output-box" id="brief-out">${p.briefOutput||'Click generate to create the brief.'}</div>
+    <div id="brief-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Generating brief…</span></div>
+    <button class="btn btn-ai" id="btn-brief" style="margin-top:10px" onclick="genBrief()">✦ Generate brief</button>
+  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: skill →</button></div>`;
+}
+
+async function genBrief() {
+  if (busy) return; busy=true;
+  const p=gp();
+  $('brief-load').style.display='flex'; $('btn-brief').disabled=true; $('brief-out').textContent='';
+  const out = await callClaude(`You are a senior consultant at Cyphr. Write a structured response to brief.
+Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
+Requirements: ${p.requirements}
+Background: ${p.bgNotes}
+Cover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
+  saveProjectData({ briefOutput: out });
+  $('brief-out').textContent = out;
+  $('brief-load').style.display='none'; $('btn-brief').disabled=false; busy=false;
+  await slackNotify(`📋 *Brief ready* — ${p.clientName}${p.projectName?' / '+p.projectName:''}\nBudget: £${Number(p.budget||0).toLocaleString()} · ${p.timeline}`);
+}
+
+// ── STAGE: SKILL ──────────────────────────────────────────────────────────
+function rSkill() {
+  const p = gp();
+  return `<div class="card">
+    <div class="card-title">Select skill</div>
+    <div class="card-sub">Choose the Cyphr skill for this project. More will appear as they're built.</div>
+    ${SKILLS.map(s=>`<div class="skill-card${p.selectedSkill===s.id?' selected':''}" onclick="selectSkill('${s.id}')">
+      <div class="skill-card-title">⌘ ${s.name}</div>
+      <div class="skill-card-desc">${s.desc}</div>
+      <div class="skill-inputs">${s.inputs.map(i=>`<span class="skill-pill">${i}</span>`).join('')}</div>
+    </div>`).join('')}
+    <div class="skill-card" style="border-style:dashed;opacity:0.5;cursor:default">
+      <div class="skill-card-title" style="color:var(--ink3)">＋ More skills coming soon</div>
+    </div>
+  </div>
+  <div id="skill-detail">${p.selectedSkill ? rSkillDetail(p.selectedSkill) : ''}</div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveSkillNotes();advance()">Next: estimate →</button></div>`;
+}
+
+function selectSkill(id) {
+  saveProjectData({ selectedSkill: id });
+  document.querySelectorAll('.skill-card').forEach(c => c.classList.toggle('selected', c.onclick?.toString().includes(`'${id}'`)));
+  $('skill-detail').innerHTML = rSkillDetail(id);
+}
+
+function rSkillDetail(id) {
+  const s = SKILLS.find(x=>x.id===id); if (!s) return '';
+  const p = gp();
+  const ctx = encodeURIComponent(`${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`);
+  return `<div class="skill-detail">
+    <div class="skill-detail-title">Running: ${s.name}</div>
+    <div class="output-label">What this skill needs</div>
+    <ul class="checklist">${s.inputs.map(i=>`<li><span class="check-icon">✓</span>${i}</li>`).join('')}</ul>
+    <div class="output-label">What it produces</div>
+    <div class="outputs-pills">${s.outputs.map(o=>`<span class="out-pill">${o}</span>`).join('')}</div>
+    <a href="https://claude.ai/new?q=${ctx}" target="_blank" class="btn btn-ai" style="margin-bottom:12px;text-decoration:none">↗ Launch skill in Claude.ai</a>
+    <div class="field-group">
+      <label class="field-label">Paste skill outputs here when done</label>
+      <textarea id="skill-notes" style="min-height:80px" placeholder="Paste key outputs or decisions from running the skill — these feed into the estimate and proposal…">${gp().skillOutputNotes||''}</textarea>
+    </div>
+  </div>`;
+}
+
+function saveSkillNotes() { saveProjectData({ skillOutputNotes: sv('skill-notes') }); }
+
+// ── STAGE: ESTIMATE ───────────────────────────────────────────────────────
+function rEstimate() {
+  const p = gp();
+  const auto = p.budget && p.rate ? Math.round(Number(p.budget)/Number(p.rate)) : '';
+  return `<div class="card">
+    <div class="card-title">Cost estimate</div>
+    <div class="card-sub">Build the resource plan from budget and skill outputs.</div>
+    <div class="two-col">
+      <div class="field-group"><label class="field-label">Day rate (£)</label><input type="number" id="f-rate" value="${p.rate||850}"/></div>
+      <div class="field-group"><label class="field-label">Total days</label><input type="number" id="f-days" value="${p.days||auto}"/></div>
+    </div>
+    <div class="field-group"><label class="field-label">Roles / resource split</label><textarea id="f-roles" placeholder="e.g. 5 days strategy, 10 days design, 8 days build…">${p.roles||''}</textarea></div>
+    <div class="output-label">Estimate output</div>
+    <div class="output-box" id="est-out">${p.estimateOutput||'Fill in above and click generate.'}</div>
+    <div id="est-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Building estimate…</span></div>
+    <button class="btn btn-ai" id="btn-est" style="margin-top:10px" onclick="genEstimate()">✦ Generate resource plan</button>
+  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveEstimate();advance()">Next: proposal →</button></div>`;
+}
+
+async function genEstimate() {
+  if (busy) return; busy=true;
+  const p=gp(); const rate=sv('f-rate')||850; const days=sv('f-days'); const roles=sv('f-roles');
+  saveProjectData({rate,days,roles});
+  $('est-load').style.display='flex'; $('btn-est').disabled=true;
+  const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
+  const out = await callClaude(`You are a project director at Cyphr. Create a concise resource plan.
+Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
+Day rate: £${rate} | Total days: ${days} | Roles: ${roles}
+Brief: ${p.briefOutput}
+${skillCtx}
+Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`);
+  saveProjectData({ estimateOutput:out, rate, days, roles });
+  $('est-out').textContent=out;
+  $('est-load').style.display='none'; $('btn-est').disabled=false; busy=false;
+}
+
+function saveEstimate() { saveProjectData({ rate:sv('f-rate'), days:sv('f-days'), roles:sv('f-roles') }); }
+
+// ── STAGE: PROPOSAL ───────────────────────────────────────────────────────
+function rProposal() {
+  const p = gp();
+  return `<div class="card">
+    <div class="card-title">Proposal document</div>
+    <div class="card-sub">Generate proposal narrative ready for your template.</div>
+    <div class="field-group"><label class="field-label">Extra notes</label><textarea id="f-pnotes" placeholder="Tone, sections to emphasise, key selling points…">${p.proposalNotes||''}</textarea></div>
+    <div class="output-label">Proposal output</div>
+    <div class="output-box" id="prop-out">${p.proposalOutput||'Click generate.'}</div>
+    <div id="prop-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Writing proposal…</span></div>
+    <button class="btn btn-ai" id="btn-prop" style="margin-top:10px" onclick="genProposal()">✦ Generate proposal</button>
+  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveProposal();advance()">Next: SOW →</button></div>`;
+}
+
+async function genProposal() {
+  if (busy) return; busy=true;
+  const p=gp(); const notes=sv('f-pnotes'); saveProjectData({proposalNotes:notes});
+  $('prop-load').style.display='flex'; $('btn-prop').disabled=true;
+  const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
+  const out = await callClaude(`You are a senior consultant at Cyphr. Write proposal copy.
+Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
+Brief: ${p.briefOutput}
+${skillCtx}
+Resource plan: ${p.estimateOutput}
+Extra notes: ${notes}
+Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`);
+  saveProjectData({ proposalOutput:out });
+  $('prop-out').textContent=out;
+  $('prop-load').style.display='none'; $('btn-prop').disabled=false; busy=false;
+}
+
+function saveProposal() { saveProjectData({ proposalNotes:sv('f-pnotes') }); }
+
+// ── STAGE: SOW ────────────────────────────────────────────────────────────
+function rSOW() {
+  const p = gp();
+  return `<div class="card">
+    <div class="card-title">Statement of work</div>
+    <div class="card-sub">Generate SOW from everything captured so far.</div>
+    <div class="output-box" id="sow-out">${p.sowOutput||'Click generate.'}</div>
+    <div id="sow-load" class="loading-row" style="display:none"><div class="spinner"></div><span>Drafting SOW…</span></div>
+    <button class="btn btn-ai" id="btn-sow" style="margin-top:10px" onclick="genSOW()">✦ Generate SOW</button>
+  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: project setup →</button></div>`;
+}
+
+async function genSOW() {
+  if (busy) return; busy=true;
+  const p=gp();
+  $('sow-load').style.display='flex'; $('btn-sow').disabled=true;
+  const out = await callClaude(`You are a project director at Cyphr. Write a Statement of Work.
+Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
+Brief: ${p.briefOutput}
+Resource plan: ${p.estimateOutput}
+Proposal: ${p.proposalOutput}
+Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`);
+  saveProjectData({ sowOutput:out });
+  $('sow-out').textContent=out;
+  $('sow-load').style.display='none'; $('btn-sow').disabled=false; busy=false;
+  const p2=gp();
+  await slackNotify(`📄 *SOW ready* — ${p2.clientName}${p2.projectName?' / '+p2.projectName:''}\nAll documents ready to generate. Budget: £${Number(p2.budget||0).toLocaleString()}`);
+}
+
+// ── STAGE: SETUP ──────────────────────────────────────────────────────────
+function rSetup() {
+  const p = gp();
+  const rows = [
+    ['Client', p.clientName||'—'],
+    ['Project', p.projectName||'—'],
+    ['Sector', p.sector||'—'],
+    ['Budget', p.budget ? `£${Number(p.budget).toLocaleString()}` : '—'],
+    ['Timeline', p.timeline||'—'],
+    ['Skill', p.selectedSkill ? SKILLS.find(x=>x.id===p.selectedSkill)?.name : 'None selected'],
+  ];
+  const outputs = [
+    ['Brief', p.briefOutput, '📋'],
+    ['Estimate', p.estimateOutput, '📊'],
+    ['Proposal', p.proposalOutput, '📝'],
+    ['SOW', p.sowOutput, '📄'],
+  ].filter(([,v])=>v);
+
+  return `<div class="card">
+    <div class="card-title">Project setup</div>
+    <div class="card-sub">Everything captured — ready to generate files and push to project tools.</div>
+    ${rows.map(([k,v])=>`<div class="summary-row"><span class="summary-key">${k}</span><span class="summary-val">${v}</span></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">Generated outputs</div>
+    ${outputs.length ? outputs.map(([lbl,val,icon])=>`
+      <div class="output-item">
+        <div class="output-item-label">${icon} ${lbl}</div>
+        <span class="badge badge-green">✓ Ready</span>
+      </div>`).join('') : '<div style="color:var(--ink3);font-size:13px">Complete the previous stages to generate outputs.</div>'}
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">Generate files</div>
+    <div class="hint hint-warn" style="margin-bottom:12px"><span>ℹ</span><span>File generation runs via the Cyphr server. This will be wired up when the Google Sites app is deployed — for now use the buttons to copy content.</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ai" onclick="copyOutput('estimateOutput','Estimate')">📊 Copy estimate</button>
+      <button class="btn btn-ai" onclick="copyOutput('proposalOutput','Proposal')">📝 Copy proposal</button>
+      <button class="btn btn-ai" onclick="copyOutput('sowOutput','SOW')">📄 Copy SOW</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">Next steps</div>
+    <div class="action-grid">
+      <button class="action-btn" onclick="jiraPrompt()">🗂 Push to Jira</button>
+      <button class="action-btn" onclick="ganttPrompt()">📅 Build Gantt</button>
+      <button class="action-btn" onclick="burnPrompt()">📈 Burn report</button>
+      <button class="action-btn" onclick="statusPrompt()">📋 Status sheet</button>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <button class="btn btn-ghost" onclick="back()">← Back</button>
+    <button class="btn btn-primary" onclick="completeProject()">✓ Mark complete</button>
+  </div>`;
+}
+
+function copyOutput(field, label) {
+  const p = gp();
+  const text = p[field] || '';
+  if (!text) { toast(`No ${label} generated yet`); return; }
+  navigator.clipboard.writeText(text).then(() => toast(`${label} copied to clipboard ✓`, 'success'));
+}
+
+function jiraPrompt()  { const p=gp(); window.open(`https://claude.ai/new?q=${encodeURIComponent('Create a Jira project setup for '+p.clientName+' based on this SOW:\n\n'+p.sowOutput.substring(0,500))}`, '_blank'); }
+function ganttPrompt() { const p=gp(); window.open(`https://claude.ai/new?q=${encodeURIComponent('Build a Gantt chart for '+p.clientName+', timeline '+p.timeline+', based on:\n\n'+p.estimateOutput.substring(0,400))}`, '_blank'); }
+function burnPrompt()  { const p=gp(); window.open(`https://claude.ai/new?q=${encodeURIComponent('Create a burn report template for '+p.clientName+', budget £'+p.budget)}`, '_blank'); }
+function statusPrompt(){ const p=gp(); window.open(`https://claude.ai/new?q=${encodeURIComponent('Create a project status sheet for '+p.clientName)}`, '_blank'); }
+
+async function completeProject() {
+  const p = gp();
+  saveProjectData({ completed: true });
+  renderSidebar();
+  await slackNotify(`🚀 *Project complete* — ${p.clientName}${p.projectName?' / '+p.projectName:''}\nAll stages done. Budget: £${Number(p.budget||0).toLocaleString()}`);
+  toast('Project marked complete ✓', 'success');
+  showDashboard();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const el = $('dash-projects');
+  if (!projects.length) {
+    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">◎</div>
+      <div class="empty-title">No projects yet</div>
+      <div class="empty-sub">Click "New project" to get started.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = projects.map(p => {
+    const stage = p.done?.length || 0;
+    const segs = STAGES.map((_,i) => `<div class="prog-seg ${i<stage?'done':i===stage?'active':''}"></div>`).join('');
+    const status = p.completed ? 'badge-green' : stage > 0 ? 'badge-amber' : 'badge-gray';
+    const statusLabel = p.completed ? '✓ Complete' : stage > 0 ? 'In progress' : 'New';
+    return `<div class="proj-card" onclick="openProject('${p.id}')">
+      <div class="proj-card-name">${p.clientName || 'Untitled project'}</div>
+      <div class="proj-card-meta">${p.sector||'—'} · ${p.budget?'£'+Number(p.budget).toLocaleString():'—'}</div>
+      <div class="prog-strip">${segs}</div>
+      <span class="badge ${status}">${statusLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── SIDEBAR ────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const el = $('sidebar-list');
+  if (!projects.length) { el.innerHTML = '<div style="padding:0 20px;font-size:12px;color:rgba(255,255,255,0.25)">No projects yet</div>'; return; }
+  el.innerHTML = projects.map(p => {
+    const stage = p.done?.length || 0;
+    const dotClass = p.completed ? 'done' : stage > 0 ? 'progress' : '';
+    return `<div class="proj-item ${activeProjectId===p.id?'active':''}" onclick="openProject('${p.id}')">
+      <div class="proj-dot ${dotClass}"></div>
+      <div class="proj-name-side">${p.clientName || 'Untitled'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── SETTINGS ───────────────────────────────────────────────────────────────
+function openSettings() { $('settings-overlay').classList.add('open'); loadSettings(); }
+function closeSettings() { $('settings-overlay').classList.remove('open'); }
+function closeSettingsIfBg(e) { if (e.target === $('settings-overlay')) closeSettings(); }
+function clearAllData() {
+  if (!confirm('Delete all project data? This cannot be undone.')) return;
+  localStorage.removeItem('cyphr_projects');
+  projects = [];
+  showDashboard();
+  toast('All data cleared');
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+renderSidebar();
+renderDashboard();
+</script>
+</body>
+</html>
