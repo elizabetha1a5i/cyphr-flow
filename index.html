@@ -1064,8 +1064,8 @@ Return this exact structure:
 Rules:
 - clientName: the external client or partner organisation (not Cyphr)
 - projectName: a short descriptive name for the engagement
-- sector: industry or domain (e.g. "Health / eLearning", "Consumer Electronics", "Field Marketing")
-- budget: best estimate as a number only, no currency symbol. If a range is given use the midpoint. If mentioned in passing (e.g. "£80k envelope") extract it.
+- sector: the actual industry domain of the CLIENT and PROJECT — e.g. "Health / eLearning", "Consumer Electronics", "Field Marketing", "Pharma / Clinical Trials". NEVER default to a previous project's sector. If the project involves NHS, healthcare, medicine, vaccination, clinical trials, wellbeing — sector must reflect that. If it involves Samsung, phones, retail tech — sector must reflect that.
+- budget: best estimate as a number only, no currency symbol. Extract even if mentioned in passing (e.g. "£80k envelope" → 80000, "up to 100k" → 100000). If genuinely unknown use 0.
 - timeline: key deadline or duration (e.g. "6 months from April 2026", "Launch July 2026")
 - requirements: 4-6 bullet points covering key goals, deliverables, and constraints. Be specific — use names, numbers, technologies from the text.
 - bgNotes: key stakeholders, funding routes, risks, open questions, and any competing projects mentioned
@@ -1085,12 +1085,84 @@ ${textToUse}`;
     const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}`;
     saveProjectData({ extractedContext: summary });
     $('ext-out').textContent = summary; $('ext-out').style.display='block';
-    toast('Context extracted ✓', 'success');
+    toast('Context extracted ✓ — generating all stages in background…', 'success');
+    // Kick off background pre-generation of all stages without blocking UI
+    preGenerateAll();
   } catch(e) {
     $('ext-out').textContent = out; $('ext-out').style.display='block';
     toast('Could not parse — check the output above');
   }
   $('ext-load').style.display='none'; $('btn-ext').disabled=false; busy=false;
+}
+
+// Pre-generate all stages silently in background after context extraction
+async function preGenerateAll() {
+  const p = gp();
+  if (!p) return;
+  // Run sequentially so each stage can use previous outputs
+  try {
+    if (!p.briefOutput) await preGen('brief');
+    if (!p.estimateOutput) await preGen('estimate');
+    if (!p.proposalOutput) await preGen('proposal');
+    if (!p.sowOutput) await preGen('sow');
+    toast('All stages ready ✓', 'success');
+  } catch(e) {
+    console.warn('Background pre-generation error:', e);
+  }
+}
+
+async function preGen(stage) {
+  const p = gp();
+  let out;
+  if (stage === 'brief') {
+    out = await callClaudeBackground(`You are a senior consultant at Cyphr. Write a structured response to brief.
+Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
+Requirements: ${p.requirements}
+Background: ${p.bgNotes}
+Cover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
+    saveProjectData({ briefOutput: out });
+  } else if (stage === 'estimate') {
+    const fresh = gp();
+    out = await callClaudeBackground(`You are a project director at Cyphr. Create a concise resource plan.
+Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
+Brief: ${fresh.briefOutput}
+Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`);
+    saveProjectData({ estimateOutput: out });
+  } else if (stage === 'proposal') {
+    const fresh = gp();
+    out = await callClaudeBackground(`You are a senior consultant at Cyphr. Write proposal copy.
+Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
+Brief: ${fresh.briefOutput}
+Resource plan: ${fresh.estimateOutput}
+Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`);
+    saveProjectData({ proposalOutput: out });
+  } else if (stage === 'sow') {
+    const fresh = gp();
+    out = await callClaudeBackground(`You are a project director at Cyphr. Write a Statement of Work.
+Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
+Brief: ${fresh.briefOutput}
+Resource plan: ${fresh.estimateOutput}
+Proposal: ${fresh.proposalOutput}
+Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`);
+    saveProjectData({ sowOutput: out });
+  }
+}
+
+// Background Claude call — doesn't touch busy flag or UI elements
+async function callClaudeBackground(prompt) {
+  const settings = getSettings();
+  const proxyUrl = settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev';
+  const res = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
 }
 
 function saveFiles() { saveProjectData({ rawText: sv('f-raw') }); }
@@ -1139,16 +1211,19 @@ function saveReq() {
 // ── STAGE: BRIEF ──────────────────────────────────────────────────────────
 function rBrief() {
   const p = gp();
+  const hasContent = !!p.briefOutput;
   return `<div class="card">
-    <div class="card-title">Generate brief</div>
-    <div class="card-sub">Turn requirements into a structured response to brief.</div>
+    <div class="card-title">Brief</div>
+    <div class="card-sub">${hasContent ? 'Pre-generated from your context — review, edit, or regenerate.' : 'Turn requirements into a structured response to brief.'}</div>
     <div class="output-label">Client</div>
     <div class="output-box" style="margin-bottom:14px">${p.clientName||'—'} · ${p.sector||'—'} · £${Number(p.budget||0).toLocaleString()} · ${p.timeline||'—'}</div>
     <div class="output-label">Brief output</div>
-    <div class="output-box" id="brief-out">${p.briefOutput||'Click generate to create the brief.'}</div>
+    <div class="output-box" id="brief-out">${p.briefOutput||'Generating in background — or click below to generate now.'}</div>
     <div id="brief-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Generating brief…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-ai" id="btn-brief" onclick="genBrief()">${p.briefOutput ? "↺ Regenerate brief" : "✦ Generate brief"}</button>
+      <button class="btn btn-ai" id="btn-brief" onclick="genBrief()">${hasContent ? '↺ Regenerate brief' : '✦ Generate brief'}</button>
+      <button class="btn btn-ghost" id="btn-brief-docx" onclick="downloadBriefDocx()" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .docx</button>
+      <button class="btn btn-ghost" id="btn-brief-pdf" onclick="downloadBriefPdf()" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .pdf</button>
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: skill →</button></div>`;
@@ -1158,15 +1233,29 @@ async function genBrief() {
   if (busy) return; busy=true;
   const p=gp();
   if($('brief-load'))$('brief-load').style.display='flex'; if($('btn-brief'))$('btn-brief').disabled=true; if($('brief-out'))$('brief-out').textContent='';
-  const out = await callClaude(`You are a senior consultant at Cyphr. Write a structured response to brief.
-Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
-Requirements: ${p.requirements}
-Background: ${p.bgNotes}
-Cover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
+  const out = await callClaude(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
   saveProjectData({ briefOutput: out });
   if($('brief-out'))$('brief-out').textContent=out;
-  if($('brief-load'))$('brief-load').style.display='none'; if($('btn-brief')){$('btn-brief').disabled=false;$('btn-brief').textContent='↺ Regenerate brief';} busy=false;
-  await slackNotify(`📋 *Brief ready* — ${p.clientName}${p.projectName?' / '+p.projectName:''}\nBudget: £${Number(p.budget||0).toLocaleString()} · ${p.timeline}`);
+  if($('brief-load'))$('brief-load').style.display='none';
+  if($('btn-brief')){$('btn-brief').disabled=false;$('btn-brief').textContent='↺ Regenerate brief';}
+  if($('btn-brief-docx')){$('btn-brief-docx').disabled=false;$('btn-brief-docx').style.opacity='1';}
+  if($('btn-brief-pdf')){$('btn-brief-pdf').disabled=false;$('btn-brief-pdf').style.opacity='1';}
+  busy=false;
+  await slackNotify(`📋 *Brief ready* — ${p.clientName}${p.projectName?' / '+p.projectName:''}\\nBudget: £${Number(p.budget||0).toLocaleString()} · ${p.timeline}`);
+}
+
+async function downloadBriefDocx() {
+  const p = gp();
+  if (!p.briefOutput) { toast('Generate the brief first'); return; }
+  try { await generateFile('brief'); }
+  catch(e) { toast('Download failed — check Railway API is running'); }
+}
+
+async function downloadBriefPdf() {
+  const p = gp();
+  if (!p.briefOutput) { toast('Generate the brief first'); return; }
+  try { await generateFile('brief-pdf'); }
+  catch(e) { toast('Download failed — check Railway API is running'); }
 }
 
 // ── STAGE: SKILL ──────────────────────────────────────────────────────────
@@ -1444,6 +1533,10 @@ async function generateFile(type) {
       await generateTextDoc(p, slug, type);
     } else if (type === 'sow' || type === 'proposal') {
       await generateTextDoc(p, slug, type);
+    } else if (type === 'brief') {
+      await generateBriefDocx(p, slug);
+    } else if (type === 'brief-pdf') {
+      await generateBriefPdf(p, slug);
     }
     if (statusEl) statusEl.innerHTML = `<div class="hint" style="margin-bottom:10px"><span>✓</span><span>${type} downloaded</span></div>`;
     toast(`${type} downloaded ✓`, 'success');
@@ -1451,6 +1544,44 @@ async function generateFile(type) {
     if (statusEl) statusEl.innerHTML = '';
     toast(`Error: ${e.message}`);
   }
+}
+
+async function generateBriefDocx(p, slug) {
+  const settings = getSettings();
+  const fileApiUrl = settings.fileApiUrl || settings.proxyUrl;
+  if (!fileApiUrl) throw new Error('File API not configured');
+  const res = await fetch(fileApiUrl + '/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ type: 'brief', projectData: {
+      clientName: p.clientName||'CLIENT', projectName: p.projectName||'PROJECT',
+      sector: p.sector||'', budget: p.budget||'0', timeline: p.timeline||'',
+      briefOutput: p.briefOutput||'', requirements: p.requirements||'',
+      bgNotes: p.bgNotes||'', date: new Date().toLocaleDateString('en-GB')
+    }})
+  });
+  if (!res.ok) throw new Error('Brief .docx generation failed');
+  const blob = await res.blob();
+  downloadBlob(blob, `${slug}_brief.docx`);
+}
+
+async function generateBriefPdf(p, slug) {
+  const settings = getSettings();
+  const fileApiUrl = settings.fileApiUrl || settings.proxyUrl;
+  if (!fileApiUrl) throw new Error('File API not configured');
+  const res = await fetch(fileApiUrl + '/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ type: 'brief-pdf', projectData: {
+      clientName: p.clientName||'CLIENT', projectName: p.projectName||'PROJECT',
+      sector: p.sector||'', budget: p.budget||'0', timeline: p.timeline||'',
+      briefOutput: p.briefOutput||'', requirements: p.requirements||'',
+      bgNotes: p.bgNotes||'', date: new Date().toLocaleDateString('en-GB')
+    }})
+  });
+  if (!res.ok) throw new Error('Brief PDF generation failed');
+  const blob = await res.blob();
+  downloadBlob(blob, `${slug}_brief.pdf`);
 }
 
 function downloadBlob(blob, filename) {
