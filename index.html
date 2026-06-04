@@ -493,6 +493,17 @@ function newProject() {
   openProject(id);
 }
 
+// Guard: warn if navigating to Files stage of a project that already has content.
+// This prevents the most common cause of data bleed — editing the same project record
+// with new client files instead of creating a new project.
+function warnIfReusingProject(proj) {
+  const hasContent = proj.clientName || proj.briefOutput || proj.sowOutput || proj.extractedContext;
+  if (hasContent) {
+    const warn = document.getElementById('reuse-warn');
+    if (warn) warn.style.display = 'block';
+  }
+}
+
 function showModal(title, message, confirmLabel, onConfirm, danger=true) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -725,6 +736,14 @@ function renderStage() {
   const id = STAGES[currentStage].id;
   const fns = { files:rFiles, req:rReq, brief:rBrief, skill:rSkill, estimate:rEstimate, proposal:rProposal, sow:rSOW, setup:rSetup };
   $('stage-content').innerHTML = fns[id]();
+  // Show bleed warning on Files stage if project already has data
+  if (id === 'files') {
+    const p = gp();
+    if (p && (p.clientName || p.briefOutput || p.sowOutput || p.extractedContext)) {
+      const warn = document.getElementById('reuse-warn');
+      if (warn) warn.style.display = 'block';
+    }
+  }
 }
 
 // ── STAGE: FILES ──────────────────────────────────────────────────────────
@@ -733,6 +752,10 @@ function rFiles() {
   return `<div class="card">
     <div class="card-title">Drop meeting files</div>
     <div class="card-sub">Upload one or more files, paste text, or pull from Gmail — Claude extracts the project context automatically.</div>
+    <div id="reuse-warn" class="hint hint-warn" style="display:none;border-color:#c0392b;background:#fdf0ee;color:#7a2a2a;margin-bottom:10px">
+      <span>⚠️</span>
+      <span><strong>This project already has content.</strong> If you're working on a different client or engagement, please create a <strong>new project</strong> instead — otherwise the old data will mix with the new. <a href="#" onclick="newProject();return false;" style="color:#c0392b;font-weight:600">Create new project →</a></span>
+    </div>
     <div class="hint hint-warn"><span>💡</span><span>Supports .txt, .docx, .pdf. Select multiple files at once or drag them all in together.</span></div>
     <div id="drop-zone" class="drop-zone" onclick="$('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
       <div style="font-size:24px;margin-bottom:8px;color:var(--ink3)">↑</div>
@@ -1474,7 +1497,7 @@ function rSetup() {
       <button class="action-btn" id="btn-dl-brief" onclick="downloadBrief()">📋 Brief (.txt)</button>
       <button class="action-btn" id="btn-dl-estimate" onclick="generateFile('estimate')">📊 Estimate (.xlsx)</button>
       <button class="action-btn" id="btn-dl-sow" onclick="generateFile('sow')">📄 SOW (.docx)</button>
-      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📝 Proposal (.docx)</button>
+      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📝 Proposal (.pptx)</button>
       <button class="action-btn" id="btn-dl-gantt" onclick="generateFile('gantt')">📅 Gantt (.xlsx)</button>
       <button class="action-btn" id="btn-dl-status" onclick="generateStatusSheet()">📋 Status sheet (.xlsx)</button>
     </div>
@@ -1720,7 +1743,7 @@ async function generateTextDoc(p, slug, type) {
   });
   if (!res.ok) throw new Error('Generation failed — please try again.');
   const blob = await res.blob();
-  const ext = type === 'sow' ? 'docx' : type === 'proposal' ? 'docx' : 'xlsx';
+  const ext = type === 'sow' ? 'docx' : type === 'proposal' ? 'pptx' : 'xlsx';
   downloadBlob(blob, `${slug}_${type}.${ext}`);
 }
 
@@ -1812,27 +1835,64 @@ function generateJiraCSV() {
 function generateStatusSheet() {
   const p = gp();
   const today = new Date().toLocaleDateString('en-GB');
+
+  // Derive workstreams from project data rather than using hardcoded generic phases.
+  // Parse milestones from sowOutput if available, otherwise fall back to estimate phases,
+  // otherwise use a minimal placeholder set that the user can fill in.
+  let workstreams = [];
+  const sow = p.sowOutput || '';
+  const est = p.estimateOutput || '';
+
+  // Try to extract milestone lines from SOW (lines starting with "Week" or "Month" or numbered)
+  const milestoneLines = sow.split('\n')
+    .filter(l => /^(week|month|\d+[\.\)])/i.test(l.trim()) && l.trim().length > 3)
+    .slice(0, 8)
+    .map(l => l.replace(/^(week\s*\d+:|month\s*\d+:|\d+[\.\)])\s*/i, '').trim())
+    .filter(l => l.length > 0);
+
+  if (milestoneLines.length >= 2) {
+    // Use milestone-derived workstreams
+    workstreams = milestoneLines.map((m, i) => [
+      m, i === 0 ? 'In Progress' : 'Not Started', 'Cyphr', ''
+    ]);
+  } else if (est && est.length > 50) {
+    // Try to extract phases from estimate output
+    const phaseLines = est.split('\n')
+      .filter(l => /phase|discovery|design|build|test|launch/i.test(l) && l.trim().length > 3)
+      .slice(0, 6)
+      .map(l => l.replace(/^[-•*]\s*/, '').trim())
+      .filter(l => l.length > 0);
+    if (phaseLines.length >= 2) {
+      workstreams = phaseLines.map((ph, i) => [ph, i === 0 ? 'In Progress' : 'Not Started', 'Cyphr', '']);
+    }
+  }
+
+  // Fallback: minimal placeholders — clearly marked so user knows to fill them in
+  if (workstreams.length === 0) {
+    workstreams = [
+      ['[WORKSTREAM — confirm at kick-off]', 'Not Started', 'Cyphr', ''],
+      ['[WORKSTREAM — confirm at kick-off]', 'Not Started', 'Cyphr', ''],
+      ['[WORKSTREAM — confirm at kick-off]', 'Not Started', 'Cyphr', ''],
+    ];
+  }
+
   const rows = [
     ['PROJECT STATUS SHEET', '', '', ''],
     ['', '', '', ''],
     ['Client', p.clientName||'—', 'Date', today],
-    ['Project', p.projectName||'—', 'Budget', p.budget ? `£${Number(p.budget).toLocaleString()}` : '—'],
-    ['Timeline', p.timeline||'—', 'Status', 'In Progress'],
+    ['Project', p.projectName||'—', 'Budget', p.budget ? `£${Number(p.budget).toLocaleString()}` : '[CONFIRM]'],
+    ['Timeline', p.timeline||'[CONFIRM]', 'Status', 'In Progress'],
     ['', '', '', ''],
     ['WORKSTREAM', 'STATUS', 'OWNER', 'NOTES'],
-    ['Discovery', 'Complete', 'Cyphr', ''],
-    ['Design', 'In Progress', 'Cyphr', ''],
-    ['Build', 'Not Started', 'Cyphr', ''],
-    ['UAT', 'Not Started', `${p.clientName||'Client'}`, ''],
-    ['Launch', 'Not Started', 'Cyphr', ''],
+    ...workstreams,
     ['', '', '', ''],
     ['RAG STATUS', '', '', ''],
     ['🟢 On Track', '', '', ''],
     ['', '', '', ''],
     ['RISKS & ISSUES', '', '', ''],
+    ['[None identified]', '', '', ''],
     ['', '', '', ''],
     ['NEXT ACTIONS', 'OWNER', 'DUE DATE', 'STATUS'],
-    ['', '', '', ''],
     ['', '', '', ''],
     ['', '', '', ''],
   ];
