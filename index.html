@@ -994,59 +994,115 @@ function readFileText(file) {
 }
 
 // ── GMAIL PULL ─────────────────────────────────────────────────────────────
-// All demo emails in a flat array — searched by keyword across all fields
-const ALL_EMAILS = [
-  { subject: 'Notes: "Fuze workshop planning" May 18, 2026', sender: 'gemini-notes@google.com', date: '2026-05-18T14:12:14Z', snippet: 'Notes from "Fuze workshop planning". Meeting focused on integrating Gemini into football partnerships via content automation and creative fan engagement strategies.' },
-  { subject: 'Invitation: Fuze workshop planning @ Mon May 18, 2026 2pm–3pm', sender: 'james@cyphr.studio', date: '2026-05-18T09:00:28Z', snippet: 'You have been invited by James Penfold to attend Fuze workshop planning on Monday May 18, 2026. Attendees: Elizabeth Alabi, Rob Bennett.' },
-  { subject: 'Invitation: Google x Fuze Brain Storming @ Fri May 15, 2026', sender: 'rob@cyphr.studio', date: '2026-05-11T14:03:53Z', snippet: 'You have been invited to attend Google x Fuze Brain Storming on Friday May 15, 2026. Attendees: Elizabeth Alabi, James Penfold, Verity.' },
-  { subject: 'Re: Fuze x Cyphr', sender: 'rob@cyphr.studio', date: '2026-04-28T13:57:57Z', snippet: 'Hi James, Thanks for coming back. On the Fuse / Gemini discovery, I completely agree. The opportunity is to turn the partnership into a genuine AI-first content operation.' },
-  { subject: 'Transcript: "Weber x Cyphr — Brand Identity & Web" May 22, 2026', sender: 'elizabeth@cyphr.studio', date: '2026-05-22T10:05:00Z', snippet: 'Full transcript of Weber x Cyphr kick-off. Brand identity refresh, Shopify Plus rebuild. Budget £62,000, 12 weeks, hard deadline 15 September 2026 Paris press event.' },
-  { subject: 'Notes: "Weber x Cyphr — Brand Identity & Web" May 22, 2026', sender: 'gemini-notes@google.com', date: '2026-05-22T10:12:00Z', snippet: 'Weber brand refresh and website redesign. New logo, typeface, colour palette. Shopify Plus custom theme. Klaviyo email templates. Budget £62,000. Timeline 12 weeks.' },
-  { subject: 'Notes: "Blarney Developer Workshop" May 20, 2026', sender: 'gemini-notes@google.com', date: '2026-05-20T12:59:10Z', snippet: 'Notes from Blarney Developer Workshop. Auto-generated May 20, 2026. Session covered platform setup, brand onboarding workflow, CSV export and decision tree configuration.' },
-  { subject: 'Notes: "Blarney Health Check" May 13, 2026', sender: 'gemini-notes@google.com', date: '2026-05-13T13:35:02Z', snippet: 'Blarney platform health check. Reviewed live brands, identified issues with chip flows and product media. Action items assigned to dev team.' },
-  { subject: 'Re: Weber x Cyphr — next steps', sender: 'sarah@weber.com', date: '2026-05-22T14:30:00Z', snippet: 'Hi Elizabeth, Really great call today. We are very excited to get started. Marcus and I are aligned on the brief. Looking forward to receiving the proposal by end of next week.' },
-];
+// Uses Google OAuth2 token model (not ID token) to get gmail.readonly access.
+// Token is sent to the Cloudflare Worker — never directly to Gmail from the browser.
+// Worker verifies the token, calls Gmail API, returns results.
+
+let gmailAccessToken = null; // cached for session only — never persisted
+
+// Request a Gmail access token using Google Identity Services token client
+function getGmailToken() {
+  return new Promise((resolve, reject) => {
+    if (gmailAccessToken) { resolve(gmailAccessToken); return; }
+
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error('Google Identity Services not loaded'));
+      return;
+    }
+
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      callback: (response) => {
+        if (response.error) {
+          reject(new Error(response.error_description || response.error));
+          return;
+        }
+        gmailAccessToken = response.access_token;
+        // Token expires in ~1 hour — clear it so next search re-auths
+        setTimeout(() => { gmailAccessToken = null; }, (response.expires_in - 60) * 1000);
+        resolve(gmailAccessToken);
+      },
+    });
+
+    client.requestAccessToken();
+  });
+}
 
 async function pullGmail() {
-  const query = ($('gmail-search').value || '').trim().toLowerCase();
+  const query = ($('gmail-search').value || '').trim();
   if (!query) { toast('Enter a search term first'); return; }
 
   const btn = $('btn-gmail');
   const resultsEl = $('gmail-results');
   btn.disabled = true;
-  btn.textContent = 'Searching…';
-  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Searching your inbox…</div>';
+  btn.textContent = 'Connecting…';
+  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Connecting to Gmail…</div>';
 
-  await new Promise(r => setTimeout(r, 700));
-
-  // Search all fields for any of the query words
-  const words = query.split(/\s+/).filter(Boolean);
-  const emails = ALL_EMAILS.filter(e => {
-    const haystack = `${e.subject} ${e.sender} ${e.snippet}`.toLowerCase();
-    return words.every(w => haystack.includes(w));
-  });
-
-  btn.disabled = false;
-  btn.textContent = '✉ Search inbox';
-
-  if (!emails.length) {
-    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No emails found. Try a different search term.</div>';
+  let token;
+  try {
+    token = await getGmailToken();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '✉ Search inbox';
+    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--error,#c0392b)">Gmail access denied — please allow access when prompted.</div>';
     return;
   }
 
-  resultsEl.innerHTML = `
-    <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${emails.length} email${emails.length>1?'s':''} found — select to add as context:</div>
-    ${emails.map((e, i) => `
-      <label style="display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;cursor:pointer;background:var(--bg);font-size:12px">
-        <input type="checkbox" class="gmail-chk" data-snippet="${encodeURIComponent(e.snippet||'')}" data-subject="${encodeURIComponent(e.subject||'')}" data-sender="${encodeURIComponent(e.sender||'')}" data-date="${encodeURIComponent(e.date||'')}" style="margin-top:2px;flex-shrink:0">
-        <div>
-          <div style="font-weight:600;color:var(--ink1)">${e.subject}</div>
-          <div style="color:var(--ink3);margin-top:2px">${e.sender} · ${new Date(e.date).toLocaleDateString('en-GB')}</div>
-          <div style="color:var(--ink2);margin-top:3px;font-size:11px">${e.snippet.substring(0,120)}…</div>
-        </div>
-      </label>
-    `).join('')}
-    <button class="btn btn-ghost" style="margin-top:6px;font-size:12px" onclick="addSelectedEmails()">✉ Add selected to context</button>`;
+  btn.textContent = 'Searching…';
+  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Searching your inbox…</div>';
+
+  try {
+    const s = (typeof getSettings === 'function') ? getSettings() : settings;
+    const workerUrl = s.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev';
+
+    const res = await fetch(`${workerUrl}/gmail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, token }),
+    });
+
+    btn.disabled = false;
+    btn.textContent = '✉ Search inbox';
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      resultsEl.innerHTML = `<div style="font-size:12px;color:var(--error,#c0392b)">${err.error || 'Search failed — try again.'}</div>`;
+      return;
+    }
+
+    const data = await res.json();
+    const emails = data.emails || [];
+
+    if (!emails.length) {
+      resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No emails found. Try a different search term.</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = `
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${emails.length} email${emails.length>1?'s':''} found — select to add as context:</div>
+      ${emails.map(e => `
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;cursor:pointer;background:var(--bg);font-size:12px">
+          <input type="checkbox" class="gmail-chk"
+            data-snippet="${encodeURIComponent(e.snippet||'')}"
+            data-subject="${encodeURIComponent(e.subject||'')}"
+            data-sender="${encodeURIComponent(e.sender||'')}"
+            data-date="${encodeURIComponent(e.date||'')}"
+            style="margin-top:2px;flex-shrink:0">
+          <div>
+            <div style="font-weight:600;color:var(--ink1)">${e.subject}</div>
+            <div style="color:var(--ink3);margin-top:2px">${e.sender} · ${new Date(e.date).toLocaleDateString('en-GB')}</div>
+            <div style="color:var(--ink2);margin-top:3px;font-size:11px">${(e.snippet||'').substring(0,120)}…</div>
+          </div>
+        </label>
+      `).join('')}
+      <button class="btn btn-ghost" style="margin-top:6px;font-size:12px" onclick="addSelectedEmails()">✉ Add selected to context</button>`;
+
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '✉ Search inbox';
+    resultsEl.innerHTML = `<div style="font-size:12px;color:var(--error,#c0392b)">Error: ${e.message}</div>`;
+  }
 }
 
 function addSelectedEmails() {
@@ -1497,7 +1553,7 @@ function rSetup() {
       <button class="action-btn" id="btn-dl-brief" onclick="downloadBrief()">📋 Brief (.txt)</button>
       <button class="action-btn" id="btn-dl-estimate" onclick="generateFile('estimate')">📊 Estimate (.xlsx)</button>
       <button class="action-btn" id="btn-dl-sow" onclick="generateFile('sow')">📄 SOW (.docx)</button>
-      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📝 Proposal (.pptx)</button>
+      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📝 Proposal (.docx)</button>
       <button class="action-btn" id="btn-dl-gantt" onclick="generateFile('gantt')">📅 Gantt (.xlsx)</button>
       <button class="action-btn" id="btn-dl-status" onclick="generateStatusSheet()">📋 Status sheet (.xlsx)</button>
     </div>
@@ -1743,7 +1799,7 @@ async function generateTextDoc(p, slug, type) {
   });
   if (!res.ok) throw new Error('Generation failed — please try again.');
   const blob = await res.blob();
-  const ext = type === 'sow' ? 'docx' : type === 'proposal' ? 'pptx' : 'xlsx';
+  const ext = type === 'estimate' ? 'xlsx' : type === 'gantt' ? 'xlsx' : 'docx';
   downloadBlob(blob, `${slug}_${type}.${ext}`);
 }
 
