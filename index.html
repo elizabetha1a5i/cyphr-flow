@@ -438,7 +438,6 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 </style>
 
-<script>
 // ── OVERLAY CONTROLS ──────────────────────────────────────────────────────
 function showGenOverlay() { const el=document.getElementById('gen-overlay'); if(el) el.style.display='flex'; }
 function closeGenOverlay() {
@@ -549,7 +548,7 @@ async function generateTextDoc(p, slug, type) {
   const ext = (type==='estimate'||type==='gantt') ? 'xlsx' : 'docx';
   downloadBlob(blob, `${slug}_${type}.${ext}`);
 }
-</script>
+
 // ── STATE ──────────────────────────────────────────────────────────────────
 const STAGES = [
   { id:'files',    label:'Files' },
