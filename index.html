@@ -267,6 +267,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="g_id_signin"></div>
     <div style="margin-top:12px;font-size:11px;color:#aaa">Use your <strong>@cyphr.studio</strong> Google account</div>
     <div id="login-error" style="display:none;margin-top:12px;font-size:12px;color:#d9534f">Access restricted to @cyphr.studio accounts.</div>
+    <div id="login-status" style="display:none;margin-top:12px;font-size:12px;color:#6B7280">Signing in…</div>
   </div>
   <div style="margin-top:20px;font-size:11px;color:#aaa">© Cyphr Studio</div>
 </div>
@@ -2160,20 +2161,35 @@ function initApp() {
 
 function handleGoogleLogin(response) {
   try {
-    // Decode JWT payload
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const email = payload.email || '';
-    const name = payload.name || email;
-    // Restrict to @cyphr.studio domain
-    if (!email.endsWith('@cyphr.studio')) {
-      $('login-error').style.display = 'block';
+    let email, name, picture;
+
+    if (response._userInfo) {
+      // OAuth2 token flow fallback — userinfo already fetched
+      email   = response._userInfo.email || '';
+      name    = response._userInfo.name  || email;
+      picture = response._userInfo.picture || '';
+    } else if (response.credential) {
+      // Standard One Tap / button flow — decode JWT
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      email   = payload.email   || '';
+      name    = payload.name    || email;
+      picture = payload.picture || '';
+    } else {
+      // No usable credential — show error
+      if ($('login-error')) $('login-error').style.display = 'block';
       return;
     }
-    // Store session
-    localStorage.setItem('cyphr_user', JSON.stringify({ email, name, picture: payload.picture }));
+
+    if (!email.endsWith('@cyphr.studio')) {
+      if ($('login-error')) $('login-error').style.display = 'block';
+      return;
+    }
+
+    localStorage.setItem('cyphr_user', JSON.stringify({ email, name, picture }));
     showApp();
   } catch(e) {
-    $('login-error').style.display = 'block';
+    console.error('Login error:', e);
+    if ($('login-error')) $('login-error').style.display = 'block';
   }
 }
 
@@ -2224,6 +2240,7 @@ function showManualSignInBtn() {
 }
 
 function manualGoogleSignIn() {
+  if ($('login-status')) $('login-status').style.display = 'block';
   if (!window.google || !window.google.accounts) {
     alert('Google sign-in unavailable — please refresh and try again.');
     return;
