@@ -89,7 +89,34 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
 .field-group textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.output-box { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ink2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-height: 48px; }
+.output-editable {
+  width: 100%;
+  min-height: 200px;
+  padding: 14px;
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--ink1);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+  line-height: 1.6;
+  box-sizing: border-box;
+  margin-bottom: 4px;
+  transition: border-color 0.15s;
+}
+.output-editable:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ai-suggestion {
+  background: rgba(91,79,217,0.06);
+  border-left: 2px solid var(--accent);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-style: italic;
+  color: var(--ink2);
+} background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ink2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-height: 48px; }
 .output-label { font-size: 10px; font-family: var(--mono); color: var(--ink3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
 
 /* ── buttons ── */
@@ -373,7 +400,156 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 
 <div class="toast" id="toast"></div>
 
+<!-- ── GENERATION LOADING OVERLAY ─────────────────────────────────────────── -->
+<div id="gen-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(248,247,244,0.97);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;font-family:var(--sans)">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:28px;max-width:420px;width:90%">
+    <svg id="gen-logo" viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;animation:spin 1.4s linear infinite;flex-shrink:0"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg>
+    <div style="text-align:center">
+      <div style="font-size:18px;font-weight:700;color:var(--ink1);letter-spacing:-0.02em;margin-bottom:6px">Building your project pack</div>
+      <div id="gen-phase-label" style="font-size:13px;color:var(--ink3);min-height:20px">Starting up…</div>
+    </div>
+    <div style="width:100%;display:flex;flex-direction:column;gap:8px">
+      <div class="gen-status-row" id="gsr-brief"><div class="gen-status-dot" id="gsd-brief"></div><div class="gen-status-text"><span class="gen-status-label">Brief</span><span class="gen-status-desc" id="gsm-brief">Reading your context…</span></div></div>
+      <div class="gen-status-row" id="gsr-estimate"><div class="gen-status-dot" id="gsd-estimate"></div><div class="gen-status-text"><span class="gen-status-label">Cost estimate</span><span class="gen-status-desc" id="gsm-estimate">Waiting…</span></div></div>
+      <div class="gen-status-row" id="gsr-proposal"><div class="gen-status-dot" id="gsd-proposal"></div><div class="gen-status-text"><span class="gen-status-label">Proposal</span><span class="gen-status-desc" id="gsm-proposal">Waiting…</span></div></div>
+      <div class="gen-status-row" id="gsr-sow"><div class="gen-status-dot" id="gsd-sow"></div><div class="gen-status-text"><span class="gen-status-label">Statement of work</span><span class="gen-status-desc" id="gsm-sow">Waiting…</span></div></div>
+      <div class="gen-status-row" id="gsr-verify"><div class="gen-status-dot" id="gsd-verify"></div><div class="gen-status-text"><span class="gen-status-label">Verifying</span><span class="gen-status-desc" id="gsm-verify">Waiting…</span></div></div>
+    </div>
+    <div style="width:100%;height:3px;background:var(--border);border-radius:2px;overflow:hidden"><div id="gen-progress-bar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.5s ease"></div></div>
+    <div id="gen-done-msg" style="display:none;text-align:center">
+      <div style="font-size:15px;font-weight:600;color:var(--accent);margin-bottom:4px">✓ Everything's ready</div>
+      <div id="gen-verify-summary" style="font-size:12px;color:var(--ink3);margin-bottom:12px"></div>
+      <button class="btn btn-primary" onclick="closeGenOverlay()">Review project →</button>
+    </div>
+  </div>
+</div>
+<style>
+.gen-status-row{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:var(--radius);background:var(--paper);border:1px solid var(--border);transition:border-color 0.3s,background 0.3s}
+.gen-status-row.done{border-color:#4ade80;background:#f0fdf4}
+.gen-status-row.active{border-color:var(--accent);background:var(--accent-light,#f3f2ff)}
+.gen-status-row.warn{border-color:#f59e0b;background:#fffbeb}
+.gen-status-dot{width:10px;height:10px;border-radius:50%;background:var(--border);margin-top:4px;flex-shrink:0;transition:background 0.3s}
+.gen-status-row.active .gen-status-dot{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+.gen-status-row.done .gen-status-dot{background:#22c55e;animation:none}
+.gen-status-row.warn .gen-status-dot{background:#f59e0b;animation:none}
+.gen-status-text{display:flex;flex-direction:column;gap:2px}
+.gen-status-label{font-size:13px;font-weight:600;color:var(--ink1)}
+.gen-status-desc{font-size:11px;color:var(--ink3);font-family:var(--mono,monospace)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+</style>
+
 <script>
+// ── OVERLAY CONTROLS ──────────────────────────────────────────────────────
+function showGenOverlay() { const el=document.getElementById('gen-overlay'); if(el) el.style.display='flex'; }
+function closeGenOverlay() {
+  const el=document.getElementById('gen-overlay'); if(el) el.style.display='none';
+  const fns={files:rFiles,req:rReq,brief:rBrief,skill:rSkill,estimate:rEstimate,proposal:rProposal,sow:rSOW,setup:rSetup};
+  const stage=STAGES[currentStage]; if(!stage) return;
+  const fn=fns[stage.id]; if(!fn) return;
+  const el2=document.getElementById('stage-content'); if(el2) el2.innerHTML=fn();
+}
+function setGenStatus(doc, state, msg) {
+  const row=document.getElementById('gsr-'+doc);
+  if(row) row.className='gen-status-row'+(state==='active'?' active':state==='done'?' done':state==='warn'?' warn':'');
+  const msgEl=document.getElementById('gsm-'+doc); if(msgEl&&msg) msgEl.textContent=msg;
+}
+function setGenProgress(pct, label) {
+  const bar=document.getElementById('gen-progress-bar'); if(bar) bar.style.width=pct+'%';
+  const lbl=document.getElementById('gen-phase-label'); if(lbl&&label) lbl.textContent=label;
+}
+
+async function preGenerateAll() {
+  const p = gp(); if(!p) return;
+  showGenOverlay();
+  const steps = [
+    { id:'brief',    saveTo:'briefOutput',    msg:'Reading context and writing the project brief…' },
+    { id:'estimate', saveTo:'estimateOutput', msg:'Calculating resource plan from brief and budget…' },
+    { id:'proposal', saveTo:'proposalOutput', msg:'Drafting proposal narrative…' },
+    { id:'sow',      saveTo:'sowOutput',      msg:'Compiling scope, deliverables, and commercial terms…' },
+  ];
+  const labels = ['Generating brief…','Building cost estimate…','Writing proposal…','Drafting statement of work…'];
+  let verifyIssues = [];
+  ['brief','estimate','proposal','sow','verify'].forEach(d => setGenStatus(d,'waiting','Waiting…'));
+  try {
+    for(let i=0; i<steps.length; i++) {
+      const step=steps[i]; const fresh=gp();
+      if(fresh[step.saveTo]){ setGenStatus(step.id,'done','Already ready ✓'); setGenProgress(Math.round((i+1)/5*85),labels[i+1]||'Verifying…'); continue; }
+      setGenStatus(step.id,'active',step.msg);
+      setGenProgress(Math.round(i/5*85),labels[i]);
+      await preGen(step.id);
+      setGenStatus(step.id,'done','Ready ✓');
+    }
+    setGenProgress(88,'Verifying documents…');
+    setGenStatus('verify','active','Checking for missing data and placeholder text…');
+    await new Promise(r=>setTimeout(r,500));
+    const finalP=gp();
+    const allText=[finalP.briefOutput,finalP.estimateOutput,finalP.proposalOutput,finalP.sowOutput].join(' ');
+    const bleedTerms=['Blue Square','Charlotte Cavanagh','Samsung Roadshow','lorem ipsum','MentorLink','Spotify Kids'];
+    bleedTerms.forEach(t=>{ if(allText.includes(t)) verifyIssues.push(`"${t}" — previous project data`); });
+    if(!finalP.clientName) verifyIssues.push('Client name missing');
+    if(!finalP.projectName) verifyIssues.push('Project name missing');
+    if(!finalP.budget||finalP.budget==='0') verifyIssues.push('Budget not set — documents will show a placeholder');
+    if(verifyIssues.length===0){ setGenStatus('verify','done','All clear ✓'); }
+    else { setGenStatus('verify','warn',`${verifyIssues.length} issue${verifyIssues.length>1?'s':''} to review`); }
+    setGenProgress(100,'Everything is ready');
+    const logo=document.getElementById('gen-logo'); if(logo) logo.style.animation='none';
+    const doneMsg=document.getElementById('gen-done-msg'); if(doneMsg) doneMsg.style.display='block';
+    const phaseLabel=document.getElementById('gen-phase-label'); if(phaseLabel) phaseLabel.textContent='';
+    const verifySummary=document.getElementById('gen-verify-summary');
+    if(verifySummary) verifySummary.textContent=verifyIssues.length===0?'All documents verified — no issues found.':'Issues: '+verifyIssues.join(' · ');
+  } catch(e) {
+    console.warn('Pre-generation error:',e);
+    const phaseLabel=document.getElementById('gen-phase-label'); if(phaseLabel) phaseLabel.textContent='Something went wrong — you can still generate each document individually.';
+    const doneMsg=document.getElementById('gen-done-msg'); if(doneMsg) doneMsg.style.display='block';
+  }
+}
+
+// ── REAL GMAIL VIA CLOUDFLARE WORKER ──────────────────────────────────────
+let gmailAccessToken = null;
+function getGmailToken() {
+  return new Promise((resolve, reject) => {
+    if (gmailAccessToken) { resolve(gmailAccessToken); return; }
+    if (!window.google?.accounts?.oauth2) { reject(new Error('Google Identity Services not loaded')); return; }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      callback: (response) => {
+        if (response.error) { reject(new Error(response.error_description || response.error)); return; }
+        gmailAccessToken = response.access_token;
+        setTimeout(() => { gmailAccessToken = null; }, (response.expires_in - 60) * 1000);
+        resolve(gmailAccessToken);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+// ── FIX generateTextDoc settings reference + extension logic ──────────────
+async function generateTextDoc(p, slug, type) {
+  const s = (typeof getSettings === 'function') ? getSettings() : settings;
+  const fileApiUrl = s.fileApiUrl || s.proxyUrl || 'https://cyphr-api-production.up.railway.app';
+  if (!fileApiUrl) throw new Error('File API not configured — check settings.');
+  const projectData = {
+    clientName:p.clientName||'CLIENT', projectName:p.projectName||'PROJECT',
+    budget:p.budget||'0', timeline:p.timeline||'', sector:p.sector||'',
+    briefOutput:p.briefOutput||'', estimateOutput:p.estimateOutput||'',
+    proposalOutput:p.proposalOutput||'', sowOutput:p.sowOutput||'',
+    requirements:p.requirements||'', bgNotes:p.bgNotes||'',
+  };
+  const res = await fetch(fileApiUrl + '/generate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type, projectData}),
+  });
+  if (!res.ok) {
+    let errMsg='Generation failed — please try again.';
+    try { const err=await res.json(); errMsg=err.message||err.error||errMsg; } catch(e) {}
+    throw new Error(errMsg);
+  }
+  const blob = await res.blob();
+  const ext = (type==='estimate'||type==='gantt') ? 'xlsx' : 'docx';
+  downloadBlob(blob, `${slug}_${type}.${ext}`);
+}
+</script>
 // ── STATE ──────────────────────────────────────────────────────────────────
 const STAGES = [
   { id:'files',    label:'Files' },
@@ -993,115 +1169,40 @@ function readFileText(file) {
   });
 }
 
-// ── GMAIL PULL ─────────────────────────────────────────────────────────────
-// Uses Google OAuth2 token model (not ID token) to get gmail.readonly access.
-// Token is sent to the Cloudflare Worker — never directly to Gmail from the browser.
-// Worker verifies the token, calls Gmail API, returns results.
-
-let gmailAccessToken = null; // cached for session only — never persisted
-
-// Request a Gmail access token using Google Identity Services token client
-function getGmailToken() {
-  return new Promise((resolve, reject) => {
-    if (gmailAccessToken) { resolve(gmailAccessToken); return; }
-
-    if (!window.google?.accounts?.oauth2) {
-      reject(new Error('Google Identity Services not loaded'));
-      return;
-    }
-
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/gmail.readonly',
-      callback: (response) => {
-        if (response.error) {
-          reject(new Error(response.error_description || response.error));
-          return;
-        }
-        gmailAccessToken = response.access_token;
-        // Token expires in ~1 hour — clear it so next search re-auths
-        setTimeout(() => { gmailAccessToken = null; }, (response.expires_in - 60) * 1000);
-        resolve(gmailAccessToken);
-      },
-    });
-
-    client.requestAccessToken();
-  });
-}
-
+// ── GMAIL PULL — real OAuth via Cloudflare Worker ────────────────────────
 async function pullGmail() {
   const query = ($('gmail-search').value || '').trim();
   if (!query) { toast('Enter a search term first'); return; }
-
-  const btn = $('btn-gmail');
-  const resultsEl = $('gmail-results');
-  btn.disabled = true;
-  btn.textContent = 'Connecting…';
-  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Connecting to Gmail…</div>';
-
+  const btn=$('btn-gmail'); const resultsEl=$('gmail-results');
+  btn.disabled=true; btn.textContent='Connecting…';
+  resultsEl.innerHTML='<div style="font-size:12px;color:var(--ink3)">Connecting to Gmail…</div>';
   let token;
-  try {
-    token = await getGmailToken();
-  } catch (e) {
-    btn.disabled = false;
-    btn.textContent = '✉ Search inbox';
-    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--error,#c0392b)">Gmail access denied — please allow access when prompted.</div>';
+  try { token=await getGmailToken(); }
+  catch(e) {
+    btn.disabled=false; btn.textContent='✉ Search inbox';
+    resultsEl.innerHTML='<div style="font-size:12px;color:var(--error,#c0392b)">Gmail access denied — please allow access when prompted.</div>';
     return;
   }
-
-  btn.textContent = 'Searching…';
-  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Searching your inbox…</div>';
-
+  btn.textContent='Searching…';
+  resultsEl.innerHTML='<div style="font-size:12px;color:var(--ink3)">Searching your inbox…</div>';
   try {
-    const s = (typeof getSettings === 'function') ? getSettings() : settings;
-    const workerUrl = s.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev';
-
-    const res = await fetch(`${workerUrl}/gmail`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, token }),
-    });
-
-    btn.disabled = false;
-    btn.textContent = '✉ Search inbox';
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      resultsEl.innerHTML = `<div style="font-size:12px;color:var(--error,#c0392b)">${err.error || 'Search failed — try again.'}</div>`;
-      return;
-    }
-
-    const data = await res.json();
-    const emails = data.emails || [];
-
-    if (!emails.length) {
-      resultsEl.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No emails found. Try a different search term.</div>';
-      return;
-    }
-
-    resultsEl.innerHTML = `
+    const s=(typeof getSettings==='function')?getSettings():settings;
+    const workerUrl=s.proxyUrl||'https://cyphr-proxy.elizabeth-537.workers.dev';
+    const res=await fetch(`${workerUrl}/gmail`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,token})});
+    btn.disabled=false; btn.textContent='✉ Search inbox';
+    if(!res.ok){const err=await res.json().catch(()=>({}));resultsEl.innerHTML=`<div style="font-size:12px;color:var(--error,#c0392b)">${err.error||'Search failed — try again.'}</div>`;return;}
+    const data=await res.json(); const emails=data.emails||[];
+    if(!emails.length){resultsEl.innerHTML='<div style="font-size:12px;color:var(--ink3)">No emails found. Try a different search term.</div>';return;}
+    resultsEl.innerHTML=`
       <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${emails.length} email${emails.length>1?'s':''} found — select to add as context:</div>
-      ${emails.map(e => `
-        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;cursor:pointer;background:var(--bg);font-size:12px">
-          <input type="checkbox" class="gmail-chk"
-            data-snippet="${encodeURIComponent(e.snippet||'')}"
-            data-subject="${encodeURIComponent(e.subject||'')}"
-            data-sender="${encodeURIComponent(e.sender||'')}"
-            data-date="${encodeURIComponent(e.date||'')}"
-            style="margin-top:2px;flex-shrink:0">
-          <div>
-            <div style="font-weight:600;color:var(--ink1)">${e.subject}</div>
-            <div style="color:var(--ink3);margin-top:2px">${e.sender} · ${new Date(e.date).toLocaleDateString('en-GB')}</div>
-            <div style="color:var(--ink2);margin-top:3px;font-size:11px">${(e.snippet||'').substring(0,120)}…</div>
-          </div>
-        </label>
-      `).join('')}
+      ${emails.map(e=>`<label style="display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;cursor:pointer;background:var(--bg);font-size:12px">
+        <input type="checkbox" class="gmail-chk" data-snippet="${encodeURIComponent(e.snippet||'')}" data-subject="${encodeURIComponent(e.subject||'')}" data-sender="${encodeURIComponent(e.sender||'')}" data-date="${encodeURIComponent(e.date||'')}" style="margin-top:2px;flex-shrink:0">
+        <div><div style="font-weight:600;color:var(--ink1)">${e.subject}</div><div style="color:var(--ink3);margin-top:2px">${e.sender} · ${new Date(e.date).toLocaleDateString('en-GB')}</div><div style="color:var(--ink2);margin-top:3px;font-size:11px">${(e.snippet||'').substring(0,120)}…</div></div>
+      </label>`).join('')}
       <button class="btn btn-ghost" style="margin-top:6px;font-size:12px" onclick="addSelectedEmails()">✉ Add selected to context</button>`;
-
-  } catch (e) {
-    btn.disabled = false;
-    btn.textContent = '✉ Search inbox';
-    resultsEl.innerHTML = `<div style="font-size:12px;color:var(--error,#c0392b)">Error: ${e.message}</div>`;
+  } catch(e) {
+    btn.disabled=false; btn.textContent='✉ Search inbox';
+    resultsEl.innerHTML=`<div style="font-size:12px;color:var(--error,#c0392b)">Error: ${e.message}</div>`;
   }
 }
 
@@ -1164,8 +1265,7 @@ ${textToUse}`;
     const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}`;
     saveProjectData({ extractedContext: summary });
     $('ext-out').textContent = summary; $('ext-out').style.display='block';
-    toast('Context extracted ✓ — generating all stages in background…', 'success');
-    // Kick off background pre-generation of all stages without blocking UI
+    toast('Context extracted ✓ — building your project pack…', 'success');
     preGenerateAll();
   } catch(e) {
     $('ext-out').textContent = out; $('ext-out').style.display='block';
@@ -1293,16 +1393,19 @@ function rBrief() {
   const hasContent = !!p.briefOutput;
   return `<div class="card">
     <div class="card-title">Brief</div>
-    <div class="card-sub">${hasContent ? 'Pre-generated from your context — review, edit, or regenerate.' : 'Turn requirements into a structured response to brief.'}</div>
+    <div class="card-sub">${hasContent ? 'Pre-generated from your context — review and edit directly, then download.' : 'Turn requirements into a structured response to brief.'}</div>
     <div class="output-label">Client</div>
     <div class="output-box" style="margin-bottom:14px">${p.clientName||'—'} · ${p.sector||'—'} · £${Number(p.budget||0).toLocaleString()} · ${p.timeline||'—'}</div>
-    <div class="output-label">Brief output</div>
-    <div class="output-box" id="brief-out">${p.briefOutput||'Generating in background — or click below to generate now.'}</div>
+    <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
+      Brief output
+      ${hasContent ? '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono)">✎ Editable — changes save automatically</span>' : ''}
+    </div>
+    <textarea class="output-editable" id="brief-out" placeholder="Generating in background — or click below to generate now." oninput="saveProjectData({briefOutput:this.value})">${p.briefOutput||''}</textarea>
     <div id="brief-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Generating brief…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-brief" onclick="genBrief()">${hasContent ? '↺ Regenerate brief' : '✦ Generate brief'}</button>
-      <button class="btn btn-ghost" id="btn-brief-docx" onclick="downloadBriefDocx()" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .docx</button>
-      <button class="btn btn-ghost" id="btn-brief-pdf" onclick="downloadBriefPdf()" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .pdf</button>
+      <button class="btn btn-ghost" id="btn-brief-docx" onclick="generateFile('brief')" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .docx</button>
+      <button class="btn btn-ghost" id="btn-brief-pdf" onclick="generateFile('brief-pdf')" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .pdf</button>
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: skill →</button></div>`;
@@ -1314,7 +1417,7 @@ async function genBrief() {
   if($('brief-load'))$('brief-load').style.display='flex'; if($('btn-brief'))$('btn-brief').disabled=true; if($('brief-out'))$('brief-out').textContent='';
   const out = await callClaude(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
   saveProjectData({ briefOutput: out });
-  if($('brief-out'))$('brief-out').textContent=out;
+  if($('brief-out'))$('brief-out').value=out;
   if($('brief-load'))$('brief-load').style.display='none';
   if($('btn-brief')){$('btn-brief').disabled=false;$('btn-brief').textContent='↺ Regenerate brief';}
   if($('btn-brief-docx')){$('btn-brief-docx').disabled=false;$('btn-brief-docx').style.opacity='1';}
@@ -1411,8 +1514,11 @@ function rEstimate() {
       <div class="field-group"><label class="field-label">Total days</label><input type="number" id="f-days" value="${p.days||auto}"/></div>
     </div>
     <div class="field-group"><label class="field-label">Roles / resource split</label><textarea id="f-roles" placeholder="e.g. 5 days strategy, 10 days design, 8 days build…">${p.roles||''}</textarea></div>
-    <div class="output-label">Estimate output</div>
-    <div class="output-box" id="est-out">${p.estimateOutput||'Fill in above and click generate.'}</div>
+    <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
+      Estimate output
+      ${p.estimateOutput ? '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono)">✎ Editable</span>' : ''}
+    </div>
+    <textarea class="output-editable" id="est-out" placeholder="Fill in above and click generate." oninput="saveProjectData({estimateOutput:this.value})">${p.estimateOutput||''}</textarea>
     <div id="est-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Building estimate…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-est" onclick="genEstimate()">✦ Generate resource plan</button>
@@ -1434,7 +1540,7 @@ Brief: ${p.briefOutput}
 ${skillCtx}
 Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`);
   saveProjectData({ estimateOutput:out, rate, days, roles });
-  $('est-out').textContent=out;
+  $('est-out').value=out;
   if($('est-load'))$('est-load').style.display='none'; if($('btn-est'))$('btn-est').disabled=false; busy=false;
 }
 
@@ -1447,8 +1553,11 @@ function rProposal() {
     <div class="card-title">Proposal document</div>
     <div class="card-sub">Generate proposal narrative ready for your template.</div>
     <div class="field-group"><label class="field-label">Extra notes</label><textarea id="f-pnotes" placeholder="Tone, sections to emphasise, key selling points…">${p.proposalNotes||''}</textarea></div>
-    <div class="output-label">Proposal output</div>
-    <div class="output-box" id="prop-out">${p.proposalOutput||'Click generate.'}</div>
+    <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
+      Proposal output
+      ${p.proposalOutput ? '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono)">✎ Editable</span>' : ''}
+    </div>
+    <textarea class="output-editable" id="prop-out" placeholder="Click generate." oninput="saveProjectData({proposalOutput:this.value})">${p.proposalOutput||''}</textarea>
     <div id="prop-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Writing proposal…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-prop" onclick="genProposal()">${p.proposalOutput ? "↺ Regenerate proposal" : "✦ Generate proposal"}</button>
@@ -1470,7 +1579,7 @@ Resource plan: ${p.estimateOutput}
 Extra notes: ${notes}
 Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`);
   saveProjectData({ proposalOutput:out });
-  $('prop-out').textContent=out;
+  $('prop-out').value=out;
   if($('prop-load'))$('prop-load').style.display='none'; if($('btn-prop'))$('btn-prop').disabled=false; busy=false;
 }
 
@@ -1482,7 +1591,11 @@ function rSOW() {
   return `<div class="card">
     <div class="card-title">Statement of work</div>
     <div class="card-sub">Generate SOW from everything captured so far.</div>
-    <div class="output-box" id="sow-out">${p.sowOutput||'Click generate.'}</div>
+    <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
+      SOW output
+      ${p.sowOutput ? '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono)">✎ Editable</span>' : ''}
+    </div>
+    <textarea class="output-editable" id="sow-out" placeholder="Click generate." oninput="saveProjectData({sowOutput:this.value})">${p.sowOutput||''}</textarea>
     <div id="sow-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Drafting SOW…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-sow" onclick="genSOW()">${p.sowOutput ? "↺ Regenerate SOW" : "✦ Generate SOW"}</button>
@@ -1502,7 +1615,7 @@ Resource plan: ${p.estimateOutput}
 Proposal: ${p.proposalOutput}
 Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`);
   saveProjectData({ sowOutput:out });
-  $('sow-out').textContent=out;
+  $('sow-out').value=out;
   if($('sow-load'))$('sow-load').style.display='none'; if($('btn-sow'))$('btn-sow').disabled=false; busy=false;
   const p2=gp();
   await slackNotify(`📄 *SOW ready* — ${p2.clientName}${p2.projectName?' / '+p2.projectName:''}\nAll documents ready to generate. Budget: £${Number(p2.budget||0).toLocaleString()}`);
@@ -1550,7 +1663,7 @@ function rSetup() {
     <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;font-family:var(--mono)">Content previews — correct data, Cyphr template formatting applied via Railway.</div>
     <div id="file-gen-status"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="action-btn" id="btn-dl-brief" onclick="downloadBrief()">📋 Brief (.txt)</button>
+      <button class="action-btn" id="btn-dl-brief" onclick="generateFile('brief')">📋 Brief (.docx)</button>
       <button class="action-btn" id="btn-dl-estimate" onclick="generateFile('estimate')">📊 Estimate (.xlsx)</button>
       <button class="action-btn" id="btn-dl-sow" onclick="generateFile('sow')">📄 SOW (.docx)</button>
       <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📝 Proposal (.docx)</button>
@@ -1799,7 +1912,7 @@ async function generateTextDoc(p, slug, type) {
   });
   if (!res.ok) throw new Error('Generation failed — please try again.');
   const blob = await res.blob();
-  const ext = type === 'estimate' ? 'xlsx' : type === 'gantt' ? 'xlsx' : 'docx';
+  const ext = type === 'estimate' || type === 'gantt' ? 'xlsx' : 'docx';
   downloadBlob(blob, `${slug}_${type}.${ext}`);
 }
 
