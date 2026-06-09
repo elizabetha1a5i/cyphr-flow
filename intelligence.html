@@ -251,11 +251,13 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
                   <div id="mode-knob" style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>
                 </div>
               </div>
-              <div class="tooltip">
-                <strong style="display:block;margin-bottom:4px">Knowledge mode (free)</strong>
-                Uses Gemini's training data. Works now, no billing needed. Stories are real but may not be from this exact week — verify source links before sharing.<br><br>
-                <strong style="display:block;margin-bottom:4px">Live search (billing required)</strong>
-                Pulls live news from the web via Google Search. Always this week's stories with real verified sources. Enable billing on Google AI Studio then toggle on.
+              <div class="tooltip" style="width:280px">
+                <strong style="display:block;margin-bottom:6px">Knowledge mode — what you get</strong>
+                <span style="opacity:0.75;display:block;margin-bottom:6px;font-size:10px">Brand · Headline · TL;DR · Sector · Journey stage · Source · Date · What happened · Why it matters · Who it's for · Problem solved · Technology involved · What's clever · What feels weak · Rating · Blarney relevance · AEO/GEO relevance · Sales angle · LinkedIn draft · Video hook · Article angle</span>
+                <span style="opacity:0.6;display:block;margin-bottom:10px;font-size:10px">Uses Gemini training data. Stories are real but may not be from this exact week — verify before sharing.</span>
+                <strong style="display:block;margin-bottom:6px">Live search ON — also gets</strong>
+                <span style="opacity:0.75;display:block;margin-bottom:6px;font-size:10px">Verified current source URLs · This week's stories only · Content pulled directly from your tracked source sites</span>
+                <span style="opacity:0.6;display:block;font-size:10px">Requires Google AI Studio billing enabled.</span>
               </div>
             </div>
             <span class="brief-toggle" id="brief-toggle-icon">▼</span>
