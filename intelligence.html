@@ -664,8 +664,8 @@ function buildMainPrompt(weekStr, sourceSummaries) {
   }
 
   const searchInstruction = isLive
-    ? `Use Google Search to find the 5 most significant AI news stories from the past 7 days relevant to these topics: ${topicsStr}\n\nPrioritise stories from these sources where possible: ${sourcesStr}`
-    : `Using your training knowledge, identify 5 significant AI developments or news stories relevant to these topics: ${topicsStr}\n\nBe clear and honest about what you know. Use real company names, real product launches, and real announcements from your training data. Do not invent stories. If a story is from your training data rather than this specific week, that is fine — focus on what is genuinely relevant and interesting. Flag in the sourceLabel field if the story is from your training knowledge rather than a live source.`;
+    ? `Use Google Search to find all relevant AI news stories from the past 7 days related to these topics: ${topicsStr}\n\nCast a wide net — do not exclude stories on the basis of significance. Significance should only determine the order, not whether a story is included. Return all relevant stories ranked from most to least significant.\n\nPrioritise stories from these sources where possible: ${sourcesStr}`
+    : `Using your training knowledge, identify all relevant AI developments and news stories related to these topics: ${topicsStr}\n\nDo not pre-filter by significance — return all relevant stories and rank them from most to least significant. Significance determines order only, not inclusion.\n\nBe clear and honest about what you know. Use real company names, real product launches, and real announcements from your training data. Do not invent stories. If a story is from your training data rather than this specific week, that is fine — focus on what is genuinely relevant and interesting. Flag in the sourceLabel field if the story is from your training knowledge rather than a live source.`;
 
   return `You are an AI intelligence analyst for Cyphr Studio, a UK digital AI agency working with Samsung (Blarney AI agent for John Lewis), HP, Weber Ranch Vodka (Tex chatbot), and EE.
 
@@ -838,12 +838,43 @@ function getWeekStr() {
 
 function parseJSON(raw) {
   let clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
-  const start = clean.indexOf('{') !== -1 ? clean.indexOf('{') : clean.indexOf('[');
   const isArr = clean.indexOf('[') !== -1 && (clean.indexOf('[') < clean.indexOf('{') || clean.indexOf('{') === -1);
   const s = isArr ? clean.indexOf('[') : clean.indexOf('{');
   const e = isArr ? clean.lastIndexOf(']') : clean.lastIndexOf('}');
   if (s === -1 || e === -1) return null;
-  try { return JSON.parse(clean.slice(s, e + 1)); } catch(err) { console.error('JSON parse failed:', err, clean.slice(s, e+1).slice(0,500)); return null; }
+  let jsonStr = clean.slice(s, e + 1);
+
+  // Sanitise common Gemini issues before parsing
+  // 1. Remove control characters except tab/newline/carriage-return
+  jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  // 2. Fix unescaped newlines inside string values — replace literal \n/\r inside quoted strings
+  jsonStr = jsonStr.replace(/"((?:[^"\\]|\\.)*)"/g, (match, inner) => {
+    const fixed = inner
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/\t/g, '\\t');
+    return '"' + fixed + '"';
+  });
+  // 3. Remove trailing commas before ] or }
+  jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch(err) {
+    console.error('JSON parse failed:', err, jsonStr.slice(0, 800));
+    // Last resort: try to extract just the stories array if full parse failed
+    try {
+      const storiesMatch = jsonStr.match(/"stories"\s*:\s*(\[[\s\S]*\])\s*[,}]/);
+      const obsMatch = jsonStr.match(/"observation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (storiesMatch) {
+        const stories = JSON.parse(storiesMatch[1]);
+        return { stories, observation: obsMatch ? obsMatch[1] : '' };
+      }
+    } catch(e2) {
+      console.error('Fallback parse also failed:', e2);
+    }
+    return null;
+  }
 }
 
 function updateLastRunLabel() {
@@ -1006,7 +1037,7 @@ function esc(str) {
 function setEl(id, html) { const e = document.getElementById(id); if (e) e.innerHTML = html; }
 function showEl(id, v) { const e = document.getElementById(id); if (e) e.style.display = v ? 'block' : 'none'; }
 function fmtRating(r) { return {strong:'Strong',interesting:'Interesting',overhyped:'Overhyped',weak:'Weak',watch:'Watch'}[r] || (r||''); }
-function fmtDate(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); } catch(e){return d;} }
+function fmtDate(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); } catch(e){return d;} }
 function toast(msg, type='') {
   const c = document.getElementById('toasts');
   const t = document.createElement('div');
