@@ -674,7 +674,7 @@ ${sourceContext}
 
 Assess each story through what Cyphr sells: AI agents for retail, conversational AI, AEO/GEO (Answer Engine Optimisation), and AI enablement consulting.
 
-Return ONLY a valid JSON object with no markdown, no backticks, no preamble:
+Return ONLY a valid JSON object with no markdown, no backticks, no preamble. Critical: do not use double quotes inside any field value — use single quotes or rephrase instead. Do not include literal newlines inside string values.
 
 {
   "observation": "2-3 sentence weekly observation about the overall AI landscape",
@@ -844,37 +844,87 @@ function parseJSON(raw) {
   if (s === -1 || e === -1) return null;
   let jsonStr = clean.slice(s, e + 1);
 
-  // Sanitise common Gemini issues before parsing
-  // 1. Remove control characters except tab/newline/carriage-return
+  // Step 1: strip control characters
   jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-  // 2. Fix unescaped newlines inside string values — replace literal \n/\r inside quoted strings
-  jsonStr = jsonStr.replace(/"((?:[^"\\]|\\.)*)"/g, (match, inner) => {
-    const fixed = inner
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
-    return '"' + fixed + '"';
-  });
-  // 3. Remove trailing commas before ] or }
+
+  // Step 2: fix unescaped characters inside JSON string values
+  // Walk character by character to correctly identify string boundaries
+  jsonStr = fixJsonStrings(jsonStr);
+
+  // Step 3: trailing commas
   jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
 
   try {
     return JSON.parse(jsonStr);
   } catch(err) {
     console.error('JSON parse failed:', err, jsonStr.slice(0, 800));
-    // Last resort: try to extract just the stories array if full parse failed
+    // Last resort: pull individual story objects out with a loose regex
     try {
-      const storiesMatch = jsonStr.match(/"stories"\s*:\s*(\[[\s\S]*\])\s*[,}]/);
-      const obsMatch = jsonStr.match(/"observation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      if (storiesMatch) {
-        const stories = JSON.parse(storiesMatch[1]);
-        return { stories, observation: obsMatch ? obsMatch[1] : '' };
+      const obsMatch = raw.match(/"observation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const storyBlocks = [];
+      // Extract each story object by finding { ... } blocks inside "stories"
+      const storiesSection = raw.match(/"stories"\s*:\s*\[([\s\S]*)\]\s*[,}]/);
+      if (storiesSection) {
+        const fields = ['brand','headline','tldr','sector','journeyStage','sourceUrl','sourceLabel','date',
+          'whatHappened','whyItMatters','whoIsItFor','problemSolved','technologyInvolved',
+          'whatIsClever','whatIsWeak','rating','blarney','aeo','salesAngle','linkedinDraft','videoHook','articleAngle'];
+        const storyRe = /\{([\s\S]*?)\}(?=\s*[,\]])/g;
+        let m;
+        while ((m = storyRe.exec(storiesSection[1])) !== null) {
+          const obj = {};
+          fields.forEach(f => {
+            const fRe = new RegExp('"' + f + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"');
+            const fMatch = m[1].match(fRe);
+            if (fMatch) obj[f] = fMatch[1];
+          });
+          const ratingMatch = m[1].match(/"rating"\s*:\s*"(\w+)"/);
+          if (ratingMatch) obj.rating = ratingMatch[1];
+          const tagsMatch = m[1].match(/"tags"\s*:\s*\[([\s\S]*?)\]/);
+          if (tagsMatch) obj.tags = tagsMatch[1].match(/"(\w+)"/g)?.map(t => t.replace(/"/g,'')) || [];
+          if (obj.brand || obj.headline) storyBlocks.push(obj);
+        }
+      }
+      if (storyBlocks.length > 0) {
+        console.log('Fallback extracted', storyBlocks.length, 'stories');
+        return { stories: storyBlocks, observation: obsMatch ? obsMatch[1] : '' };
       }
     } catch(e2) {
       console.error('Fallback parse also failed:', e2);
     }
     return null;
   }
+}
+
+function fixJsonStrings(str) {
+  let result = '';
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (escape) {
+      result += ch;
+      escape = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escape = true;
+      result += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+      continue;
+    }
+    if (inString) {
+      // Fix unescaped newlines, carriage returns, tabs inside strings
+      if (ch === '\n') { result += '\\n'; continue; }
+      if (ch === '\r') { result += '\\r'; continue; }
+      if (ch === '\t') { result += '\\t'; continue; }
+    }
+    result += ch;
+  }
+  return result;
 }
 
 function updateLastRunLabel() {
