@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyphr — AI Intelligence</title>
+<style>
+:root {
+  --ink: #1a1a18;
+  --ink2: #4a4a44;
+  --ink3: #8a8a82;
+  --paper: #f7f6f1;
+  --surface: #ffffff;
+  --border: #e2e0d8;
+  --border2: #ccc9bc;
+  --accent: #2d5a3d;
+  --accent-light: #e8f0eb;
+  --accent2: #8b3a2a;
+  --warn: #f5f0e8;
+  --mono: 'Courier New', monospace;
+  --sans: system-ui, -apple-system, sans-serif;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--ink); padding: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.sidebar-logo { padding: 20px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.logo-sub { font-size: 10px; color: rgba(255,255,255,0.35); font-family: var(--mono); letter-spacing: 0.1em; margin-top: 5px; text-transform: uppercase; }
+.sidebar-nav { flex: 1; padding: 16px 0; }
+.sidebar-section { font-size: 10px; font-family: var(--mono); letter-spacing: 0.1em; color: rgba(255,255,255,0.3); padding: 0 20px 8px; text-transform: uppercase; }
+.nav-item { padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; font-size: 12px; color: rgba(255,255,255,0.6); border-radius: 6px; margin: 0 8px; }
+.nav-item:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
+.nav-item.active { background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
+.settings-note { font-size: 11px; color: rgba(255,255,255,0.3); font-family: var(--mono); }
+
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; }
+.topbar-title { font-size: 18px; font-weight: 600; color: var(--ink); }
+.topbar-sub { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+.btn { padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-family: var(--sans); cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--ink2); transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--border2); color: var(--ink); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #245030; border-color: #245030; color: #fff; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: none; border: none; padding: 4px 6px; color: var(--ink3); cursor: pointer; font-size: 13px; border-radius: 4px; transition: color 0.15s; }
+.btn-ghost:hover { color: var(--accent2); }
+
+.content { flex: 1; padding: 24px 28px; }
+
+/* ── search brief panel ── */
+.brief-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; }
+.brief-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+.brief-header:hover { background: var(--paper); }
+.brief-title { font-size: 13px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.brief-toggle { font-size: 11px; color: var(--ink3); font-family: var(--mono); }
+.brief-body { padding: 0 18px 18px; border-top: 1px solid var(--border); }
+.brief-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; }
+.brief-col-title { font-size: 10px; font-family: var(--mono); letter-spacing: 0.08em; color: var(--ink3); text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 28px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--paper); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--ink2); }
+.chip-remove { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 14px; line-height: 1; padding: 0; display: flex; align-items: center; }
+.chip-remove:hover { color: var(--accent2); }
+.chip-source { background: #eef6ff; border-color: #bfdbfe; color: #1e40af; }
+.chip-source .chip-remove { color: #93c5fd; }
+.chip-source .chip-remove:hover { color: #1e40af; }
+.add-row { display: flex; gap: 8px; }
+.add-input { flex: 1; padding: 7px 11px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+.add-input:focus { outline: none; border-color: var(--accent); }
+
+/* ── progress bar ── */
+.progress-wrap { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; display: none; }
+.progress-label { font-size: 12px; color: var(--ink2); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.progress-bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; width: 0%; }
+.progress-steps { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.progress-step { font-size: 11px; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; background: var(--paper); border: 1px solid var(--border); color: var(--ink3); }
+.progress-step.done { background: var(--accent-light); border-color: #c5d9cb; color: var(--accent); }
+.progress-step.active { background: var(--warn); border-color: #e0d5c0; color: var(--ink2); }
+
+/* ── digest banner ── */
+.digest-banner { background: var(--accent-light); border: 1px solid #c5d9cb; border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; }
+.digest-banner-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.digest-label { font-size: 11px; font-family: var(--mono); letter-spacing: 0.08em; color: var(--accent); text-transform: uppercase; font-weight: 600; }
+.digest-date { font-size: 11px; color: var(--ink3); }
+.digest-body { margin-top: 12px; font-size: 13px; color: var(--ink2); line-height: 1.7; }
+
+/* ── filters ── */
+.filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.filter-search { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--surface); color: var(--ink); font-family: var(--sans); }
+.filter-search:focus { outline: none; border-color: var(--accent); }
+.filter-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; background: var(--surface); color: var(--ink2); font-family: var(--sans); cursor: pointer; }
+.filter-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── table ── */
+.story-count { font-size: 12px; color: var(--ink3); margin-bottom: 10px; }
+.story-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+.story-table thead th { background: var(--paper); padding: 10px 14px; text-align: left; font-size: 11px; font-family: var(--mono); letter-spacing: 0.06em; color: var(--ink3); text-transform: uppercase; border-bottom: 1px solid var(--border); font-weight: 500; }
+.story-row { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+.story-row:last-child { border-bottom: none; }
+.story-row:hover { background: var(--paper); }
+.story-row td { padding: 12px 14px; vertical-align: top; }
+.story-brand { font-weight: 600; font-size: 13px; color: var(--ink); }
+.story-headline { font-size: 13px; color: var(--ink); margin-top: 2px; }
+.story-tldr { font-size: 12px; color: var(--ink3); margin-top: 3px; line-height: 1.5; }
+.story-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tag { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-family: var(--mono); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+.tag-linkedin { background: #dbeafe; color: #1e40af; }
+.tag-newsletter { background: #fef3c7; color: #92400e; }
+.tag-sales { background: #d1fae5; color: #065f46; }
+.tag-blarney { background: #ede9fe; color: #5b21b6; }
+.tag-aeo { background: #fce7f3; color: #9d174d; }
+.tag-default { background: var(--paper); color: var(--ink3); border: 1px solid var(--border); }
+
+.rating-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-family: var(--mono); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.rating-strong { background: #d1fae5; color: #065f46; }
+.rating-interesting { background: #dbeafe; color: #1e40af; }
+.rating-overhyped { background: #fef3c7; color: #92400e; }
+.rating-weak { background: #fee2e2; color: #991b1b; }
+.rating-watch { background: #ede9fe; color: #5b21b6; }
+
+.story-meta { font-size: 11px; color: var(--ink3); white-space: nowrap; }
+.story-source-link { font-size: 11px; color: var(--accent); text-decoration: none; display: block; margin-top: 2px; }
+.story-source-link:hover { text-decoration: underline; }
+
+/* ── qa note ── */
+.qa-note { font-size: 11px; color: var(--ink3); font-style: italic; margin-top: 4px; }
+.qa-note-warn { color: #92400e; }
+
+/* ── empty ── */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--ink3); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; }
+
+/* ── modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--surface); border-radius: var(--radius-lg); max-width: 640px; width: 100%; max-height: 85vh; overflow-y: auto; border: 1px solid var(--border); }
+.modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.modal-brand { font-size: 11px; font-family: var(--mono); color: var(--ink3); text-transform: uppercase; letter-spacing: 0.06em; }
+.modal-headline { font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 4px; line-height: 1.35; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 18px; flex-shrink: 0; padding: 2px; }
+.modal-close:hover { color: var(--ink); }
+.modal-body { padding: 20px 24px; }
+.modal-section { margin-bottom: 20px; }
+.modal-section:last-child { margin-bottom: 0; }
+.modal-label { font-size: 10px; font-family: var(--mono); letter-spacing: 0.08em; color: var(--ink3); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+.modal-text { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+.modal-draft { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ink); line-height: 1.65; font-family: var(--sans); white-space: pre-wrap; }
+.modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+.modal-meta-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.modal-meta-item { display: flex; flex-direction: column; gap: 3px; }
+.copy-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; font-size: 11px; cursor: pointer; color: var(--ink3); font-family: var(--sans); transition: all 0.15s; }
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── source limited notice ── */
+.source-limited { font-size: 11px; color: var(--ink3); font-style: italic; margin-top: 6px; }
+
+/* ── api panel ── */
+.api-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px; }
+.api-panel-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--ink); }
+.api-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.api-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px; }
+.api-field label { font-size: 11px; color: var(--ink3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.api-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--paper); color: var(--ink); font-family: var(--sans); width: 100%; }
+.api-input:focus { outline: none; border-color: var(--accent); }
+
+/* ── spinner ── */
+.spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── toast ── */
+.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+.toast { background: var(--ink); color: #fff; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; animation: slideUp 0.2s ease; max-width: 320px; }
+.toast.success { background: var(--accent); }
+.toast.error { background: var(--accent2); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 700px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .brief-cols { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 1070 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:80px;display:block">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M428.266 393.248C387.671 393.248 362.182 362.565 362.182 321.97V128.909C362.182 88.7857 387.671 58.1035 427.794 58.1035C467.917 58.1035 493.407 88.7857 493.407 128.909V174.696H449.98V146.846C449.98 129.381 441.955 119.468 428.266 119.468C414.577 119.468 406.553 129.381 406.553 146.846V303.561C406.553 321.498 414.577 331.883 428.738 331.883C442.899 331.883 450.924 321.498 450.924 303.561V271.463H494.351V321.97C494.351 362.565 468.861 393.248 428.266 393.248ZM541.979 263.438V390.887H586.35V263.91L637.329 60.4637H592.014L564.636 179.416H563.692L534.426 60.4637H491.943L541.979 263.438ZM645.25 390.887V60.4637H705.671C752.874 60.4637 777.42 85.0094 777.42 132.213V183.664C777.42 230.868 752.874 255.414 705.671 255.414H689.622V390.887H645.25ZM689.622 194.049H709.919C725.024 194.049 733.049 184.137 733.049 165.727V150.15C733.049 131.741 725.024 121.828 709.919 121.828H689.622V194.049ZM792.301 60.4637V390.887H836.672V255.414H875.378V390.887H919.75V60.4637H875.378V194.049H836.672V60.4637H792.301ZM938.428 60.4637V390.887H982.799V265.326H1000.26C1015.84 265.326 1024.81 274.767 1024.81 294.592V390.887H1069.18V286.568C1069.18 255.414 1056.91 238.892 1037.56 232.756V231.812C1059.27 225.676 1068.24 209.626 1068.24 178.944V132.213C1068.24 85.0094 1043.69 60.4637 996.488 60.4637H938.428ZM1000.26 203.962H982.799V121.828H1000.74C1015.84 121.828 1023.87 131.741 1023.87 150.15V177.056C1023.87 194.521 1015.37 203.962 1000.26 203.962Z" fill="white"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="white"/>
+      </svg>
+      <div class="logo-sub">AI Intelligence</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section" style="margin-top:8px">Navigate</div>
+      <div class="nav-item" onclick="window.open('index.html','_self')">
+        <span>←</span><span>Back to Flow</span>
+      </div>
+      <div class="nav-item active">
+        <span>⚡</span><span>AI Intelligence</span>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="settings-note">Gemini Flash 2.5 · Google Search</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">AI Intelligence</div>
+        <div class="topbar-sub">Weekly retail AI news tracker</div>
+      </div>
+      <div class="topbar-actions">
+        <span id="last-run-label" style="font-size:11px;color:var(--ink3);font-family:var(--mono)"></span>
+        <button class="btn btn-primary" onclick="runDigest()" id="run-btn">
+          <span id="run-icon">▶</span><span id="run-label">Run this week</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+
+
+      <!-- Search Brief panel -->
+      <div class="brief-panel">
+        <div class="brief-header" onclick="toggleBrief()">
+          <div class="brief-title">
+            <span>🎯</span> Search Brief
+            <span style="font-size:11px;color:var(--ink3);font-weight:400;font-family:var(--mono)" id="brief-summary"></span>
+          </div>
+          <span class="brief-toggle" id="brief-toggle-icon">▼</span>
+        </div>
+        <div class="brief-body" id="brief-body">
+          <div class="brief-cols">
+            <!-- Topics -->
+            <div>
+              <div class="brief-col-title">Topics & brands to track</div>
+              <div class="chip-list" id="topics-list"></div>
+              <div class="add-row">
+                <input type="text" class="add-input" id="topic-input" placeholder="e.g. Samsung Blarney AI" onkeydown="if(event.key==='Enter')addTopic()" />
+                <button class="btn btn-sm" onclick="addTopic()">Add</button>
+              </div>
+            </div>
+            <!-- Sources -->
+            <div>
+              <div class="brief-col-title">Source URLs to prioritise</div>
+              <div class="chip-list" id="sources-list"></div>
+              <div class="add-row">
+                <input type="text" class="add-input" id="source-input" placeholder="e.g. retailgazette.co.uk" onkeydown="if(event.key==='Enter')addSource()" />
+                <button class="btn btn-sm" onclick="addSource()">Add</button>
+              </div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5">Gemini will read these pages directly where possible. Paywalled or JS-heavy sites may return limited content.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress indicator (shown during run) -->
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-label">
+          <span class="spinner"></span>
+          <span id="progress-label-text">Running...</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progress-bar"></div>
+        </div>
+        <div class="progress-steps">
+          <span class="progress-step" id="step-search">1 · Search</span>
+          <span class="progress-step" id="step-sources">2 · Sources</span>
+          <span class="progress-step" id="step-generate">3 · Generate</span>
+          <span class="progress-step" id="step-qa">4 · QA review</span>
+          <span class="progress-step" id="step-save">5 · Done</span>
+        </div>
+      </div>
+
+      <!-- Digest banner -->
+      <div class="digest-banner" id="digest-banner" style="display:none">
+        <div class="digest-banner-header" onclick="toggleDigest()">
+          <span class="digest-label">⚡ Weekly observation</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="digest-date" id="digest-date"></span>
+            <span style="font-size:11px;color:var(--accent)" id="digest-toggle">▼</span>
+          </div>
+        </div>
+        <div class="digest-body" id="digest-text"></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <input type="text" class="filter-search" id="search-input" placeholder="Search brands, headlines, angles..." oninput="renderTable()" />
+        <select class="filter-select" id="tag-filter" onchange="renderTable()">
+          <option value="">All tags</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="newsletter">Newsletter</option>
+          <option value="sales">Sales</option>
+          <option value="blarney">Blarney</option>
+          <option value="aeo">AEO/GEO</option>
+        </select>
+        <select class="filter-select" id="rating-filter" onchange="renderTable()">
+          <option value="">All ratings</option>
+          <option value="strong">Strong</option>
+          <option value="interesting">Interesting</option>
+          <option value="overhyped">Overhyped</option>
+          <option value="weak">Weak</option>
+          <option value="watch">One to watch</option>
+        </select>
+        <select class="filter-select" id="sector-filter" onchange="renderTable()">
+          <option value="">All sectors</option>
+          <option value="retail">Retail</option>
+          <option value="tech">Tech</option>
+          <option value="fmcg">FMCG</option>
+          <option value="finance">Finance</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="story-count" id="story-count"></div>
+      <div id="table-container"></div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Story modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal" id="modal-inner">
+    <div class="modal-header">
+      <div style="flex:1;min-width:0">
+        <div class="modal-brand" id="m-brand"></div>
+        <div class="modal-headline" id="m-headline"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px" id="m-tags"></div>
+      </div>
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- QA note (subtle, shown only if present) -->
+      <div id="m-qa-wrap" style="display:none;margin-bottom:16px">
+        <div style="font-size:11px;color:var(--ink3);font-style:italic;padding:8px 12px;background:var(--warn);border-radius:var(--radius);border:1px solid #e0d5c0" id="m-qa-note"></div>
+      </div>
+      <div class="modal-meta-row">
+        <div class="modal-meta-item">
+          <div class="modal-label">Rating</div>
+          <div id="m-rating-badge"></div>
+        </div>
+        <div class="modal-meta-item">
+          <div class="modal-label">Sector</div>
+          <div class="modal-text" id="m-sector"></div>
+        </div>
+        <div class="modal-meta-item">
+          <div class="modal-label">Journey stage</div>
+          <div class="modal-text" id="m-stage"></div>
+        </div>
+        <div class="modal-meta-item">
+          <div class="modal-label">Date</div>
+          <div class="modal-text" id="m-date"></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-label">Source</div>
+        <a class="story-source-link" id="m-source" target="_blank" rel="noopener"></a>
+        <div id="m-source-limited" class="source-limited" style="display:none">Content from this source may be limited</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-label">What happened</div>
+        <div class="modal-text" id="m-what"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-label">Why it matters</div>
+        <div class="modal-text" id="m-why"></div>
+      </div>
+      <div class="modal-section" id="m-blarney-section" style="display:none">
+        <div class="modal-label">Blarney relevance</div>
+        <div class="modal-text" id="m-blarney"></div>
+      </div>
+      <div class="modal-section" id="m-aeo-section" style="display:none">
+        <div class="modal-label">AEO/GEO relevance</div>
+        <div class="modal-text" id="m-aeo"></div>
+      </div>
+      <div class="modal-section" id="m-sales-section" style="display:none">
+        <div class="modal-label">Sales angle</div>
+        <div class="modal-text" id="m-sales"></div>
+      </div>
+      <div class="modal-section" id="m-linkedin-section" style="display:none">
+        <div class="modal-label">LinkedIn draft</div>
+        <div class="modal-draft" id="m-linkedin-draft"></div>
+        <button class="copy-btn" style="margin-top:8px" onclick="copyText('linkedin')">Copy</button>
+      </div>
+      <div class="modal-section" id="m-video-section" style="display:none">
+        <div class="modal-label">Video hook / concept</div>
+        <div class="modal-text" id="m-video"></div>
+      </div>
+      <div class="modal-section" id="m-article-section" style="display:none">
+        <div class="modal-label">Article angle</div>
+        <div class="modal-text" id="m-article"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="m-footer"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY     = 'cyphr_intelligence_v3';
+const BRIEF_STORE     = 'cyphr_intel_brief';
+// ⚠️ API key lives in Cloudflare Worker — update WORKER_URL to your Worker domain
+const WORKER_URL      = 'https://cyphr-proxy.elizabetha1a5i.workers.dev/gemini';
+const MODEL_MAIN      = 'gemini-2.0-flash-exp';
+const MODEL_QA        = 'gemini-2.0-flash-exp';
+
+const DEFAULT_TOPICS  = ['Samsung Blarney AI retail', 'HP AI', 'Weber Ranch AI chatbot', 'EE AI', 'John Lewis AI', 'retail AI agents', 'AEO answer engine optimisation', 'conversational commerce AI'];
+const DEFAULT_SOURCES = ['retailgazette.co.uk', 'thegrocer.co.uk', 'techcrunch.com', 'wired.com'];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let stories      = [];
+let digest       = null;
+let digestOpen   = true;
+let briefOpen    = true;
+let activeStory  = null;
+let running      = false;
+let brief        = { topics: [...DEFAULT_TOPICS], sources: [...DEFAULT_SOURCES] };
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadBrief();
+  loadData();
+  renderBrief();
+  renderDigest();
+  renderTable();
+  updateLastRunLabel();
+  checkAutoRun();
+});
+
+// ── API KEY ───────────────────────────────────────────────────────────────────
+// API key is handled server-side via Cloudflare Worker — no key needed in browser
+
+// ── BRIEF ─────────────────────────────────────────────────────────────────────
+function loadBrief() {
+  try {
+    const raw = localStorage.getItem(BRIEF_STORE);
+    if (raw) brief = JSON.parse(raw);
+  } catch(e) {}
+}
+function saveBrief() {
+  localStorage.setItem(BRIEF_STORE, JSON.stringify(brief));
+  renderBrief();
+}
+function toggleBrief() {
+  briefOpen = !briefOpen;
+  document.getElementById('brief-body').style.display = briefOpen ? 'block' : 'none';
+  document.getElementById('brief-toggle-icon').textContent = briefOpen ? '▼' : '▶';
+}
+function renderBrief() {
+  // topics
+  const tl = document.getElementById('topics-list');
+  tl.innerHTML = brief.topics.map((t,i) =>
+    `<span class="chip">${esc(t)}<button class="chip-remove" onclick="removeTopic(${i})" title="Remove">×</button></span>`
+  ).join('');
+  // sources
+  const sl = document.getElementById('sources-list');
+  sl.innerHTML = brief.sources.map((s,i) =>
+    `<span class="chip chip-source">${esc(s)}<button class="chip-remove" onclick="removeSource(${i})" title="Remove">×</button></span>`
+  ).join('');
+  // summary in header
+  document.getElementById('brief-summary').textContent =
+    `${brief.topics.length} topics · ${brief.sources.length} sources`;
+}
+function addTopic() {
+  const input = document.getElementById('topic-input');
+  const v = input.value.trim();
+  if (!v) return;
+  if (!brief.topics.includes(v)) { brief.topics.push(v); saveBrief(); }
+  input.value = '';
+}
+function removeTopic(i) {
+  brief.topics.splice(i, 1);
+  saveBrief();
+}
+function addSource() {
+  const input = document.getElementById('source-input');
+  let v = input.value.trim().replace(/^https?:\/\//, '');
+  if (!v) return;
+  if (!brief.sources.includes(v)) { brief.sources.push(v); saveBrief(); }
+  input.value = '';
+}
+function removeSource(i) {
+  brief.sources.splice(i, 1);
+  saveBrief();
+}
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const d = JSON.parse(raw); stories = d.stories || []; digest = d.digest || null; }
+  } catch(e) {}
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ stories, digest }));
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────────────────────
+function setProgress(pct, labelText, activeStep) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label-text').textContent = labelText;
+  ['search','sources','generate','qa','save'].forEach(s => {
+    const el = document.getElementById('step-' + s);
+    const steps = ['search','sources','generate','qa','save'];
+    const idx = steps.indexOf(s);
+    const activeIdx = steps.indexOf(activeStep);
+    el.className = 'progress-step' + (idx < activeIdx ? ' done' : idx === activeIdx ? ' active' : '');
+  });
+}
+function showProgress(show) {
+  document.getElementById('progress-wrap').style.display = show ? 'block' : 'none';
+}
+
+// ── GEMINI CALL ───────────────────────────────────────────────────────────────
+async function gemini(prompt, options = {}) {
+  const model = options.model || MODEL_MAIN;
+  const url = WORKER_URL;
+
+  const body = { model,
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: options.temperature || 0.3, maxOutputTokens: options.maxTokens || 8192 }
+  };
+
+  // Add Google Search grounding
+  if (options.search !== false) {
+    body.tools = [{ googleSearch: {} }];
+  }
+
+  // Add URL context parts
+  if (options.urls && options.urls.length > 0) {
+    body.contents[0].parts = [
+      ...options.urls.map(u => ({ fileData: { mimeType: 'text/html', fileUri: u } })).filter(() => false), // placeholder
+      { text: prompt }
+    ];
+    // Use inline fetch approach via grounding hint instead
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data?.candidates?.[0]?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || '';
+}
+
+// ── TRY FETCH SOURCE ──────────────────────────────────────────────────────────
+async function tryFetchSource(url) {
+  // Ask Gemini to read a specific URL and return a summary
+  // Returns { summary, limited } where limited=true if it couldn't get much
+  try {
+    const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+    const prompt = `Please fetch and read the content at this URL: ${fullUrl}
+
+Return a brief 2-3 sentence summary of the most recent AI-related news or announcements found on this page. If you cannot access the page or it has no relevant AI content, return exactly: CONTENT_LIMITED
+
+Do not add any preamble. Just the summary or CONTENT_LIMITED.`;
+
+    const result = await gemini(prompt, { search: false, temperature: 0.2, maxTokens: 512 });
+    const limited = result.trim() === 'CONTENT_LIMITED' || result.trim().length < 40;
+    return { summary: limited ? '' : result.trim(), limited };
+  } catch(e) {
+    return { summary: '', limited: true };
+  }
+}
+
+// ── MAIN DIGEST PROMPT ────────────────────────────────────────────────────────
+function buildMainPrompt(weekStr, sourceSummaries) {
+  const topicsStr = brief.topics.join(', ');
+  const sourcesStr = brief.sources.join(', ');
+
+  let sourceContext = '';
+  if (sourceSummaries.length > 0) {
+    sourceContext = '\n\nContext from tracked sources (use this alongside your search):\n' +
+      sourceSummaries.map(s => `[${s.url}]: ${s.summary || '(limited content available)'}`).join('\n');
+  }
+
+  return `You are an AI intelligence analyst for Cyphr Studio, a UK digital AI agency working with Samsung (Blarney AI agent for John Lewis), HP, Weber Ranch Vodka (Tex chatbot), and EE.
+
+Use Google Search to find the 5 most significant AI news stories from the past 7 days relevant to these topics: ${topicsStr}
+
+Prioritise stories from these sources where possible: ${sourcesStr}
+${sourceContext}
+
+Assess each story through what Cyphr sells: AI agents for retail, conversational AI, AEO/GEO (Answer Engine Optimisation), and AI enablement consulting.
+
+Return ONLY a valid JSON object with no markdown, no backticks, no preamble:
+
+{
+  "observation": "2-3 sentence weekly observation about the overall AI landscape",
+  "stories": [
+    {
+      "brand": "Company name",
+      "headline": "Short headline max 12 words",
+      "tldr": "One sentence summary",
+      "sector": "retail|tech|fmcg|finance|healthcare|other",
+      "journeyStage": "awareness|consideration|decision|retention",
+      "sourceUrl": "https://...",
+      "sourceLabel": "Publication name",
+      "sourceLimited": false,
+      "date": "YYYY-MM-DD",
+      "whatHappened": "2-3 sentences on what happened",
+      "whyItMatters": "2-3 sentences on commercial significance",
+      "rating": "strong|interesting|overhyped|weak|watch",
+      "tags": ["linkedin","newsletter","sales","blarney","aeo"],
+      "blarney": "Relevance to retail AI agents or empty string",
+      "aeo": "Relevance to AEO/GEO or empty string",
+      "salesAngle": "Pitch hook for Cyphr or empty string",
+      "linkedinDraft": "150-200 word LinkedIn post. Direct, insightful tone. No hashtag spam. No emojis.",
+      "videoHook": "Video concept or empty string",
+      "articleAngle": "Article angle or empty string"
+    }
+  ]
+}
+
+Week: ${weekStr}
+Today: ${new Date().toISOString().split('T')[0]}`;
+}
+
+// ── QA PROMPT ─────────────────────────────────────────────────────────────────
+function buildQAPrompt(storiesJson) {
+  return `You are a QA editor reviewing an AI news digest for Cyphr Studio.
+
+Review each story below and flag any issues. For each story return a short qaNote if there's a concern, or an empty string if it passes cleanly.
+
+Issues to flag (be concise and subtle, one sentence max):
+- Story appears older than 2 weeks
+- Source URL looks hallucinated or implausible
+- Rating seems inconsistent with the content
+- LinkedIn draft is generic and doesn't reference the actual story
+- Very thin summary with little substance
+- Near-duplicate of another story in the list
+
+Return ONLY a valid JSON array with no markdown, matching the order of the input stories:
+[
+  { "id": "story_id_here", "qaNote": "subtle note or empty string" },
+  ...
+]
+
+Stories to review:
+${storiesJson}`;
+}
+
+// ── RUN DIGEST ────────────────────────────────────────────────────────────────
+async function runDigest() {
+  if (running) return;
+  running = true;
+
+  const btn = document.getElementById('run-btn');
+  const icon = document.getElementById('run-icon');
+  const label = document.getElementById('run-label');
+  btn.disabled = true;
+  icon.className = 'spinner';
+  label.textContent = 'Running...';
+  showProgress(true);
+
+  try {
+    const weekStr = getWeekStr();
+
+    // Step 1: fetch source content
+    setProgress(10, 'Reading tracked sources...', 'sources');
+    const sourceSummaries = [];
+    for (const src of brief.sources.slice(0, 4)) { // cap at 4 to keep it fast
+      const result = await tryFetchSource(src);
+      sourceSummaries.push({ url: src, ...result });
+    }
+
+    // Step 2: main Gemini search + generate
+    setProgress(35, 'Searching and generating stories...', 'generate');
+    const mainPrompt = buildMainPrompt(weekStr, sourceSummaries);
+    const rawMain = await gemini(mainPrompt, { search: true, temperature: 0.4, maxTokens: 8192 });
+    const parsed = parseJSON(rawMain);
+
+    if (!parsed || !parsed.stories || parsed.stories.length === 0) {
+      throw new Error('No stories returned. Check console for raw output.');
+    }
+
+    // Stamp stories with IDs and source-limited flags from our fetch
+    const stamped = parsed.stories.map((s, i) => {
+      const srcMatch = sourceSummaries.find(x => s.sourceUrl && s.sourceUrl.includes(x.url.replace(/^https?:\/\//, '')));
+      return {
+        id: `story_${Date.now()}_${i}`,
+        week: weekStr,
+        qaNote: '',
+        sourceLimitedFlag: srcMatch?.limited || false,
+        ...s
+      };
+    });
+
+    // Step 3: QA pass
+    setProgress(70, 'Running QA review...', 'qa');
+    try {
+      const qaInput = JSON.stringify(stamped.map(s => ({ id: s.id, brand: s.brand, headline: s.headline, sourceUrl: s.sourceUrl, date: s.date, rating: s.rating, tldr: s.tldr, linkedinDraft: s.linkedinDraft })));
+      const qaRaw = await gemini(buildQAPrompt(qaInput), { search: false, temperature: 0.2, maxTokens: 1024 });
+      const qaResults = parseJSON(qaRaw);
+      if (Array.isArray(qaResults)) {
+        qaResults.forEach(q => {
+          const s = stamped.find(x => x.id === q.id);
+          if (s && q.qaNote) s.qaNote = q.qaNote;
+        });
+      }
+    } catch(e) {
+      console.warn('QA pass failed (non-critical):', e.message);
+    }
+
+    // Step 4: save
+    setProgress(95, 'Saving...', 'save');
+    stories = [...stories, ...stamped];
+    digest = { text: parsed.observation, date: new Date().toISOString(), week: weekStr };
+    saveData();
+    localStorage.setItem('cyphr_intel_last_run', Date.now().toString());
+
+    setProgress(100, 'Done', 'save');
+    setTimeout(() => showProgress(false), 1200);
+
+    updateLastRunLabel();
+    renderDigest();
+    renderTable();
+    toast(`${stamped.length} stories added`, 'success');
+
+  } catch(e) {
+    showProgress(false);
+    toast('Error: ' + e.message, 'error');
+    console.error(e);
+  }
+
+  running = false;
+  btn.disabled = false;
+  icon.className = '';
+  icon.textContent = '▶';
+  label.textContent = 'Run this week';
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getWeekStr() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay());
+  return `w/c ${start.toLocaleDateString('en-GB', { month:'short', day:'numeric' })}`;
+}
+
+function parseJSON(raw) {
+  let clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  const start = clean.indexOf('{') !== -1 ? clean.indexOf('{') : clean.indexOf('[');
+  const isArr = clean.indexOf('[') !== -1 && (clean.indexOf('[') < clean.indexOf('{') || clean.indexOf('{') === -1);
+  const s = isArr ? clean.indexOf('[') : clean.indexOf('{');
+  const e = isArr ? clean.lastIndexOf(']') : clean.lastIndexOf('}');
+  if (s === -1 || e === -1) return null;
+  try { return JSON.parse(clean.slice(s, e + 1)); } catch(err) { console.error('JSON parse failed:', err, clean.slice(s, e+1).slice(0,500)); return null; }
+}
+
+function updateLastRunLabel() {
+  const raw = localStorage.getItem('cyphr_intel_last_run');
+  const el = document.getElementById('last-run-label');
+  if (!raw) { el.textContent = 'Never run'; return; }
+  const days = Math.floor((Date.now() - parseInt(raw)) / 86400000);
+  el.textContent = days === 0 ? 'Run today' : `${days}d ago`;
+}
+
+function checkAutoRun() {
+  const raw = localStorage.getItem('cyphr_intel_last_run');
+  if (!raw) return;
+  const days = (Date.now() - parseInt(raw)) / 86400000;
+  if (days >= 7 && new Date().getDay() === 1) setTimeout(() => runDigest(), 2000);
+}
+
+// ── RENDER DIGEST ─────────────────────────────────────────────────────────────
+function renderDigest() {
+  if (!digest) { document.getElementById('digest-banner').style.display = 'none'; return; }
+  document.getElementById('digest-banner').style.display = 'block';
+  document.getElementById('digest-text').textContent = digest.text;
+  document.getElementById('digest-date').textContent =
+    new Date(digest.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+}
+function toggleDigest() {
+  digestOpen = !digestOpen;
+  document.getElementById('digest-text').style.display = digestOpen ? 'block' : 'none';
+  document.getElementById('digest-toggle').textContent = digestOpen ? '▼' : '▶';
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────────
+function renderTable() {
+  const search   = (document.getElementById('search-input').value || '').toLowerCase();
+  const tagF     = document.getElementById('tag-filter').value;
+  const ratingF  = document.getElementById('rating-filter').value;
+  const sectorF  = document.getElementById('sector-filter').value;
+
+  let filtered = [...stories].reverse();
+  if (search)  filtered = filtered.filter(s => [s.brand,s.headline,s.tldr,s.whatHappened].join(' ').toLowerCase().includes(search));
+  if (tagF)    filtered = filtered.filter(s => (s.tags||[]).includes(tagF));
+  if (ratingF) filtered = filtered.filter(s => s.rating === ratingF);
+  if (sectorF) filtered = filtered.filter(s => s.sector === sectorF);
+
+  document.getElementById('story-count').textContent = filtered.length > 0 ? `${filtered.length} ${filtered.length===1?'story':'stories'}` : '';
+
+  const container = document.getElementById('table-container');
+
+  if (stories.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><div class="empty-title">No stories yet</div><div style="font-size:13px;color:var(--ink3)">Configure your Search Brief above, then hit Run this week</div></div>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No stories match</div></div>`;
+    return;
+  }
+
+  const rows = filtered.map(s => {
+    const qaIndicator = s.qaNote ? `<div class="qa-note">· ${esc(s.qaNote)}</div>` : '';
+    const limitedNote = s.sourceLimitedFlag ? `<div class="story-meta" style="font-style:italic;margin-top:2px;font-size:10px">Source content may be limited</div>` : '';
+    return `<tr class="story-row" onclick="openStory('${s.id}')">
+      <td style="max-width:280px">
+        <div class="story-brand">${esc(s.brand||'')}</div>
+        <div class="story-headline">${esc(s.headline||'')}</div>
+        <div class="story-tldr">${esc(s.tldr||'')}</div>
+        <div class="story-tags">${(s.tags||[]).map(t=>`<span class="tag tag-${t}">${t}</span>`).join('')}</div>
+        ${qaIndicator}
+      </td>
+      <td style="width:100px;text-align:center;vertical-align:middle">
+        <span class="rating-badge rating-${s.rating||'interesting'}">${fmtRating(s.rating)}</span>
+      </td>
+      <td style="width:90px">
+        <div class="story-meta">${esc(s.sector||'')}</div>
+        <div class="story-meta" style="margin-top:2px">${esc(s.journeyStage||'')}</div>
+      </td>
+      <td style="width:130px">
+        <div class="story-meta">${fmtDate(s.date)}</div>
+        ${s.sourceUrl ? `<a class="story-source-link" href="${esc(s.sourceUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(s.sourceLabel||'Source')}</a>` : ''}
+        ${limitedNote}
+      </td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `<table class="story-table">
+    <thead><tr>
+      <th>Story</th>
+      <th style="text-align:center">Rating</th>
+      <th>Sector</th>
+      <th>Date / Source</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openStory(id) {
+  const s = stories.find(x => x.id === id);
+  if (!s) return;
+  activeStory = s;
+
+  setEl('m-brand', esc(s.brand||''));
+  setEl('m-headline', esc(s.headline||''));
+  setEl('m-tags', (s.tags||[]).map(t=>`<span class="tag tag-${t}">${t}</span>`).join(''));
+  setEl('m-rating-badge', `<span class="rating-badge rating-${s.rating}">${fmtRating(s.rating)}</span>`);
+  setEl('m-sector', esc(s.sector||''));
+  setEl('m-stage', esc(s.journeyStage||''));
+  setEl('m-date', fmtDate(s.date));
+
+  const srcEl = document.getElementById('m-source');
+  srcEl.href = s.sourceUrl || '#';
+  srcEl.textContent = s.sourceLabel || s.sourceUrl || 'No source';
+  showEl('m-source-limited', !!s.sourceLimitedFlag);
+
+  setEl('m-what', esc(s.whatHappened||''));
+  setEl('m-why', esc(s.whyItMatters||''));
+
+  // QA note
+  if (s.qaNote) {
+    setEl('m-qa-note', esc(s.qaNote));
+    showEl('m-qa-wrap', true);
+  } else {
+    showEl('m-qa-wrap', false);
+  }
+
+  showConditional('m-blarney-section', 'm-blarney', s.blarney);
+  showConditional('m-aeo-section', 'm-aeo', s.aeo);
+  showConditional('m-sales-section', 'm-sales', s.salesAngle);
+  showConditional('m-linkedin-section', 'm-linkedin-draft', s.linkedinDraft);
+  showConditional('m-video-section', 'm-video', s.videoHook);
+  showConditional('m-article-section', 'm-article', s.articleAngle);
+
+  document.getElementById('modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function showConditional(sectionId, contentId, value) {
+  showEl(sectionId, !!value);
+  if (value) setEl(contentId, esc(value));
+}
+function closeModal(e) { if (e.target === document.getElementById('modal')) closeModalBtn(); }
+function closeModalBtn() {
+  document.getElementById('modal').style.display = 'none';
+  document.body.style.overflow = '';
+  activeStory = null;
+}
+function copyText(type) {
+  if (!activeStory) return;
+  const text = { linkedin: activeStory.linkedinDraft }[type] || '';
+  navigator.clipboard.writeText(text).then(() => toast('Copied', 'success')).catch(() => toast('Copy failed', 'error'));
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function setEl(id, html) { const e = document.getElementById(id); if (e) e.innerHTML = html; }
+function showEl(id, v) { const e = document.getElementById(id); if (e) e.style.display = v ? 'block' : 'none'; }
+function fmtRating(r) { return {strong:'Strong',interesting:'Interesting',overhyped:'Overhyped',weak:'Weak',watch:'Watch'}[r] || (r||''); }
+function fmtDate(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); } catch(e){return d;} }
+function toast(msg, type='') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modal').style.display !== 'none') closeModalBtn();
+});
+</script>
+</body>
+</html>
