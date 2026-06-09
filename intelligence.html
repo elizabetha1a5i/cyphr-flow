@@ -401,6 +401,26 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
         <div class="modal-label">Why it matters</div>
         <div class="modal-text" id="m-why"></div>
       </div>
+      <div class="modal-section" id="m-who-section" style="display:none">
+        <div class="modal-label">Who it is for</div>
+        <div class="modal-text" id="m-who"></div>
+      </div>
+      <div class="modal-section" id="m-problem-section" style="display:none">
+        <div class="modal-label">Problem it solves</div>
+        <div class="modal-text" id="m-problem"></div>
+      </div>
+      <div class="modal-section" id="m-tech-section" style="display:none">
+        <div class="modal-label">Technology involved</div>
+        <div class="modal-text" id="m-tech"></div>
+      </div>
+      <div class="modal-section" id="m-clever-section" style="display:none">
+        <div class="modal-label">What is clever</div>
+        <div class="modal-text" id="m-clever"></div>
+      </div>
+      <div class="modal-section" id="m-weak-section" style="display:none">
+        <div class="modal-label">What feels weak or overhyped</div>
+        <div class="modal-text" id="m-weak"></div>
+      </div>
       <div class="modal-section" id="m-blarney-section" style="display:none">
         <div class="modal-label">Blarney relevance</div>
         <div class="modal-text" id="m-blarney"></div>
@@ -444,7 +464,13 @@ const MODEL_MAIN      = 'gemini-2.5-flash';
 const MODEL_QA        = 'gemini-2.5-flash';
 
 const DEFAULT_TOPICS  = ['Samsung Blarney AI retail', 'HP AI', 'Weber Ranch AI chatbot', 'EE AI', 'John Lewis AI', 'retail AI agents', 'AEO answer engine optimisation', 'conversational commerce AI'];
-const DEFAULT_SOURCES = ['retailgazette.co.uk', 'thegrocer.co.uk', 'techcrunch.com', 'wired.com'];
+const DEFAULT_SOURCES = [
+  'retailgazette.co.uk', 'thegrocer.co.uk', 'techcrunch.com', 'wired.com',
+  'anthropic.com/news', 'openai.com/blog', 'deepmind.google/discover/blog',
+  'ai.meta.com/blog', 'huggingface.co/blog',
+  'bensbites.com', 'aioptimist.org', 'marketingaiinstitute.com/newsletter',
+  'substack.com/@declandunn'
+];
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let stories      = [];
@@ -663,6 +689,11 @@ Return ONLY a valid JSON object with no markdown, no backticks, no preamble:
       "date": "YYYY-MM-DD",
       "whatHappened": "2-3 sentences on what happened",
       "whyItMatters": "2-3 sentences on commercial significance",
+      "whoIsItFor": "consumer|colleague|brand|retailer|platform (pick the most relevant one)",
+      "problemSolved": "1-2 sentences on the specific problem this solves",
+      "technologyInvolved": "Brief note on what technology seems to be involved e.g. LLM, computer vision, RAG, fine-tuned model",
+      "whatIsClever": "1-2 sentences on what is genuinely smart about this, or empty string if nothing stands out",
+      "whatIsWeak": "1-2 sentences on what feels overhyped, badly executed or missing, or empty string if nothing",
       "rating": "strong|interesting|overhyped|weak|watch",
       "tags": ["linkedin","newsletter","sales","blarney","aeo"],
       "blarney": "Relevance to retail AI agents or empty string",
@@ -935,6 +966,11 @@ function openStory(id) {
     showEl('m-qa-wrap', false);
   }
 
+  showConditional('m-who-section', 'm-who', s.whoIsItFor);
+  showConditional('m-problem-section', 'm-problem', s.problemSolved);
+  showConditional('m-tech-section', 'm-tech', s.technologyInvolved);
+  showConditional('m-clever-section', 'm-clever', s.whatIsClever);
+  showConditional('m-weak-section', 'm-weak', s.whatIsWeak);
   showConditional('m-blarney-section', 'm-blarney', s.blarney);
   showConditional('m-aeo-section', 'm-aeo', s.aeo);
   showConditional('m-sales-section', 'm-sales', s.salesAngle);
