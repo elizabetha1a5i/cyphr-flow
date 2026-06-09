@@ -158,6 +158,11 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 .copy-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; font-size: 11px; cursor: pointer; color: var(--ink3); font-family: var(--sans); transition: all 0.15s; }
 .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ── tooltip ── */
+.tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tooltip-wrap .tooltip { position: fixed; background: var(--ink); color: #fff; font-size: 11px; line-height: 1.5; padding: 10px 14px; border-radius: var(--radius); width: 240px; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 9999; font-family: var(--sans); font-weight: 400; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+.tooltip-wrap:hover .tooltip { opacity: 1; }
+
 /* ── source limited notice ── */
 .source-limited { font-size: 11px; color: var(--ink3); font-style: italic; margin-top: 6px; }
 
@@ -238,7 +243,23 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
             <span>🎯</span> Search Brief
             <span style="font-size:11px;color:var(--ink3);font-weight:400;font-family:var(--mono)" id="brief-summary"></span>
           </div>
-          <span class="brief-toggle" id="brief-toggle-icon">▼</span>
+          <div style="display:flex;align-items:center;gap:10px" onclick="event.stopPropagation()">
+            <div class="tooltip-wrap" onmouseenter="positionTooltip(event,this)" onmousemove="positionTooltip(event,this)">
+              <div style="display:flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--border);border-radius:20px;padding:4px 10px">
+                <span style="font-size:11px;font-family:var(--mono);color:var(--ink3)" id="mode-label">Knowledge mode</span>
+                <div id="mode-toggle" onclick="toggleMode()" style="width:32px;height:18px;border-radius:9px;background:var(--border2);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0">
+                  <div id="mode-knob" style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>
+                </div>
+              </div>
+              <div class="tooltip">
+                <strong style="display:block;margin-bottom:4px">Knowledge mode (free)</strong>
+                Uses Gemini's training data. Works now, no billing needed. Stories are real but may not be from this exact week — verify source links before sharing.<br><br>
+                <strong style="display:block;margin-bottom:4px">Live search (billing required)</strong>
+                Pulls live news from the web via Google Search. Always this week's stories with real verified sources. Enable billing on Google AI Studio then toggle on.
+              </div>
+            </div>
+            <span class="brief-toggle" id="brief-toggle-icon">▼</span>
+          </div>
         </div>
         <div class="brief-body" id="brief-body">
           <div class="brief-cols">
@@ -260,6 +281,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
                 <button class="btn btn-sm" onclick="addSource()">Add</button>
               </div>
               <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5">Gemini will read these pages directly where possible. Paywalled or JS-heavy sites may return limited content.</div>
+              <div id="sources-hint" style="display:none;font-size:11px;color:var(--accent);margin-top:6px;line-height:1.5">⚡ Live search active — requires Google AI billing enabled on your project.</div>
             </div>
           </div>
         </div>
@@ -415,6 +437,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY     = 'cyphr_intelligence_v3';
 const BRIEF_STORE     = 'cyphr_intel_brief';
+const MODE_STORE      = 'cyphr_intel_mode'; // 'knowledge' or 'live'
 // ⚠️ API key lives in Cloudflare Worker — update WORKER_URL to your Worker domain
 const WORKER_URL      = 'https://cyphr-proxy.elizabeth-537.workers.dev/gemini';
 const MODEL_MAIN      = 'gemini-2.0-flash';
@@ -431,10 +454,12 @@ let briefOpen    = true;
 let activeStory  = null;
 let running      = false;
 let brief        = { topics: [...DEFAULT_TOPICS], sources: [...DEFAULT_SOURCES] };
+let searchMode   = 'knowledge'; // 'knowledge' or 'live'
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadBrief();
+  loadMode();
   loadData();
   renderBrief();
   renderDigest();
@@ -456,6 +481,25 @@ function loadBrief() {
 function saveBrief() {
   localStorage.setItem(BRIEF_STORE, JSON.stringify(brief));
   renderBrief();
+}
+function loadMode() {
+  searchMode = localStorage.getItem(MODE_STORE) || 'knowledge';
+  renderMode();
+}
+function toggleMode() {
+  searchMode = searchMode === 'knowledge' ? 'live' : 'knowledge';
+  localStorage.setItem(MODE_STORE, searchMode);
+  renderMode();
+}
+function renderMode() {
+  const isLive = searchMode === 'live';
+  document.getElementById('mode-label').textContent = isLive ? 'Live search' : 'Knowledge mode';
+  document.getElementById('mode-label').style.color = isLive ? 'var(--accent)' : 'var(--ink3)';
+  document.getElementById('mode-toggle').style.background = isLive ? 'var(--accent)' : 'var(--border2)';
+  document.getElementById('mode-knob').style.transform = isLive ? 'translateX(14px)' : 'translateX(0)';
+  // Show/hide sources panel hint
+  const hint = document.getElementById('sources-hint');
+  if (hint) hint.style.display = isLive ? 'block' : 'none';
 }
 function toggleBrief() {
   briefOpen = !briefOpen;
@@ -537,8 +581,8 @@ async function gemini(prompt, options = {}) {
     generationConfig: { temperature: options.temperature || 0.3, maxOutputTokens: options.maxTokens || 8192 }
   };
 
-  // Add Google Search grounding
-  if (options.search !== false) {
+  // Add Google Search grounding only in live mode
+  if (options.search === true && searchMode === 'live') {
     body.tools = [{ googleSearch: {} }];
   }
 
@@ -590,6 +634,7 @@ Do not add any preamble. Just the summary or CONTENT_LIMITED.`;
 function buildMainPrompt(weekStr, sourceSummaries) {
   const topicsStr = brief.topics.join(', ');
   const sourcesStr = brief.sources.join(', ');
+  const isLive = searchMode === 'live';
 
   let sourceContext = '';
   if (sourceSummaries.length > 0) {
@@ -597,11 +642,13 @@ function buildMainPrompt(weekStr, sourceSummaries) {
       sourceSummaries.map(s => `[${s.url}]: ${s.summary || '(limited content available)'}`).join('\n');
   }
 
+  const searchInstruction = isLive
+    ? `Use Google Search to find the 5 most significant AI news stories from the past 7 days relevant to these topics: ${topicsStr}\n\nPrioritise stories from these sources where possible: ${sourcesStr}`
+    : `Using your training knowledge, identify 5 significant AI developments or news stories relevant to these topics: ${topicsStr}\n\nBe clear and honest about what you know. Use real company names, real product launches, and real announcements from your training data. Do not invent stories. If a story is from your training data rather than this specific week, that is fine — focus on what is genuinely relevant and interesting. Flag in the sourceLabel field if the story is from your training knowledge rather than a live source.`;
+
   return `You are an AI intelligence analyst for Cyphr Studio, a UK digital AI agency working with Samsung (Blarney AI agent for John Lewis), HP, Weber Ranch Vodka (Tex chatbot), and EE.
 
-Use Google Search to find the 5 most significant AI news stories from the past 7 days relevant to these topics: ${topicsStr}
-
-Prioritise stories from these sources where possible: ${sourcesStr}
+${searchInstruction}
 ${sourceContext}
 
 Assess each story through what Cyphr sells: AI agents for retail, conversational AI, AEO/GEO (Answer Engine Optimisation), and AI enablement consulting.
@@ -679,12 +726,14 @@ async function runDigest() {
   try {
     const weekStr = getWeekStr();
 
-    // Step 1: fetch source content
-    setProgress(10, 'Reading tracked sources...', 'sources');
+    // Step 1: fetch source content (live mode only)
+    setProgress(10, searchMode === 'live' ? 'Reading tracked sources...' : 'Preparing brief...', 'sources');
     const sourceSummaries = [];
-    for (const src of brief.sources.slice(0, 4)) { // cap at 4 to keep it fast
-      const result = await tryFetchSource(src);
-      sourceSummaries.push({ url: src, ...result });
+    if (searchMode === 'live') {
+      for (const src of brief.sources.slice(0, 4)) {
+        const result = await tryFetchSource(src);
+        sourceSummaries.push({ url: src, ...result });
+      }
     }
 
     // Step 2: main Gemini search + generate
@@ -934,6 +983,24 @@ function toast(msg, type='') {
   t.textContent = msg;
   c.appendChild(t);
   setTimeout(() => t.remove(), 3500);
+}
+
+function positionTooltip(e, wrap) {
+  const tip = wrap.querySelector('.tooltip');
+  if (!tip) return;
+  const tipW = 240;
+  const tipH = tip.offsetHeight || 160;
+  const margin = 12;
+  const x = e.clientX;
+  const y = e.clientY;
+  // Flip below if not enough room above
+  let top = y - tipH - 14;
+  if (top < margin) top = y + 20;
+  let left = x - tipW / 2;
+  if (left < margin) left = margin;
+  if (left + tipW > window.innerWidth - margin) left = window.innerWidth - tipW - margin;
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
 }
 
 document.addEventListener('keydown', e => {
