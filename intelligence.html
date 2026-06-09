@@ -586,15 +586,6 @@ async function gemini(prompt, options = {}) {
     body.tools = [{ googleSearch: {} }];
   }
 
-  // Add URL context parts
-  if (options.urls && options.urls.length > 0) {
-    body.contents[0].parts = [
-      ...options.urls.map(u => ({ fileData: { mimeType: 'text/html', fileUri: u } })).filter(() => false), // placeholder
-      { text: prompt }
-    ];
-    // Use inline fetch approach via grounding hint instead
-  }
-
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -603,7 +594,9 @@ async function gemini(prompt, options = {}) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    const msg = err?.error?.message || err?.error || JSON.stringify(err) || `HTTP ${res.status}`;
+    console.error('Gemini error response:', JSON.stringify(err));
+    throw new Error(msg);
   }
 
   const data = await res.json();
