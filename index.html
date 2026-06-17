@@ -249,6 +249,12 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 }]},{},[21])(21)});
 </script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 </head>
 <body>
 
@@ -1197,41 +1203,31 @@ function readFileText(file) {
       reader.readAsText(file);
 
     } else if (file.name.match(/\.pdf$/i)) {
-      reader.onload = (e) => {
+      // Use PDF.js to properly decompress and extract text — no binary garbage
+      reader.onload = async (e) => {
         try {
-          const bytes = new Uint8Array(e.target.result);
-          let raw = '';
-          for (let i = 0; i < bytes.length; i++) {
-            const b = bytes[i];
-            if (b >= 32 && b < 127) raw += String.fromCharCode(b);
-            else if (b === 10 || b === 13) raw += '\n';
+          if (!window['pdfjsLib']) {
+            reject(new Error('PDF reader failed to load — check your connection and try again'));
+            return;
           }
-          // Try BT/ET text blocks
-          const chunks = [];
-          const btBlocks = raw.match(/BT[\s\S]*?ET/g) || [];
-          for (const block of btBlocks) {
-            const strings = block.match(/\(([^)]{1,200})\)/g) || [];
-            for (const s of strings) {
-              const t = s.slice(1,-1).replace(/\\n/g,'\n').replace(/\\t/g,' ').replace(/\\\\/g,'\\').trim();
-              if (t.length > 1 && /[a-zA-Z]{2,}/.test(t)) chunks.push(t);
-            }
+          const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+          const pageTexts = [];
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            const pageText = content.items.map(item => item.str).join(' ');
+            pageTexts.push(pageText);
           }
-          // Fallback
-          if (!chunks.length) {
-            const fallback = raw.match(/\(([^)]{3,150})\)/g) || [];
-            for (const s of fallback) {
-              const t = s.slice(1,-1).trim();
-              if (/[a-zA-Z]{3,}/.test(t) && !/^[\d\s.]+$/.test(t)) chunks.push(t);
-            }
-          }
-          const text = chunks.join(' ').replace(/\s{3,}/g, '\n').substring(0, 12000);
-          // If we got very little text it's probably a scanned/image PDF
+          const text = pageTexts.join('\n\n').trim().substring(0, 12000);
+          // If we got very little text it's probably a scanned/image PDF with no text layer
           if (!text || text.length < 50) {
             resolve('[PDF appears to be image-based — please paste the transcript text manually in the box below]');
           } else {
             resolve(text);
           }
-        } catch(err) { reject(err); }
+        } catch(err) {
+          reject(err);
+        }
       };
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
