@@ -679,7 +679,7 @@ async function testSlack() {
   toast('Test sent — check Slack', 'success');
 }
 
-// ── CLAUDE API ─────────────────────────────────────────────────────────────
+// ── CLAUDE API (used only when the Cyphr Process Automation skill specifically calls for Claude) ──
 async function callClaude(prompt) {
   const proxyUrl = settings.proxyUrl;
   if (!proxyUrl) return 'AI generation unavailable — contact your admin.';
@@ -692,6 +692,32 @@ async function callClaude(prompt) {
     const d = await res.json();
     if (d.error) return `Error: ${d.error.message}`;
     return d.content?.map(b => b.text || '').join('') || 'No response.';
+  } catch(e) {
+    return `Error: ${e.message}`;
+  }
+}
+
+// ── GEMINI API (default for document generation in this app) ──────────────
+async function callGemini(prompt, options = {}) {
+  const geminiUrl = (settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev') + '/gemini';
+  const model = options.model || 'gemini-2.5-flash';
+  try {
+    const res = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: options.temperature ?? 0.4, maxOutputTokens: options.maxTokens || 1000 }
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || err?.error || `HTTP ${res.status}`;
+      return `Error: ${msg}`;
+    }
+    const d = await res.json();
+    return d?.candidates?.[0]?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || 'No response.';
   } catch(e) {
     return `Error: ${e.message}`;
   }
@@ -1304,7 +1330,7 @@ ${truncated ? '\nNOTE: Input was truncated to 40,000 characters. Extract from wh
 
 Text:
 ${textToUse}`;
-  const out = await callClaude(prompt);
+  const out = await callGemini(prompt);
   try {
     const clean = out.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean);
@@ -1344,7 +1370,7 @@ async function preGen(stage) {
   const p = gp();
   let out;
   if (stage === 'brief') {
-    out = await callClaudeBackground(`You are a senior consultant at Cyphr. Write a structured response to brief.
+    out = await callGeminiBackground(`You are a senior consultant at Cyphr. Write a structured response to brief.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Requirements: ${p.requirements}
 Background: ${p.bgNotes}
@@ -1352,14 +1378,14 @@ Cover: client context, the problem, the opportunity, what success looks like, ke
     saveProjectData({ briefOutput: out });
   } else if (stage === 'estimate') {
     const fresh = gp();
-    out = await callClaudeBackground(`You are a project director at Cyphr. Create a concise resource plan.
+    out = await callGeminiBackground(`You are a project director at Cyphr. Create a concise resource plan.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`);
     saveProjectData({ estimateOutput: out });
   } else if (stage === 'proposal') {
     const fresh = gp();
-    out = await callClaudeBackground(`You are a senior consultant at Cyphr. Write proposal copy.
+    out = await callGeminiBackground(`You are a senior consultant at Cyphr. Write proposal copy.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Resource plan: ${fresh.estimateOutput}
@@ -1367,7 +1393,7 @@ Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr.
     saveProjectData({ proposalOutput: out });
   } else if (stage === 'sow') {
     const fresh = gp();
-    out = await callClaudeBackground(`You are a project director at Cyphr. Write a Statement of Work.
+    out = await callGeminiBackground(`You are a project director at Cyphr. Write a Statement of Work.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Resource plan: ${fresh.estimateOutput}
@@ -1378,19 +1404,19 @@ Include: scope, deliverables, timeline, commercial terms (fee, payment milestone
 }
 
 // Background Claude call — doesn't touch busy flag or UI elements
-async function callClaudeBackground(prompt) {
-  const proxyUrl = settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev';
-  const res = await fetch(proxyUrl, {
+async function callGeminiBackground(prompt) {
+  const geminiUrl = (settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev') + '/gemini';
+  const res = await fetch(geminiUrl, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }]
+      model: 'gemini-2.5-flash',
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 1000 }
     })
   });
   const data = await res.json();
-  return data.content?.[0]?.text || '';
+  return data?.candidates?.[0]?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || '';
 }
 
 function saveFiles() { saveProjectData({ rawText: sv('f-raw') }); }
@@ -1464,7 +1490,7 @@ async function genBrief() {
   if (busy) return; busy=true;
   const p=gp();
   if($('brief-load'))$('brief-load').style.display='flex'; if($('btn-brief'))$('btn-brief').disabled=true; if($('brief-out'))$('brief-out').textContent='';
-  const out = await callClaude(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
+  const out = await callGemini(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
   saveProjectData({ briefOutput: out });
   if($('brief-out'))$('brief-out').value=out;
   if($('brief-load'))$('brief-load').style.display='none';
@@ -1582,7 +1608,7 @@ async function genEstimate() {
   saveProjectData({rate,days,roles});
   $('est-load').style.display='flex'; $('btn-est').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
-  const out = await callClaude(`You are a project director at Cyphr. Create a concise resource plan.
+  const out = await callGemini(`You are a project director at Cyphr. Create a concise resource plan.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Day rate: £${rate} | Total days: ${days} | Roles: ${roles}
 Brief: ${p.briefOutput}
@@ -1620,7 +1646,7 @@ async function genProposal() {
   const p=gp(); const notes=sv('f-pnotes'); saveProjectData({proposalNotes:notes});
   $('prop-load').style.display='flex'; $('btn-prop').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
-  const out = await callClaude(`You are a senior consultant at Cyphr. Write proposal copy.
+  const out = await callGemini(`You are a senior consultant at Cyphr. Write proposal copy.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Brief: ${p.briefOutput}
 ${skillCtx}
@@ -1657,7 +1683,7 @@ async function genSOW() {
   if (busy) return; busy=true;
   const p=gp();
   $('sow-load').style.display='flex'; $('btn-sow').disabled=true;
-  const out = await callClaude(`You are a project director at Cyphr. Write a Statement of Work.
+  const out = await callGemini(`You are a project director at Cyphr. Write a Statement of Work.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Brief: ${p.briefOutput}
 Resource plan: ${p.estimateOutput}
@@ -1820,7 +1846,7 @@ Bullet points only. The 3-4 most important things Cyphr needs to do next, in pri
 Keep the whole thing under 350 words. No waffle.`;
 
   try {
-    const analysis = await callClaude(prompt);
+    const analysis = await callGemini(prompt);
     saveProjectData({ projectIntelligence: analysis });
 
     // Re-render the setup stage to show the analysis
