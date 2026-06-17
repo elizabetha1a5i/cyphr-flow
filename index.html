@@ -1304,37 +1304,45 @@ async function extractContext() {
 
   const prompt = `You are extracting project context for a consulting brief. The input may be messy — transcripts, emails, research docs, or multiple topics in one paste.
 
-STEP 1: Identify the PRIMARY project or opportunity being discussed. If there are multiple topics, pick the one that is furthest along or most actionable as a paid engagement.
+IMPORTANT: Do not discard information to force everything into one narrow project. Real conversations often cover multiple related opportunities, stakeholders, and routes forward (e.g. several possible funding paths, several use cases for the same technology, multiple workstreams with the same client). Capture that full picture rather than picking just one thread and dropping the rest.
 
-STEP 2: Extract context for that primary project and return ONLY valid JSON with no markdown, no preamble, no explanation.
+STEP 1: Identify the PRIMARY project or opportunity — the one that is furthest along, most actionable, or most central to the conversation. This becomes the main client/project/sector/budget/timeline.
+
+STEP 2: Capture every other significant opportunity, idea, or workstream mentioned, even briefly, as a separate entry — do not lose them.
+
+STEP 3: Return ONLY valid JSON with no markdown, no preamble, no explanation, using the exact structure below.
 
 For each field also return a short source note (max 12 words) explaining where you found it.
 
 Return this exact structure:
-{"clientName":"","clientNameSource":"","projectName":"","projectNameSource":"","sector":"","sectorSource":"","budget":"","budgetSource":"","timeline":"","timelineSource":"","requirements":"","requirementsSource":"","bgNotes":"","bgNotesSource":""}
+{"clientName":"","clientNameSource":"","projectName":"","projectNameSource":"","sector":"","sectorSource":"","budget":"","budgetSource":"","timeline":"","timelineSource":"","requirements":"","requirementsSource":"","bgNotes":"","bgNotesSource":"","stakeholders":"","stakeholdersSource":"","otherOpportunities":"","otherOpportunitiesSource":"","risksAndOpenQuestions":"","risksAndOpenQuestionsSource":"","nextSteps":"","nextStepsSource":""}
 
 Rules:
-- clientName: the external client or partner organisation (not Cyphr)
-- projectName: a short descriptive name for the engagement
+- clientName: the external client or partner organisation(s) involved (not Cyphr). List more than one if multiple organisations are genuinely part of the picture (e.g. "Cardiff University (Kavita Vedhara) / Public Health Wales / UKHSA").
+- projectName: a short descriptive name for the primary engagement
 - sector: the actual industry domain of the CLIENT and PROJECT — e.g. "Health / eLearning", "Consumer Electronics", "Field Marketing", "Pharma / Clinical Trials". NEVER default to a previous project's sector. If the project involves NHS, healthcare, medicine, vaccination, clinical trials, wellbeing — sector must reflect that. If it involves Samsung, phones, retail tech — sector must reflect that.
-- budget: best estimate as a number only, no currency symbol. Extract even if mentioned in passing (e.g. "£80k envelope" → 80000, "up to 100k" → 100000). If genuinely unknown use 0.
-- timeline: key deadline or duration (e.g. "6 months from April 2026", "Launch July 2026")
-- requirements: 4-6 bullet points covering key goals, deliverables, and constraints. Be specific — use names, numbers, technologies from the text.
-- bgNotes: key stakeholders, funding routes, risks, open questions, and any competing projects mentioned
+- budget: best estimate as a number only, no currency symbol. Extract even if mentioned in passing (e.g. "£80k envelope" → 80000, "up to 100k" → 100000). If multiple budget figures are mentioned for different routes, note the most concrete one here and list the others in otherOpportunities. If genuinely unknown use 0.
+- timeline: key deadline or duration for the primary project (e.g. "6 months from April 2026", "Launch July 2026")
+- requirements: 6-10 bullet points covering key goals, deliverables, technical approach, and constraints for the primary project. Be specific — use names, numbers, technologies, and methods mentioned in the text. Do not compress multi-paragraph detail into one vague line — preserve specifics.
+- bgNotes: detailed background — why this matters, the problem being solved, relevant prior work, evidence or credentials mentioned, and context that explains the opportunity. This should be substantial, not a one-line summary.
+- stakeholders: every named person and their role/organisation mentioned across the whole input, with a brief note on their involvement (e.g. "Kavita Vedhara — Professor of Health Psychology, Cardiff University, leads the research design")
+- otherOpportunities: every other distinct opportunity, idea, funding route, or workstream mentioned besides the primary one — described in enough detail to act on later, not just a one-word label. If there are none, say so explicitly rather than leaving blank.
+- risksAndOpenQuestions: anything flagged as uncertain, a risk, a dependency, or an open question across the whole conversation (e.g. IP ownership, funding decisions pending, technical feasibility questions)
+- nextSteps: concrete next actions and who owns them, as discussed
 - source fields: very short, specific — e.g. "Kavita at 14:52 in transcript", "email from Rob 26 May"
 ${truncated ? '\nNOTE: Input was truncated to 40,000 characters. Extract from what is available.' : ''}
 
 Text:
 ${textToUse}`;
-  const out = await callGemini(prompt);
+  const out = await callGemini(prompt, { maxTokens: 8000 });
   try {
     const clean = out.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean);
-    const fields = {clientName:parsed.clientName,projectName:parsed.projectName,sector:parsed.sector,budget:parsed.budget,timeline:parsed.timeline,requirements:parsed.requirements,bgNotes:parsed.bgNotes};
-    const sources = {clientNameSource:parsed.clientNameSource,projectNameSource:parsed.projectNameSource,sectorSource:parsed.sectorSource,budgetSource:parsed.budgetSource,timelineSource:parsed.timelineSource,requirementsSource:parsed.requirementsSource,bgNotesSource:parsed.bgNotesSource};
+    const fields = {clientName:parsed.clientName,projectName:parsed.projectName,sector:parsed.sector,budget:parsed.budget,timeline:parsed.timeline,requirements:parsed.requirements,bgNotes:parsed.bgNotes,stakeholders:parsed.stakeholders,otherOpportunities:parsed.otherOpportunities,risksAndOpenQuestions:parsed.risksAndOpenQuestions,nextSteps:parsed.nextSteps};
+    const sources = {clientNameSource:parsed.clientNameSource,projectNameSource:parsed.projectNameSource,sectorSource:parsed.sectorSource,budgetSource:parsed.budgetSource,timelineSource:parsed.timelineSource,requirementsSource:parsed.requirementsSource,bgNotesSource:parsed.bgNotesSource,stakeholdersSource:parsed.stakeholdersSource,otherOpportunitiesSource:parsed.otherOpportunitiesSource,risksAndOpenQuestionsSource:parsed.risksAndOpenQuestionsSource,nextStepsSource:parsed.nextStepsSource};
     saveProjectData({...fields,...sources});
     const p = gp();
-    const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}`;
+    const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}\n\nStakeholders:\n${p.stakeholders||'—'}\n\nOther opportunities mentioned:\n${p.otherOpportunities||'—'}\n\nRisks & open questions:\n${p.risksAndOpenQuestions||'—'}\n\nNext steps:\n${p.nextSteps||'—'}`;
     saveProjectData({ extractedContext: summary });
     $('ext-out').textContent = summary; $('ext-out').style.display='block';
     toast('Context extracted ✓ — building your project pack…', 'success');
