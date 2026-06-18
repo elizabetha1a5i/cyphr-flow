@@ -3,166 +3,185 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tex QA Dashboard — Weber Ranch</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="expires" content="0" />
+<title>Tex QA Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --wr-blue:       #1A72BC;
-    --wr-blue-dark:  #145A96;
-    --wr-blue-pale:  #E8F3FC;
-    --wr-blue-soft:  #D0E8F7;
-    --text:          #0F1F2E;
-    --text-mid:      #3D5166;
-    --text-light:    #7A92A8;
-    --border:        #D5E3EE;
-    --bg:            #F4F8FC;
-    --white:         #FFFFFF;
-    --green:         #16A34A;
-    --green-pale:    #DCFCE7;
-    --amber:         #B45309;
-    --amber-pale:    #FEF3C7;
-    --amber-border:  #FDE68A;
-    --red:           #B91C1C;
-    --red-pale:      #FEE2E2;
+    --blue:        #258ed8;
+    --blue-light:  #e8f4fd;
+    --blue-dark:   #080331;
+    --pink:        #dd23bb;
+    --bg:          #f5f6fa;
+    --surface:     #ffffff;
+    --text:        #0f1e2d;
+    --text-mid:    #5a6478;
+    --text-light:  #9ea3b8;
+    --border:      #e8eaf2;
+    --green:       #137333;
+    --green-bg:    #e6f4ea;
+    --amber:       #7a5200;
+    --amber-bg:    #fef9e7;
+    --amber-border:#fde68a;
+    --red:         #b91c1c;
+    --red-bg:      #fef2f2;
+    --shadow:      0 1px 3px rgba(15,30,45,.06), 0 4px 16px rgba(15,30,45,.05);
+    --radius:      12px;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+  body { font-family:'Montserrat',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased; }
 
-  /* Header */
-  .header { background:var(--wr-blue); padding:0 48px; display:flex; align-items:center; justify-content:space-between; height:64px; }
-  .header-left { display:flex; align-items:center; gap:14px; }
-  .header-logo { font-size:20px; font-weight:800; color:#fff; letter-spacing:-.5px; }
-  .header-logo span { opacity:.55; font-weight:400; font-size:13px; margin-left:4px; vertical-align:middle; }
+  /* ── Header ── */
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:18px 40px 14px; }
+  .header-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+  .header-title { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-.4px; }
+  .header-right { display:flex; align-items:center; gap:14px; }
+  .header-date { font-size:13px; color:var(--text-light); font-weight:500; text-align:right; }
+  .header-date strong { display:block; color:var(--text); font-weight:700; font-size:14px; }
   .header-tags { display:flex; gap:6px; flex-wrap:wrap; }
-  .badge { font-size:10px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; padding:3px 9px; border-radius:20px; }
-  .badge.prod      { background:var(--green-pale);  color:var(--green); }
-  .badge.staging   { background:var(--wr-blue-pale); color:var(--wr-blue-dark); }
-  .badge.criteria  { background:#EDE9FE; color:#5B21B6; }
-  .badge.custom    { background:var(--amber-pale);  color:var(--amber); }
-  .badge.feedback  { background:#FCE7F3; color:#BE185D; }
-  .header-right { text-align:right; font-size:12px; color:rgba(255,255,255,.7); line-height:1.7; }
-  .header-right strong { color:#fff; font-weight:600; }
+  .badge { font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; padding:4px 12px; border-radius:20px; }
+  .badge.staging    { background:#dbeafe; color:#1e40af; }
+  .badge.production { background:var(--green-bg); color:var(--green); }
+  .badge.criteria   { background:#ede9fe; color:#5b21b6; }
+  .badge.custom     { background:var(--amber-bg); color:var(--amber); }
+  .badge.feedback   { background:#fce7f3; color:#9d174d; }
+  .badge.week       { background:var(--green-bg); color:var(--green); }
 
-  /* Toolbar */
-  .toolbar { background:var(--wr-blue-dark); padding:7px 48px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .toolbar-btn { border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.1); border-radius:6px; padding:6px 13px; font-size:11px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; color:rgba(255,255,255,.85); transition:background .15s; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
-  .toolbar-btn:hover { background:rgba(255,255,255,.2); }
-  .toolbar-btn.primary { background:#fff; color:var(--wr-blue-dark); border-color:#fff; font-weight:600; }
+  /* ── Toolbar ── */
+  .toolbar { background:var(--surface); border-bottom:1px solid var(--border); padding:8px 40px; display:flex; gap:8px; align-items:center; }
+  .toolbar-btn { border:1.5px solid var(--border); background:var(--bg); border-radius:8px; padding:6px 16px; font-size:11px; font-weight:600; cursor:pointer; font-family:'Montserrat',sans-serif; color:var(--text-mid); letter-spacing:.3px; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .toolbar-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-light); }
+  .toolbar-btn.primary { background:var(--blue); color:#fff; border-color:var(--blue); }
+  .toolbar-btn.primary:hover { background:#1a7bbf; border-color:#1a7bbf; }
+  .toolbar-btn.accent { background:var(--pink); color:#fff; border-color:var(--pink); }
+  .toolbar-btn.accent:hover { background:#be1ea0; border-color:#be1ea0; }
 
-  /* Nav */
-  .nav-bar { background:var(--white); border-bottom:1px solid var(--border); padding:0 48px; display:flex; align-items:center; }
-  .tab-btn { padding:11px 18px; font-size:13px; font-weight:500; color:var(--text-light); border:none; border-bottom:2px solid transparent; background:none; cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; white-space:nowrap; }
+  /* ── Nav bar ── */
+  .nav-bar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 40px; display:flex; align-items:center; gap:4px; }
+  .tab-btn { padding:13px 18px; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-light); border:none; border-bottom:2px solid transparent; background:none; cursor:pointer; font-family:'Montserrat',sans-serif; transition:all .15s; }
   .tab-btn:hover { color:var(--text-mid); }
-  .tab-btn.active { color:var(--wr-blue); border-bottom-color:var(--wr-blue); font-weight:600; }
-  .nav-div { width:1px; height:20px; background:var(--border); margin:0 10px; }
-  .type-label { font-size:11px; font-weight:500; color:var(--text-light); padding:0 6px 0 4px; white-space:nowrap; }
-  .pill-btn { padding:4px 11px; border-radius:20px; font-size:11px; font-weight:500; border:1px solid var(--border); background:var(--bg); color:var(--text-mid); cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; margin:8px 2px; }
-  .pill-btn:hover { border-color:var(--wr-blue); color:var(--wr-blue); }
-  .pill-btn.active { background:var(--wr-blue); border-color:var(--wr-blue); color:#fff; font-weight:600; }
+  .tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+  .nav-sep { width:1px; height:18px; background:var(--border); margin:0 6px; }
+  .type-lbl { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-light); margin:0 4px 0 8px; }
+  .pill-btn { padding:5px 14px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; border:1.5px solid var(--border); background:transparent; color:var(--text-light); cursor:pointer; font-family:'Montserrat',sans-serif; transition:all .15s; margin:8px 2px; }
+  .pill-btn:hover { border-color:var(--blue); color:var(--blue); }
+  .pill-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
 
-  /* Filter bar */
-  .filter-bar { background:var(--bg); border-bottom:1px solid var(--border); padding:8px 48px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .filter-bar label { font-size:11px; font-weight:500; color:var(--text-light); white-space:nowrap; }
-  .filter-bar select, .filter-bar input[type="date"] { border:1px solid var(--border); border-radius:6px; padding:5px 9px; font-size:12px; font-family:'Inter',sans-serif; background:var(--white); color:var(--text); outline:none; cursor:pointer; }
-  .filter-bar select:focus, .filter-bar input[type="date"]:focus { border-color:var(--wr-blue); }
-  .filter-group { display:flex; align-items:center; gap:6px; }
-  .filter-sep { color:var(--border); }
+  /* ── Filter bar ── */
+  .filter-bar { background:var(--bg); border-bottom:1px solid var(--border); padding:8px 40px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+  .filter-group { display:flex; align-items:center; gap:8px; }
+  .filter-bar label { font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; color:var(--text-light); }
+  .filter-bar select, .filter-bar input[type="date"] { border:1.5px solid var(--border); border-radius:8px; padding:5px 12px; font-size:12px; font-family:'Montserrat',sans-serif; background:var(--surface); color:var(--text); outline:none; font-weight:500; }
+  .filter-bar select:focus, .filter-bar input[type="date"]:focus { border-color:var(--blue); }
 
-  /* Main */
-  .main { max-width:1080px; margin:0 auto; padding:28px 48px; }
-  .section-title { font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--text-light); margin-bottom:10px; }
+  /* ── Main layout ── */
+  .main { max-width:900px; margin:0 auto; padding:32px 24px; }
+  .section-label { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--text-light); margin-bottom:10px; }
 
-  /* Warning banner */
-  .warn-banner { background:#FFFBEB; border:1px solid var(--amber-border); border-radius:8px; padding:11px 15px; margin-bottom:18px; font-size:12px; color:#92400E; line-height:1.55; }
-  .warn-banner strong { font-weight:600; }
+  /* ── Warning banner ── */
+  .warn-banner { background:var(--amber-bg); border:1px solid var(--amber-border); border-radius:var(--radius); padding:14px 18px; margin-bottom:24px; font-size:12.5px; color:var(--amber); line-height:1.65; font-weight:500; display:flex; gap:10px; align-items:flex-start; }
+  .warn-banner strong { font-weight:700; }
 
-  /* Summary */
-  .summary-card { background:var(--wr-blue-pale); border:1px solid var(--wr-blue-soft); border-radius:10px; padding:13px 18px; margin-bottom:18px; font-size:12px; color:var(--text-mid); line-height:1.65; }
-  .summary-card strong { color:var(--wr-blue-dark); }
+  /* ── Summary card ── */
+  .summary-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 22px; margin-bottom:28px; font-size:13px; color:var(--text-mid); line-height:1.75; box-shadow:var(--shadow); }
+  .summary-card strong { color:var(--text); font-weight:700; }
 
-  /* KPIs */
-  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
-  .kpi { background:var(--white); border-radius:10px; padding:20px; border:1px solid var(--border); }
-  .kpi-label { font-size:10px; color:var(--text-light); font-weight:600; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px; }
-  .kpi-num { font-size:36px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  .kpi-num .unit { font-size:17px; font-weight:400; color:var(--text-light); }
-  .kpi-sub { font-size:11px; }
-  .pill { display:inline-flex; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
-  .pill.green  { background:var(--green-pale);  color:var(--green); }
-  .pill.amber  { background:var(--amber-pale);  color:var(--amber); }
-  .pill.blue   { background:var(--wr-blue-pale); color:var(--wr-blue-dark); }
-  .pill.red    { background:var(--red-pale);     color:var(--red); }
+  /* ── KPI grid ── */
+  .kpi-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:28px; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px 26px; box-shadow:var(--shadow); }
+  .kpi-label { font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-light); margin-bottom:14px; }
+  .kpi-num { font-size:46px; font-weight:800; color:var(--text); line-height:1; margin-bottom:14px; letter-spacing:-2px; }
+  .kpi-num .unit { font-size:26px; font-weight:400; color:var(--text-light); letter-spacing:0; }
+  .chip { display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding:4px 12px; border-radius:20px; }
+  .chip.green  { background:var(--green-bg); color:var(--green); }
+  .chip.amber  { background:var(--amber-bg); color:var(--amber); }
+  .chip.blue   { background:var(--blue-light); color:var(--blue); }
+  .chip.red    { background:var(--red-bg); color:var(--red); }
 
-  /* Two-col */
-  .two-col { display:grid; grid-template-columns:1.3fr 1fr; gap:12px; margin-bottom:18px; }
-  .card { background:var(--white); border-radius:10px; border:1px solid var(--border); padding:20px; }
-  .card h3 { font-size:14px; font-weight:600; color:var(--text); margin-bottom:2px; }
-  .card-sub { font-size:12px; color:var(--text-light); margin-bottom:16px; }
+  /* ── Cards ── */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); }
+  .card h3 { font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .card-sub { font-size:12px; color:var(--text-light); margin-bottom:20px; font-weight:500; }
+  .two-col { display:grid; grid-template-columns:1.4fr 1fr; gap:12px; margin-bottom:28px; }
 
-  /* Category bars */
-  .cat-bars { display:flex; flex-direction:column; gap:10px; }
-  .cat-row { display:flex; flex-direction:column; gap:4px; }
-  .cat-label { display:flex; justify-content:space-between; font-size:12px; color:var(--text-mid); }
-  .cat-name { font-weight:500; }
-  .cat-pct  { font-weight:600; color:var(--text); }
-  .bar-track { background:#EEF3F8; border-radius:4px; height:7px; }
-  .bar-fill  { height:7px; border-radius:4px; }
-  .bar-fill.full    { background:#22C55E; }
-  .bar-fill.partial { background:#F59E0B; }
-  .bar-fill.fail    { background:#EF4444; }
+  /* ── Category bars ── */
+  .cat-bars { display:flex; flex-direction:column; gap:14px; }
+  .cat-row { display:flex; flex-direction:column; gap:6px; }
+  .cat-label { display:flex; justify-content:space-between; font-size:11px; color:var(--text-mid); font-weight:600; }
+  .cat-pct { font-weight:700; color:var(--text); }
+  .bar-track { background:var(--bg); border-radius:99px; height:7px; overflow:hidden; }
+  .bar-fill  { height:7px; border-radius:99px; transition:width .5s ease; }
+  .bar-fill.full    { background:var(--blue); }
+  .bar-fill.partial { background:#f0c040; }
+  .bar-fill.fail    { background:var(--red); }
 
-  /* Donut */
-  .donut-wrap { display:flex; align-items:center; gap:22px; }
-  .donut-legend { display:flex; flex-direction:column; gap:9px; flex:1; }
-  .legend-item { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-mid); }
-  .legend-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .legend-val { font-weight:600; color:var(--text); margin-left:auto; padding-left:12px; }
+  /* ── Donut ── */
+  .donut-wrap { display:flex; align-items:center; gap:24px; }
+  .donut-legend { display:flex; flex-direction:column; gap:12px; flex:1; }
+  .legend-item { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-mid); font-weight:500; }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .legend-val { font-weight:700; color:var(--text); margin-left:auto; }
 
-  /* Trend */
-  .trend-card { background:var(--white); border-radius:10px; border:1px solid var(--border); padding:20px; margin-bottom:18px; }
-  .trend-card h3 { font-size:14px; font-weight:600; color:var(--text); margin-bottom:2px; }
+  /* ── Trend ── */
+  .trend-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px; margin-bottom:28px; box-shadow:var(--shadow); }
   .trend-wrap { margin-top:16px; overflow-x:auto; }
 
-  /* Issue Tracker */
-  .issue-list { display:flex; flex-direction:column; gap:0; }
-  .issue-item { border:1px solid var(--border); border-radius:0; padding:13px 16px; background:var(--white); border-top:none; }
-  .issue-item:first-child { border-radius:10px 10px 0 0; border-top:1px solid var(--border); }
-  .issue-item:last-child  { border-radius:0 0 10px 10px; }
-  .issue-item:only-child  { border-radius:10px; }
-  .issue-top { display:flex; align-items:baseline; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
-  .issue-name  { font-size:13px; font-weight:500; color:var(--text); }
-  .issue-count { font-size:11px; color:var(--text-light); }
-  .issue-meta  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .issue-score { font-size:13px; font-weight:700; color:var(--text); }
-  .issue-delta { font-size:11px; font-weight:500; padding:2px 7px; border-radius:10px; }
-  .issue-delta.up   { background:var(--green-pale);  color:var(--green); }
-  .issue-delta.down { background:var(--red-pale);    color:var(--red); }
-  .issue-delta.same { background:#F3F4F6; color:#6B7280; }
-  .issue-resolved { font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--green); background:var(--green-pale); padding:2px 8px; border-radius:10px; }
-  .issue-open     { font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--amber); background:var(--amber-pale); padding:2px 8px; border-radius:10px; }
+  /* ── Issue tracker ── */
+  .issue-list { display:flex; flex-direction:column; margin-bottom:28px; border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+  .issue-header-card { background:var(--surface); border:1px solid var(--border); padding:18px 24px 14px; border-bottom:none; }
+  .issue-header-card h3 { font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .issue-header-card p  { font-size:12px; color:var(--text-light); font-weight:500; }
+  .issue-item { background:var(--surface); border:1px solid var(--border); border-top:none; padding:14px 24px; display:flex; flex-direction:column; gap:7px; }
+  .issue-item-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .issue-name  { font-size:12px; font-weight:600; color:var(--text-mid); }
+  .issue-count { font-size:11px; color:var(--text-light); font-weight:500; }
+  .issue-score { font-size:15px; font-weight:800; color:var(--text); white-space:nowrap; }
+  .issue-pct   { font-size:13px; font-weight:600; color:var(--text-mid); }
+  .issue-delta { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap; }
+  .issue-delta.up   { background:var(--blue-light); color:var(--blue); }
+  .issue-delta.down { background:var(--red-bg);     color:var(--red); }
+  .issue-delta.same { background:var(--bg); color:var(--text-light); border:1px solid var(--border); }
+  .resolved-chip { font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--green); background:var(--green-bg); padding:3px 10px; border-radius:20px; white-space:nowrap; }
+  .open-chip    { font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--amber); background:var(--amber-bg); padding:3px 10px; border-radius:20px; white-space:nowrap; }
+  .issue-date   { font-size:10px; color:var(--text-light); margin-left:auto; white-space:nowrap; }
 
-  /* Partials */
-  .partial-list { display:flex; flex-direction:column; gap:10px; }
-  .partial-item { background:#FFFBEB; border:1px solid var(--amber-border); border-left:3px solid #F59E0B; border-radius:8px; padding:12px 14px; }
-  .partial-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:5px; }
-  .partial-name    { font-size:13px; font-weight:600; color:var(--text); }
-  .partial-score   { font-size:11px; font-weight:600; color:#D97706; background:#FEF3C7; padding:2px 8px; border-radius:10px; white-space:nowrap; }
-  .partial-summary { font-size:12px; color:#6B7280; line-height:1.55; }
+  /* ── Partials ── */
+  .partial-list { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
+  .partial-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); }
+  .partial-item.overridden { border-color:var(--green); background:var(--green-bg); opacity:.85; }
+  .partial-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px; }
+  .partial-name    { font-size:13px; font-weight:700; color:var(--text); }
+  .partial-badge   { font-size:10px; font-weight:700; color:var(--amber); background:var(--amber-bg); padding:3px 10px; border-radius:20px; border:1px solid var(--amber-border); white-space:nowrap; }
+  .partial-footer  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .criteria-tag    { font-size:10px; font-weight:600; padding:3px 10px; border-radius:20px; background:var(--red-bg); color:var(--red); border:1px solid #fca5a5; white-space:nowrap; }
+  .criteria-tag.warn { background:var(--amber-bg); color:var(--amber); border-color:var(--amber-border); }
+  .link-btn        { font-size:10px; font-weight:600; color:var(--blue); text-decoration:none; padding:3px 10px; border-radius:20px; border:1px solid var(--blue-light); background:var(--blue-light); white-space:nowrap; }
+  .link-btn:hover  { background:#c7e5f7; }
+  .override-btn    { font-size:10px; font-weight:700; padding:3px 12px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--text-light); cursor:pointer; font-family:'Montserrat',sans-serif; transition:all .15s; margin-left:auto; white-space:nowrap; }
+  .override-btn:hover  { border-color:var(--green); color:var(--green); }
+  .override-btn.active { background:var(--green-bg); border-color:var(--green); color:var(--green); }
+  .override-note   { font-size:10px; color:var(--green); font-weight:600; }
 
-  .disclaimer { font-size:11px; color:var(--text-light); padding:13px 16px; background:var(--white); border-radius:10px; border:1px solid var(--border); line-height:1.6; margin-bottom:20px; }
-  .footer { text-align:center; padding:18px; font-size:11px; color:var(--text-light); border-top:1px solid var(--border); }
+  /* ── Fails list ── */
+  .fail-list { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
+  .fail-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); }
+  .fail-item.overridden { border-color:var(--green); background:var(--green-bg); opacity:.85; }
+
+  .disclaimer { font-size:11px; color:var(--text-light); padding:16px 20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); line-height:1.75; margin-bottom:24px; font-weight:500; box-shadow:var(--shadow); }
+  .footer { text-align:center; padding:20px; font-size:11px; color:var(--text-light); border-top:1px solid var(--border); font-weight:600; letter-spacing:.5px; }
   .empty { text-align:center; padding:80px 20px; }
-  .empty h2 { font-size:16px; font-weight:600; color:var(--text-mid); margin-bottom:8px; }
-  .empty p  { font-size:13px; color:var(--text-light); }
+  .empty h2 { font-size:20px; font-weight:800; color:var(--text); margin-bottom:8px; }
+  .empty p  { font-size:13px; color:var(--text-light); font-weight:500; }
 
   @media print {
     body { background:white; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .toolbar,.nav-bar,.filter-bar { display:none !important; }
-    .card,.kpi,.partial-item,.issue-item { break-inside:avoid; }
+    .kpi,.issue-item,.partial-item { break-inside:avoid; }
   }
-  @media (max-width:800px) {
-    .kpi-grid { grid-template-columns:repeat(2,1fr); }
-    .two-col  { grid-template-columns:1fr; }
+  @media (max-width:700px) {
+    .kpi-grid,.two-col { grid-template-columns:1fr; }
     .main,.header,.toolbar,.nav-bar,.filter-bar { padding-left:16px; padding-right:16px; }
   }
 </style>
@@ -170,27 +189,29 @@
 <body>
 
 <header class="header">
-  <div class="header-left">
-    <span class="header-logo">Tex QA <span>Weber Ranch</span></span>
-    <div class="header-tags" id="header-tags"></div>
+  <div class="header-top">
+    <div>
+      <div class="header-title">Tex QA Dashboard</div>
+    </div>
+    <div class="header-right">
+      <div class="header-date" id="header-date"></div>
+    </div>
   </div>
-  <div class="header-right">
-    <strong id="header-date">—</strong>
-  </div>
+  <div class="header-tags" id="header-tags"></div>
 </header>
 
 <div class="toolbar">
   <a href="index.html" class="toolbar-btn">&#8592; Back</a>
   <button class="toolbar-btn primary" onclick="exportPDF()">&#8659; Export PDF</button>
-  <button class="toolbar-btn" onclick="exportCSV()">&#8595; Export CSV</button>
+  <button class="toolbar-btn accent" onclick="exportCSV()">&#8595; Export CSV</button>
 </div>
 
 <nav class="nav-bar">
   <button class="tab-btn active" data-env="all">All</button>
   <button class="tab-btn" data-env="production">Production</button>
   <button class="tab-btn" data-env="staging">Staging</button>
-  <div class="nav-div"></div>
-  <span class="type-label">Type:</span>
+  <div class="nav-sep"></div>
+  <span class="type-lbl">Type</span>
   <button class="pill-btn active" data-type="all">All</button>
   <button class="pill-btn" data-type="criteria">Criteria</button>
   <button class="pill-btn" data-type="custom">Custom</button>
@@ -199,22 +220,21 @@
 
 <div class="filter-bar">
   <div class="filter-group">
-    <label for="run-select">Run:</label>
+    <label for="run-select">Run</label>
     <select id="run-select"></select>
   </div>
   <div class="filter-group">
-    <label for="date-from">From:</label>
+    <label for="date-from">From</label>
     <input type="date" id="date-from" />
-    <span class="filter-sep">–</span>
+    <label style="color:var(--text-light)">–</label>
     <input type="date" id="date-to" />
   </div>
 </div>
 
 <main class="main" id="main"></main>
-<footer class="footer" id="footer">Tex QA Dashboard · Weber Ranch</footer>
+<footer class="footer" id="footer">Tex QA · Weber Ranch</footer>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
 let allRuns = [], currentRun = null, activeEnv = 'all', activeType = 'all';
 let dateFrom = '', dateTo = '';
 
@@ -230,301 +250,298 @@ function filteredRuns() {
   });
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  return new Date(d+'T00:00:00').toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'});
 }
 function pct(n,t) { return t ? Math.round((n/t)*100) : 0; }
 
-// ── Header ─────────────────────────────────────────────────────────────────
 function updateHeader() {
   if (!currentRun) return;
   const env  = currentRun.environment || 'production';
   const type = currentRun.test_type   || 'criteria';
+  const label = currentRun.label || fmtDate(currentRun.date);
+  const weekBadge = currentRun.week ? `<span class="badge week">${esc(currentRun.week)}</span>` : '';
   document.getElementById('header-tags').innerHTML =
     `<span class="badge ${env}">${esc(env)}</span>` +
-    `<span class="badge ${type}">${esc(type)}</span>`;
-  document.getElementById('header-date').textContent =
-    currentRun.label || fmtDate(currentRun.date);
+    `<span class="badge ${type}">${esc(type)}</span>` +
+    weekBadge;
+  document.getElementById('header-date').innerHTML =
+    `<strong>${esc(label)}</strong>`;
   document.getElementById('footer').textContent =
-    `Tex QA Dashboard · ${esc(type)} · ${esc(currentRun.label || fmtDate(currentRun.date))}`;
+    `Tex QA Dashboard · ${esc(type)} · ${esc(label)}`;
 }
 
-// ── Run selector ───────────────────────────────────────────────────────────
 function updateRunSelector() {
   const runs = filteredRuns();
   const sel  = document.getElementById('run-select');
   sel.innerHTML = runs.length
-    ? runs.map((r, i) => {
+    ? runs.map((r,i) => {
         const tags = [
-          activeEnv  === 'all' ? (r.environment || 'prod') : null,
-          activeType === 'all' ? (r.test_type   || 'criteria') : null,
+          activeEnv  === 'all' ? (r.environment||'prod') : null,
+          activeType === 'all' ? (r.test_type||'criteria') : null,
         ].filter(Boolean).join(' · ');
-        const lbl = (r.label || r.date || `Run ${i+1}`) + (tags ? `  [${tags}]` : '');
-        return `<option value="${i}" ${r === currentRun ? 'selected' : ''}>${esc(lbl)}</option>`;
+        const lbl = (r.label||r.date||`Run ${i+1}`) + (tags ? `  [${tags}]` : '');
+        return `<option value="${i}" ${r===currentRun?'selected':''}>${esc(lbl)}</option>`;
       }).join('')
     : '<option>No runs match filters</option>';
 }
 
-// ── Issue Tracker (feedback runs) ─────────────────────────────────────────
 function buildIssueTracker(r, prevRun) {
-  const cats = Object.entries(r.categories || {});
+  const cats = Object.entries(r.categories||{});
   if (!cats.length) return '';
+  const prevCats = prevRun ? (prevRun.categories||{}) : {};
+  const resolved = cats.filter(([,v])=>pct((v.pass||0)+(v.partial||0),v.total||0)>=80).length;
 
-  const prevCats = prevRun ? (prevRun.categories || {}) : {};
-  const resolved = cats.filter(([,v]) => pct((v.pass||0)+(v.partial||0), v.total||0) >= 80).length;
-
-  const items = cats.sort((a,b) => a[0].localeCompare(b[0])).map(([name, v]) => {
-    const total   = v.total || 0;
-    const passing = (v.pass || 0) + (v.partial || 0);
-    const rate    = pct(passing, total);
-    const isRes   = rate >= 80;
-
-    // Delta vs previous run
+  const rows = cats.sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v]) => {
+    const total=v.total||0, passing=(v.pass||0)+(v.partial||0);
+    const rate = pct(passing,total);
+    const isRes = rate >= 80;
     let deltaHTML = '';
     if (prevCats[name]) {
-      const pv     = prevCats[name];
+      const pv = prevCats[name];
       const prevRate = pct((pv.pass||0)+(pv.partial||0), pv.total||0);
-      const diff   = rate - prevRate;
-      if (diff > 0)      deltaHTML = `<span class="issue-delta up">&#8593; from ${prevRate}%</span>`;
-      else if (diff < 0) deltaHTML = `<span class="issue-delta down">&#8595; from ${prevRate}%</span>`;
-      else               deltaHTML = `<span class="issue-delta same">&#8594; maintained</span>`;
+      const diff = rate - prevRate;
+      if (diff > 0)      deltaHTML = `<span class="issue-delta up">↑ from ${prevRate}%</span>`;
+      else if (diff < 0) deltaHTML = `<span class="issue-delta down">↓ from ${prevRate}%</span>`;
+      else               deltaHTML = `<span class="issue-delta same">→ maintained</span>`;
     }
-
-    const statusBadge = isRes
-      ? `<span class="issue-resolved">Resolved</span>`
-      : `<span class="issue-open">Open</span>`;
-
     return `
       <div class="issue-item">
-        <div class="issue-top">
-          <span class="issue-name">${esc(name)}</span>
-          <span class="issue-count">· ${total} variant${total !== 1 ? 's' : ''} tested</span>
-        </div>
-        <div class="issue-meta">
-          <span class="issue-score">${passing}/${total} (${rate}%)</span>
+        <div><span class="issue-name">${esc(name)}</span> <span class="issue-count">· ${total} variant${total!==1?'s':''} tested</span></div>
+        <div class="issue-item-row">
+          <span class="issue-score">${passing}/${total}</span>
+          <span class="issue-pct">(${rate}%)</span>
           ${deltaHTML}
-          ${statusBadge}
-          <span style="margin-left:auto;font-size:11px;color:var(--text-light)">${esc(r.date || '')}</span>
+          ${isRes ? `<span class="resolved-chip">Resolved</span>` : `<span class="open-chip">Open</span>`}
+          <span class="issue-date">${esc(r.date||'')}</span>
         </div>
       </div>`;
   }).join('');
 
   return `
-    <div class="section-title">Issue Tracker</div>
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:18px">
-      <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+    <div class="section-label">Issue Tracker</div>
+    <div class="issue-list">
+      <div class="issue-header-card">
         <h3>Feedback Issues — Results</h3>
-        <p class="card-sub" style="margin-bottom:0">Resolved = 80%+ pass rate &nbsp;·&nbsp; ${resolved} of ${cats.length} resolved</p>
+        <p>Resolved = 80%+ pass rate &nbsp;·&nbsp; ${resolved} of ${cats.length} resolved</p>
       </div>
-      <div class="issue-list">${items}</div>
+      ${rows}
     </div>`;
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
 function render() {
   const runs = filteredRuns();
   if (!runs.length) {
     document.getElementById('main').innerHTML = `<div class="empty"><h2>No data</h2><p>No runs match the current filters.</p></div>`;
     return;
   }
-  if (!currentRun || !runs.includes(currentRun)) currentRun = runs[runs.length - 1];
-  updateHeader();
-  updateRunSelector();
+  if (!currentRun || !runs.includes(currentRun)) currentRun = runs[runs.length-1];
+  updateHeader(); updateRunSelector();
 
-  const r       = currentRun;
-  const rIdx    = runs.indexOf(r);
-  const prevRun = rIdx > 0 ? runs[rIdx - 1] : null;
+  const r        = currentRun;
+  const rIdx     = runs.indexOf(r);
+  const prevRun  = rIdx > 0 ? runs[rIdx-1] : null;
+  const total    = r.total  || 0;
+  const passed   = r.pass   || 0;
+  const partial  = r.partial|| 0;
+  const failed   = r.fail   || 0;
+  const errored  = r.error  || 0;
+  const overrideKey = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
+  let overrides = {};
+  try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
+  const overrideCount = Object.keys(overrides).length;
+  const passRate = total ? Math.round(((passed + partial + overrideCount) / total) * 100) : (r.pass_rate ?? 0);
+  const isFB     = (r.test_type||'criteria') === 'feedback';
+  const cats     = Object.entries(r.categories||{});
+  const cleanCats= cats.filter(([,v])=>!(v.fail||0)&&!(v.partial||0)).length;
+  const resolved = isFB ? cats.filter(([,v])=>pct((v.pass||0)+(v.partial||0),v.total||0)>=80).length : null;
 
-  const total   = r.total   || 0;
-  const passed  = r.pass    || 0;
-  const partial = r.partial || 0;
-  const failed  = r.fail    || 0;
-  const errored = r.error   || 0;
-  const passRate = r.pass_rate ?? pct(passed + partial, total);
-  const isFeedback = (r.test_type || 'criteria') === 'feedback';
-
-  const cats      = Object.entries(r.categories || {});
-  const cleanCats = cats.filter(([,v]) => !(v.fail||0) && !(v.partial||0)).length;
-  const resolved  = isFeedback ? cats.filter(([,v]) => pct((v.pass||0)+(v.partial||0),v.total||0) >= 80).length : null;
-
-  // Warning banner for feedback runs
-  const warnBanner = isFeedback ? `
+  const warnBanner = isFB ? `
     <div class="warn-banner">
-      &#9888;&#65039; This report covers <strong>issue-specific tests</strong> only — targeted tests raised against known feedback items. General scheduled test results are tracked separately.
+      <span>⚠️</span>
+      <span>This report covers <strong>issue-specific tests</strong> only — targeted tests raised against known feedback items. General scheduled test results are tracked separately.</span>
     </div>` : '';
 
-  // Summary
-  const summaryText = isFeedback
-    ? `Issue-specific test run &nbsp;·&nbsp; ${esc(r.label || fmtDate(r.date))} &nbsp;·&nbsp; ${cats.length} issues tracked &nbsp;·&nbsp; ${total} test variants run &nbsp;·&nbsp; Overall pass rate <strong>${passRate}%</strong>${resolved !== null ? ` &nbsp;·&nbsp; ${resolved} of ${cats.length} issues resolved` : ''}`
-    : `${esc(r.test_type || 'Criteria')} test run &nbsp;·&nbsp; ${esc(r.label || fmtDate(r.date))} &nbsp;·&nbsp; ${total} tests across ${cats.length} categories &nbsp;·&nbsp; Overall pass rate <strong>${passRate}%</strong>${cleanCats === cats.length ? ' &nbsp;·&nbsp; All categories clean' : ''}`;
+  const summaryText = isFB
+    ? `Issue-specific test run · ${esc(r.label||fmtDate(r.date))} · ${cats.length} issues tracked · ${total} test variants run · Overall pass rate <strong>${passRate}%</strong>${resolved!==null?` · ${resolved} of ${cats.length} issues resolved`:''}`
+    : `${esc(r.test_type||'Criteria')} test run · ${esc(r.label||fmtDate(r.date))} · ${total} tests across ${cats.length} categories · Pass rate <strong>${passRate}%</strong>${cleanCats===cats.length?' · All categories clean':''}`;
 
-  // KPI labels vary by type
-  const kpi3Label = isFeedback ? 'Failures'          : 'Partials';
-  const kpi3Val   = isFeedback ? failed               : partial;
-  const kpi3Sub   = isFeedback ? `<span class="pill ${failed===0?'green':'red'}">${pct(failed,total)}% fail rate</span>` : `<span class="pill amber">to monitor</span>`;
-  const kpi4Label = isFeedback ? 'Issues Resolved'   : 'Clean Categories';
-  const kpi4Val   = isFeedback ? (resolved ?? cleanCats) : cleanCats;
-  const kpi4Sub   = isFeedback ? `<span class="pill green">of ${cats.length} tracked</span>` : `<span class="pill green">of ${cats.length}</span>`;
+  const kpi3Val = isFB ? failed  : partial;
+  const kpi3Lbl = isFB ? 'Failures' : 'Partials';
+  const kpi3Sub = isFB
+    ? `<span class="chip ${failed===0?'green':'red'}">${pct(failed,total)}% fail rate</span>`
+    : `<span class="chip amber">to monitor</span>`;
+  const kpi4Val = isFB ? (resolved??cleanCats) : cleanCats;
+  const kpi4Lbl = isFB ? 'Issues Resolved' : 'Clean Categories';
+  const kpi4Sub = `<span class="chip green">of ${cats.length} ${isFB?'tracked':'categories'}</span>`;
 
-  // Category bars (criteria/custom only)
-  const catBarsHTML = !isFeedback ? `
-    <div class="section-title">Breakdown</div>
-    <div class="two-col">
-      <div class="card">
-        <h3>Results by Category</h3>
-        <p class="card-sub">Pass rate per test category</p>
-        <div class="cat-bars">
-          ${cats.sort((a,b)=>a[0].localeCompare(b[0])).map(([name, v]) => {
-            const t = v.total || 0, p = (v.pass||0)+(v.partial||0), f = v.fail||0;
-            const cp = pct(p,t);
-            const fc = f>0?'fail':(v.partial||0)>0?'partial':'full';
-            return `<div class="cat-row">
-              <div class="cat-label"><span class="cat-name">${esc(name)}</span><span class="cat-pct">${cp}%&nbsp;${p}/${t}</span></div>
-              <div class="bar-track"><div class="bar-fill ${fc}" style="width:${cp}%"></div></div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-      <div class="card">
-        <h3>Results Split</h3>
-        <p class="card-sub">${total} total tests</p>
-        <div class="donut-wrap">
-          <svg id="donut-svg" width="115" height="115" viewBox="0 0 110 110"></svg>
-          <div class="donut-legend">
-            ${[[passed,'#22C55E','Pass'],[partial,'#F59E0B','Partial'],[failed,'#EF4444','Fail'],[errored,'#94A3B8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
-              <div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${esc(l)}<span class="legend-val">${v}</span></div>`).join('')}
-          </div>
-        </div>
-      </div>
-    </div>` : `
-    <div class="section-title">Breakdown</div>
-    <div class="card" style="margin-bottom:18px">
+  const splitCard = `
+    <div class="card">
       <h3>Results Split</h3>
-      <p class="card-sub">${esc(r.label || fmtDate(r.date))} — ${total} tests</p>
+      <p class="card-sub">${esc(r.label||fmtDate(r.date))} — ${total} tests</p>
       <div class="donut-wrap">
-        <svg id="donut-svg" width="115" height="115" viewBox="0 0 110 110"></svg>
+        <svg id="donut-svg" width="120" height="120" viewBox="0 0 110 110"></svg>
         <div class="donut-legend">
-          ${[[passed,'#22C55E','Pass'],[partial,'#F59E0B','Partial'],[failed,'#EF4444','Fail'],[errored,'#94A3B8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
+          ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial'],[failed,'#b91c1c','Fail'],[errored,'#9ea3b8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
             <div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${esc(l)}<span class="legend-val">${v}</span></div>`).join('')}
         </div>
       </div>
     </div>`;
 
-  // Issue tracker (feedback only)
-  const issueTrackerHTML = isFeedback ? buildIssueTracker(r, prevRun) : '';
-
-  // Partials (criteria/custom)
-  const partials = r.partials || [];
-  const partialsHTML = !isFeedback && partials.length ? `
-    <div class="section-title">Partials to Monitor</div>
-    <div class="card" style="margin-bottom:18px">
-      <h3>Tests with Partial Results</h3>
-      <p class="card-sub">Passed overall but have a criterion to review</p>
-      <div class="partial-list">
-        ${partials.map(p=>`
-          <div class="partial-item">
-            <div class="partial-header"><span class="partial-name">${esc(p.name)}</span><span class="partial-score">${esc(p.score||p.category||'Partial')}</span></div>
-            <div class="partial-summary">${esc(p.summary||p.notes||'')}</div>
-          </div>`).join('')}
+  const catHTML = !isFB ? `
+    <div class="two-col">
+      <div class="card">
+        <h3>By Category</h3>
+        <p class="card-sub">Pass rate per test category</p>
+        <div class="cat-bars">
+          ${cats.sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v]) => {
+            const t=v.total||0, p=(v.pass||0)+(v.partial||0), f=v.fail||0;
+            const cp=pct(p,t), fc=f>0?'fail':(v.partial||0)>0?'partial':'full';
+            return `<div class="cat-row">
+              <div class="cat-label"><span>${esc(name)}</span><span class="cat-pct">${cp}%&nbsp;(${p}/${t})</span></div>
+              <div class="bar-track"><div class="bar-fill ${fc}" style="width:${cp}%"></div></div>
+            </div>`;
+          }).join('')}
+        </div>
       </div>
+      ${splitCard}
+    </div>` : `<div style="margin-bottom:28px">${splitCard}</div>`;
+
+  const issueHTML = isFB ? buildIssueTracker(r, prevRun) : '';
+
+  function testCard(t, typeClass) {
+    const oid = t.id || t.name;
+    const isOverridden = !!overrides[oid];
+    const criteriaStr = t.criteria_failed||t.critical_failures||t.high_failures||'';
+    const critTags = criteriaStr.split(/[,;|]/).map(s=>s.trim()).filter(Boolean)
+      .map(c=>`<span class="criteria-tag ${typeClass==='warn'?'warn':''}">${esc(c)}</span>`).join('');
+    const screenshotLink = t.screenshot_path
+      ? `<a class="link-btn" href="${esc(t.screenshot_path)}" target="_blank">📸 Screenshot</a>` : '';
+    const convLink = t.conversation_path
+      ? `<a class="link-btn" href="${esc(t.conversation_path)}" target="_blank">💬 Conversation</a>` : '';
+    const overriddenBadge = isOverridden ? `<span class="override-note">✓ Manually passed</span>` : '';
+    return `
+      <div class="partial-item ${isOverridden?'overridden':''}" id="card_${esc(oid)}">
+        <div class="partial-header">
+          <span class="partial-name">${esc(t.name)}</span>
+          <span class="partial-badge">${esc(t.score||typeClass==='warn'?'Partial':'Fail')}</span>
+        </div>
+        <div class="partial-footer">
+          ${critTags}
+          ${screenshotLink}
+          ${convLink}
+          ${overriddenBadge}
+          <button class="override-btn ${isOverridden?'active':''}" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')" style="margin-left:auto">
+            ${isOverridden?'↩ Undo override':'✓ Mark as pass'}
+          </button>
+        </div>
+      </div>`;
+  }
+
+  const partials = r.partials||[];
+  const partialsHTML = !isFB && partials.length ? `
+    <div class="section-label">Partials to Monitor</div>
+    <div class="partial-list">
+      ${partials.map(p=>testCard(p,'warn')).join('')}
     </div>` : '';
 
-  const trendHTML = buildTrendHTML(runs);
+  const failTests = !isFB ? (r.tests||[]).filter(t=>t.status==='FAIL') : [];
+  const failsHTML = failTests.length ? `
+    <div class="section-label">Failing Tests</div>
+    <div class="fail-list">
+      ${failTests.map(t=>testCard(t,'fail')).join('')}
+    </div>` : '';
 
   document.getElementById('main').innerHTML = `
     ${warnBanner}
-    <div class="section-title">Summary</div>
+    <div class="section-label">Summary</div>
     <div class="summary-card">${summaryText}</div>
-    <div class="section-title">Test Results</div>
+    <div class="section-label">Test Results</div>
     <div class="kpi-grid">
       <div class="kpi">
         <div class="kpi-label">Pass Rate</div>
         <div class="kpi-num">${passRate}<span class="unit">%</span></div>
-        <div class="kpi-sub"><span class="pill ${passRate===100?'green':passRate>=80?'amber':'red'}">${passed+partial} of ${total} passing</span></div>
+        <div><span class="chip green">${passed+partial} of ${total} passing</span></div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Tests Run</div>
         <div class="kpi-num">${total}</div>
-        <div class="kpi-sub"><span class="pill blue">${isFeedback?'issue-specific variants':cats.length+' categories'}</span></div>
+        <div><span class="chip blue">${isFB?'issue-specific variants':cats.length+' categories'}</span></div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">${kpi3Label}</div>
+        <div class="kpi-label">${kpi3Lbl}</div>
         <div class="kpi-num">${kpi3Val}</div>
-        <div class="kpi-sub">${kpi3Sub}</div>
+        <div>${kpi3Sub}</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">${kpi4Label}</div>
+        <div class="kpi-label">${kpi4Lbl}</div>
         <div class="kpi-num">${kpi4Val}</div>
-        <div class="kpi-sub">${kpi4Sub}</div>
+        <div>${kpi4Sub}</div>
       </div>
     </div>
-    ${trendHTML}
-    ${catBarsHTML}
-    ${issueTrackerHTML}
+    <div class="section-label">Breakdown</div>
+    ${buildTrendHTML(runs)}
+    ${catHTML}
+    ${issueHTML}
+    ${failsHTML}
     ${partialsHTML}
     <div class="disclaimer">
-      Results reflect automated ${esc(r.test_type||'criteria')} testing against the ${esc(r.environment||'production')} environment.
+      Results reflect automated ${esc(r.test_type||'criteria')} testing against the ${esc(r.environment||'production')} environment${r.date?' on '+esc(fmtDate(r.date)):''}.
       ${failed>0?`${failed} test${failed>1?'s':''} failed defined criteria thresholds.`:'All tests passed defined criteria thresholds.'}
-      ${partial>0?`${partial} partial result${partial>1?'s':''} indicate tests where one criterion was not fully met but overall behaviour was correct.`:''}
+      ${partial>0?` ${partial} partial result${partial>1?'s':''} indicate responses where one criterion was not fully met but overall behaviour was correct.`:''} Tests should be reviewed alongside manual testing.
     </div>`;
 
   drawDonut(
-    [[passed,'#22C55E'],[partial,'#F59E0B'],[failed,'#EF4444'],[errored,'#94A3B8']].filter(([v])=>v>0),
+    [[passed,'#258ed8'],[partial,'#f0c040'],[failed,'#b91c1c'],[errored,'#9ea3b8']].filter(([v])=>v>0),
     total, passRate
   );
 }
 
-// ── Donut ──────────────────────────────────────────────────────────────────
 function drawDonut(slices, total, passRate) {
   const svg = document.getElementById('donut-svg');
   if (!svg || !total) return;
-  const cx=55,cy=55,r=40,sw=14, circ=2*Math.PI*r;
+  const cx=55, cy=55, r=40, sw=13, circ=2*Math.PI*r;
   let offset=0, arcs='';
   slices.forEach(([v,c]) => {
-    const d=(v/total)*circ;
-    arcs+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-dasharray="${d} ${circ-d}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
-    offset+=d;
+    const d = (v/total)*circ;
+    arcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-dasharray="${d} ${circ-d}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += d;
   });
-  svg.innerHTML = arcs +
-    `<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="#0F1F2E" font-size="16" font-weight="700" font-family="Inter">${passRate}%</text>` +
-    `<text x="${cx}" y="${cy+12}" text-anchor="middle" fill="#7A92A8" font-size="10" font-family="Inter">pass rate</text>`;
+  svg.innerHTML = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f0f2f5" stroke-width="${sw}"/>` + arcs +
+    `<text x="${cx}" y="${cy-3}" text-anchor="middle" fill="#0f1e2d" font-size="16" font-weight="800" font-family="Montserrat">${passRate}%</text>` +
+    `<text x="${cx}" y="${cy+12}" text-anchor="middle" fill="#9ea3b8" font-size="8" font-family="Montserrat" font-weight="600" letter-spacing="0.5">PASS RATE</text>`;
 }
 
-// ── Trend with value labels ────────────────────────────────────────────────
 function buildTrendHTML(runs) {
   const sorted = [...runs].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   if (sorted.length < 2) return '';
-  const W=660,H=130, pad={t:30,b:28,l:30,r:16};
+  const W=820, H=160, pad={t:40,b:32,l:36,r:20};
   const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
-  const vals = sorted.map(r => r.pass_rate ?? pct(r.pass||0, r.total||1));
-  const minV = Math.max(0,   Math.min(...vals)-8);
-  const maxV = Math.min(100, Math.max(...vals)+8);
-  const xStep  = iW/Math.max(vals.length-1,1);
-  const yScale = v => iH-((v-minV)/(maxV-minV||1))*iH;
-  const pts    = vals.map((v,i)=>[pad.l+i*xStep, pad.t+yScale(v)]);
+  const vals   = sorted.map(r=>r.pass_rate??pct(r.pass||0,r.total||1));
+  const minV   = Math.max(0,   Math.min(...vals)-15);
+  const maxV   = Math.min(100, Math.max(...vals)+15);
+  const xStep  = iW / Math.max(vals.length-1, 1);
+  const yScale = v => iH - ((v-minV)/(maxV-minV||1))*iH;
+  const pts    = vals.map((v,i) => [pad.l+i*xStep, pad.t+yScale(v)]);
   const area   = `M ${pts[0].join(',')} ` + pts.slice(1).map(p=>`L ${p.join(',')}`).join(' ') +
     ` L ${pts[pts.length-1][0]},${pad.t+iH} L ${pad.l},${pad.t+iH} Z`;
   const line   = `M ${pts[0].join(',')} ` + pts.slice(1).map(p=>`L ${p.join(',')}`).join(' ');
 
-  // Y-axis labels
-  const yLabels = [0,50,100].map(v => {
-    const y = pad.t + yScale(Math.max(minV, Math.min(maxV, v)));
-    return `<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="8" fill="#7A92A8" font-family="Inter">${v}%</text>
-            <line x1="${pad.l}" y1="${y}" x2="${pad.l+iW}" y2="${y}" stroke="#EEF3F8" stroke-width="1"/>`;
+  const yGrid = [0,50,100].map(v => {
+    const y = pad.t + yScale(Math.max(minV,Math.min(maxV,v)));
+    return `<line x1="${pad.l}" y1="${y}" x2="${pad.l+iW}" y2="${y}" stroke="#eaecf4" stroke-width="1"/>
+            <text x="${pad.l-8}" y="${y+4}" text-anchor="end" font-size="9" fill="#9ea3b8" font-family="Montserrat" font-weight="600">${v}%</text>`;
   }).join('');
 
-  // Dots + value labels + x labels
-  const annotations = pts.map(([x,y], i) => {
+  const dots = pts.map(([x,y],i) => {
     const v   = vals[i];
     const sel = sorted[i] === currentRun;
-    const labelY = y - 10;
-    return `
-      <circle cx="${x}" cy="${y}" r="${sel?5:3.5}" fill="${sel?'#1A72BC':'#22C55E'}" stroke="#fff" stroke-width="1.5"/>
-      <text x="${x}" y="${labelY}" text-anchor="middle" font-size="9" font-weight="600" fill="${sel?'#1A72BC':'#22C55E'}" font-family="Inter">${v}%</text>
-      <text x="${x}" y="${H-4}" text-anchor="middle" font-size="9" fill="#7A92A8" font-family="Inter">${esc((sorted[i].label||sorted[i].date||'').slice(0,6))}</text>`;
+    const c   = sel ? '#137333' : '#258ed8';
+    return `<circle cx="${x}" cy="${y}" r="${sel?6:4}" fill="${c}" stroke="#fff" stroke-width="2.5"/>
+            <text x="${x}" y="${y-13}" text-anchor="middle" font-size="10" font-weight="700" fill="${c}" font-family="Montserrat">${v}%</text>
+            <text x="${x}" y="${H-6}" text-anchor="middle" font-size="9" fill="#9ea3b8" font-family="Montserrat" font-weight="600">${esc((sorted[i].label||sorted[i].date||'').slice(0,8))}</text>`;
   }).join('');
 
   return `
@@ -535,51 +552,54 @@ function buildTrendHTML(runs) {
         <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block">
           <defs>
             <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#1A72BC" stop-opacity=".1"/>
-              <stop offset="100%" stop-color="#1A72BC" stop-opacity="0"/>
+              <stop offset="0%" stop-color="#258ed8" stop-opacity=".1"/>
+              <stop offset="100%" stop-color="#258ed8" stop-opacity="0"/>
             </linearGradient>
           </defs>
-          ${yLabels}
+          ${yGrid}
           <path d="${area}" fill="url(#tg)"/>
-          <path d="${line}" fill="none" stroke="#1A72BC" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-          ${annotations}
+          <path d="${line}" fill="none" stroke="#258ed8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          ${dots}
         </svg>
       </div>
     </div>`;
 }
 
-// ── CSV Export ─────────────────────────────────────────────────────────────
-function exportCSV() {
-  if (!currentRun) return;
-  const tests = currentRun.tests || [];
-  if (!tests.length) { alert('No test data to export for this run.'); return; }
-  const headers = ['test_id','name','category','status','score','summary'];
-  const rows = tests.map(t => headers.map(h => `"${String(t[h]||'').replace(/"/g,'""')}"`).join(','));
-  const csv  = [headers.join(','), ...rows].join('\r\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `tex-qa-${currentRun.date||'run'}-${currentRun.test_type||'results'}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+function toggleOverride(testId, overrideKey) {
+  let overrides = {};
+  try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
+  if (overrides[testId]) {
+    delete overrides[testId];
+  } else {
+    overrides[testId] = { overriddenAt: new Date().toISOString() };
+  }
+  localStorage.setItem(overrideKey, JSON.stringify(overrides));
+  render(); // re-render to reflect updated overrides and recalculate KPIs
 }
 
+function exportCSV() {
+  if (!currentRun) return;
+  const tests = currentRun.tests||[];
+  if (!tests.length) { alert('No test data for this run.'); return; }
+  const headers = ['test_id','name','category','status','score','summary'];
+  const rows    = tests.map(t=>headers.map(h=>`"${String(t[h]||'').replace(/"/g,'""')}"`).join(','));
+  const csv     = [headers.join(','),...rows].join('\r\n');
+  const blob    = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url     = URL.createObjectURL(blob);
+  const a       = document.createElement('a');
+  a.href=url; a.download=`tex-qa-${currentRun.date||'run'}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
 function exportPDF() { window.print(); }
 
-// ── Nav bindings ───────────────────────────────────────────────────────────
 function bindNav() {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    activeEnv = btn.dataset.env;
-    currentRun = null; render();
+    btn.classList.add('active'); activeEnv=btn.dataset.env; currentRun=null; render();
   }));
   document.querySelectorAll('.pill-btn').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.pill-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    activeType = btn.dataset.type;
-    currentRun = null; render();
+    btn.classList.add('active'); activeType=btn.dataset.type; currentRun=null; render();
   }));
   document.getElementById('run-select').addEventListener('change', e => {
     currentRun = filteredRuns()[parseInt(e.target.value,10)]; render();
@@ -588,12 +608,11 @@ function bindNav() {
   document.getElementById('date-to').addEventListener('change',   e => { dateTo  =e.target.value; currentRun=null; render(); });
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────
 async function init() {
   bindNav();
   try {
     const resp = await fetch('reports/qa_results.json');
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.ok) throw new Error();
     const data = await resp.json();
     allRuns = (data.runs||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
     if (allRuns.length) {
@@ -601,7 +620,7 @@ async function init() {
       if (dates.length) {
         document.getElementById('date-from').value = dates[0];
         document.getElementById('date-to').value   = dates[dates.length-1];
-        dateFrom = dates[0]; dateTo = dates[dates.length-1];
+        dateFrom=dates[0]; dateTo=dates[dates.length-1];
       }
     }
     if (!allRuns.length) {
@@ -613,7 +632,6 @@ async function init() {
     document.getElementById('main').innerHTML = `<div class="empty"><h2>No data yet</h2><p>Run the test suite to generate results.</p></div>`;
   }
 }
-
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
