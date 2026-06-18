@@ -362,6 +362,47 @@
       "partials": [],
       "environment": "production",
       "test_type": "criteria"
+    },
+    {
+      "date": "2026-06-18",
+      "timestamp": "2026-06-18T15:36:20Z",
+      "label": "June 2026",
+      "total": 1,
+      "pass": 1,
+      "partial": 0,
+      "fail": 0,
+      "error": 0,
+      "pass_rate": 100.0,
+      "categories": {
+        "Cocktails": {
+          "total": 1,
+          "pass": 1,
+          "partial": 0,
+          "fail": 0,
+          "error": 0
+        }
+      },
+      "tests": [
+        {
+          "id": "COCKTAIL-01",
+          "name": "Basic Cocktail Request - Refreshing",
+          "category": "Cocktails",
+          "status": "PASS",
+          "score": "12/12 rules met",
+          "critical_failures": "",
+          "high_failures": "",
+          "criteria_failed": "0",
+          "notes": "\nTEST: Basic Cocktail Request - Refreshing\nRESULT: PASS  |  SCORE: 12/12 rules met\n\n\nSUMMARY\n-------\nTex performed excellently in this test. It maintained its persona, accurately suggested cocktails using Weber Ranch Vodka, and consistently promoted responsible drinking. All responses adhered to formatting rules and correctly offered suggestions before providing full recipes, without any critical or high-severity rule violations.\n\nPASSING RULES\n-------------\n  [OK] brand-name-spelling (core-rules.md): Weber Ranch is spelled correctly in all responses.\n  [OK] vodka-only-brand (core-rules.md): Tex only refers to Weber Ranch Vodka and does not imply other spirits.\n  [OK] stays-in-persona (core-rules.md): Tex maintained its friendly, knowledgeable, and responsible AI bartender persona throughout the conversation.\n  [OK] responsible-drinking (core-rules.md): Tex consistently included reminders to enjoy responsibly or that measurements would be responsibly kept.\n  [OK] no-low-abv-promotion (core-rules.md): Tex used descriptive terms like 'refreshing' and 'clean fizz' as flavor descriptions, not as claims about low-ABV or reduced alcohol content, which is compliant with the rule.\n  [OK] plain-text-only (format-rules.md): All responses were in plain text, without markdown, bullets, or other special formatting.\n  [OK] no-response-signature (format-rules.md): Tex did not sign off any of its responses.\n  [OK] brand-mention (core-rules.md): Tex mentioned 'Weber Ranch Vodka' in each relevant response when discussing vodka.\n  [OK] appropriate-tone (core-rules.md): The tone was consistently warm, neighbourly, and conversational.\n  [OK] one-recipe-max (recipe-rule.md): Tex offered suggestions and asked for confirmation before providing a full recipe, adhering to the one-recipe-max rule by not delivering a full recipe yet.\n  [OK] suggestion-not-full-recipe (tool-strategy.md): Tex correctly provided suggestions and asked for confirmation before delivering a full recipe, as per instructions.\n  [OK] weber-ranch-vodka-used (novel-cocktail-instructions.md): All suggested cocktails explicitly mentioned the use of Weber Ranch Vodka.",
+          "summary": "Tex performed excellently in this test. It maintained its persona, accurately suggested cocktails using Weber Ranch Vodka, and consistently promoted responsible drinking. All responses adhered to formatting rules and correctly offered suggestions before providing full recipes, without any critical or high-severity rule violations.",
+          "screenshot_path": "https://drive.google.com/file/d/1VSEywzuTe32GLTD-ZiGjqdytn38eQukb/view",
+          "screenshot_local": "",
+          "conversation_path": "https://drive.google.com/file/d/1xvE4rHpILl4n4yB2itxywB1402Ox-Ybf/view"
+        }
+      ],
+      "partials": [],
+      "environment": "production",
+      "test_type": "criteria",
+      "run_id": "2026-06-18T15:36:20Z-production-criteria"
     }
   ]
 }
