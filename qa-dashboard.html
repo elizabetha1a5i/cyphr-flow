@@ -163,9 +163,6 @@
   .override-btn:hover  { border-color:var(--green); color:var(--green); }
   .override-btn.active { background:var(--green-bg); border-color:var(--green); color:var(--green); }
   .override-note   { font-size:10px; color:var(--green); font-weight:600; }
-  .remove-override-btn { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; border:1.5px solid var(--green); background:var(--green-bg); color:var(--green); cursor:pointer; font-family:'Montserrat',sans-serif; transition:all .15s; margin-left:6px; white-space:nowrap; }
-  .remove-override-btn:hover { background:#b7f5c8; border-color:#0d6024; color:#0d6024; }
-  .partial-badge.pass-override { background:var(--green-bg); color:var(--green); border:1px solid #b7f5c8; }
 
   /* ── Fails list ── */
   .fail-list { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
@@ -204,7 +201,7 @@
 </header>
 
 <div class="toolbar">
-  <a href="https://elizabetha1a5i.github.io/cyphr-flow/index.html" class="toolbar-btn">&#8592; Back</a>
+  <a href="index.html" class="toolbar-btn">&#8592; Back</a>
   <button class="toolbar-btn primary" onclick="exportPDF()">&#8659; Export PDF</button>
   <button class="toolbar-btn accent" onclick="exportCSV()">&#8595; Export CSV</button>
 </div>
@@ -231,7 +228,6 @@
     <input type="date" id="date-from" />
     <label style="color:var(--text-light)">–</label>
     <input type="date" id="date-to" />
-    <button class="toolbar-btn" onclick="clearDates()" title="Show all dates">✕ Clear</button>
   </div>
 </div>
 
@@ -277,30 +273,16 @@ function updateHeader() {
     `Tex QA Dashboard · ${esc(type)} · ${esc(label)}`;
 }
 
-function fmtRunLabel(r, i) {
-  // Prefer timestamp for specific time, fall back to date only
-  let datePart = r.date || `Run ${i+1}`;
-  if (r.timestamp) {
-    const d = new Date(r.timestamp);
-    const day   = d.getUTCDate();
-    const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
-    const hh    = String(d.getUTCHours()).padStart(2,'0');
-    const mm    = String(d.getUTCMinutes()).padStart(2,'0');
-    datePart = `${day} ${month} ${hh}:${mm}`;
-  }
-  const tags = [
-    activeEnv  === 'all' ? (r.environment||'production') : null,
-    activeType === 'all' ? (r.test_type||'criteria') : null,
-  ].filter(Boolean).join(' · ');
-  return datePart + (tags ? `  [${tags}]` : '');
-}
-
 function updateRunSelector() {
   const runs = filteredRuns();
   const sel  = document.getElementById('run-select');
   sel.innerHTML = runs.length
     ? runs.map((r,i) => {
-        const lbl = fmtRunLabel(r, i);
+        const tags = [
+          activeEnv  === 'all' ? (r.environment||'prod') : null,
+          activeType === 'all' ? (r.test_type||'criteria') : null,
+        ].filter(Boolean).join(' · ');
+        const lbl = (r.label||r.date||`Run ${i+1}`) + (tags ? `  [${tags}]` : '');
         return `<option value="${i}" ${r===currentRun?'selected':''}>${esc(lbl)}</option>`;
       }).join('')
     : '<option>No runs match filters</option>';
@@ -369,10 +351,8 @@ function render() {
   const overrideKey = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
   let overrides = {};
   try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
-  // Only count overrides for tests that are actually FAIL or ERROR (not already passing)
-  const failIds = new Set((r.tests||[]).filter(t=>t.status==='FAIL'||t.status==='ERROR').map(t=>t.id));
-  const overrideCount = Object.keys(overrides).filter(id => failIds.has(id)).length;
-  const passRate = total ? Math.min(100, Math.round(((passed + partial + overrideCount) / total) * 100)) : (r.pass_rate ?? 0);
+  const overrideCount = Object.keys(overrides).length;
+  const passRate = total ? Math.round(((passed + partial + overrideCount) / total) * 100) : (r.pass_rate ?? 0);
   const isFB     = (r.test_type||'criteria') === 'feedback';
   const cats     = Object.entries(r.categories||{});
   const cleanCats= cats.filter(([,v])=>!(v.fail||0)&&!(v.partial||0)).length;
@@ -441,23 +421,21 @@ function render() {
       ? `<a class="link-btn" href="${esc(t.screenshot_path)}" target="_blank">📸 Screenshot</a>` : '';
     const convLink = t.conversation_path
       ? `<a class="link-btn" href="${esc(t.conversation_path)}" target="_blank">💬 Conversation</a>` : '';
-    const badgeLabel = isOverridden ? 'Pass' : (t.score || (typeClass==='warn' ? 'Partial' : 'Fail'));
-    const badgeClass = isOverridden ? 'pass-override' : '';
+    const overriddenBadge = isOverridden ? `<span class="override-note">✓ Manually passed</span>` : '';
     return `
       <div class="partial-item ${isOverridden?'overridden':''}" id="card_${esc(oid)}">
         <div class="partial-header">
           <span class="partial-name">${esc(t.name)}</span>
-          <span class="partial-badge ${badgeClass}">${esc(badgeLabel)}</span>
+          <span class="partial-badge">${esc(t.score||typeClass==='warn'?'Partial':'Fail')}</span>
         </div>
         <div class="partial-footer">
           ${critTags}
           ${screenshotLink}
           ${convLink}
-          ${isOverridden
-            ? `<span class="override-note" style="margin-left:auto">✓ Manually passed</span>
-               <button class="remove-override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')" title="Remove override">✕</button>`
-            : `<button class="override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')" style="margin-left:auto">✓ Mark as pass</button>`
-          }
+          ${overriddenBadge}
+          <button class="override-btn ${isOverridden?'active':''}" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')" style="margin-left:auto">
+            ${isOverridden?'↩ Undo override':'✓ Mark as pass'}
+          </button>
         </div>
       </div>`;
   }
@@ -537,11 +515,7 @@ function drawDonut(slices, total, passRate) {
 }
 
 function buildTrendHTML(runs) {
-  const sorted = [...runs].sort((a,b)=>{
-    const ka = a.timestamp || a.date || '';
-    const kb = b.timestamp || b.date || '';
-    return ka.localeCompare(kb);
-  });
+  const sorted = [...runs].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   if (sorted.length < 2) return '';
   const W=820, H=160, pad={t:40,b:32,l:36,r:20};
   const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
@@ -567,7 +541,7 @@ function buildTrendHTML(runs) {
     const c   = sel ? '#137333' : '#258ed8';
     return `<circle cx="${x}" cy="${y}" r="${sel?6:4}" fill="${c}" stroke="#fff" stroke-width="2.5"/>
             <text x="${x}" y="${y-13}" text-anchor="middle" font-size="10" font-weight="700" fill="${c}" font-family="Montserrat">${v}%</text>
-            <text x="${x}" y="${H-6}" text-anchor="middle" font-size="9" fill="#9ea3b8" font-family="Montserrat" font-weight="600">${esc(sorted[i].timestamp ? sorted[i].timestamp.slice(5,16).replace('T',' ') : (sorted[i].date||'').slice(0,8))}</text>`;
+            <text x="${x}" y="${H-6}" text-anchor="middle" font-size="9" fill="#9ea3b8" font-family="Montserrat" font-weight="600">${esc((sorted[i].label||sorted[i].date||'').slice(0,8))}</text>`;
   }).join('');
 
   return `
@@ -634,25 +608,21 @@ function bindNav() {
   document.getElementById('date-to').addEventListener('change',   e => { dateTo  =e.target.value; currentRun=null; render(); });
 }
 
-function clearDates() {
-  dateFrom=''; dateTo='';
-  document.getElementById('date-from').value='';
-  document.getElementById('date-to').value='';
-  currentRun=null; render();
-}
-
 async function init() {
   bindNav();
   try {
     const resp = await fetch('reports/qa_results.json');
     if (!resp.ok) throw new Error();
     const data = await resp.json();
-    allRuns = (data.runs||[]).slice().sort((a,b)=>{
-      const ka = a.timestamp || a.date || '';
-      const kb = b.timestamp || b.date || '';
-      return ka.localeCompare(kb);
-    });
-    // Don't pre-fill date inputs — leave blank so all runs show by default
+    allRuns = (data.runs||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    if (allRuns.length) {
+      const dates = allRuns.map(r=>r.date).filter(Boolean).sort();
+      if (dates.length) {
+        document.getElementById('date-from').value = dates[0];
+        document.getElementById('date-to').value   = dates[dates.length-1];
+        dateFrom=dates[0]; dateTo=dates[dates.length-1];
+      }
+    }
     if (!allRuns.length) {
       document.getElementById('main').innerHTML = `<div class="empty"><h2>No data yet</h2><p>Run the test suite to generate results.</p></div>`;
       return;
