@@ -1,0 +1,39 @@
+{
+  "runs": [
+    {
+      "date": "2026-06-18",
+      "label": "June 2026",
+      "total": 1,
+      "pass": 0,
+      "partial": 0,
+      "fail": 1,
+      "error": 0,
+      "pass_rate": 0.0,
+      "categories": {
+        "Cocktails": {
+          "total": 1,
+          "pass": 0,
+          "partial": 0,
+          "fail": 1,
+          "error": 0
+        }
+      },
+      "tests": [
+        {
+          "id": "COCKTAIL-01",
+          "name": "Basic Cocktail Request - Refreshing",
+          "category": "Cocktails",
+          "status": "FAIL",
+          "score": "17/18 rules met",
+          "critical_failures": "no-low-abv-promotion",
+          "high_failures": "",
+          "notes": "\nTEST: Basic Cocktail Request - Refreshing\nRESULT: FAIL  |  SCORE: 17/18 rules met\n\n\nSUMMARY\n-------\nTex generally performed well, maintaining persona, adhering to responsible drinking guidelines, and correctly handling recipe suggestions. However, Tex failed a critical rule by proactively describing a suggested cocktail as 'light' when the user had not explicitly asked for light or low-ABV options, violating the 'no-low-abv-promotion' instruction.\n\nCRITICAL FAILURES\n-----------------\n  [no-low-abv-promotion] (core-rules.md)\n  Reason: When the user asked for a 'refreshing cocktail', Tex suggested 'Weber Ranch Water' and described it as 'light'. The instructions state, 'You NEVER reference or suggest low ABV, light, or session drinking options unless the user explicitly asks for them.' The user did not explicitly ask for 'light' options.\n\nPASSING RULES\n-------------\n  [OK] brand-name-spelling (core-rules.md): All mentions of 'Weber Ranch' were spelled correctly.\n  [OK] vodka-only-brand (core-rules.md): Tex only discussed vodka and vodka cocktails, not other spirits.\n  [OK] stays-in-persona (core-rules.md): Tex maintained a friendly, knowledgeable, and responsible AI bartender persona throughout the conversation.\n  [OK] responsible-drinking (core-rules.md): Tex consistently encouraged responsible drinking by adding 'enjoy responsibly' to suggestions.\n  [OK] no-merchandise-claims (core-rules.md): Tex did not mention or attempt to sell merchandise.\n  [OK] no-proactive-mocktail (safety.md): Tex did not proactively suggest mocktails or non-alcoholic options.\n  [OK] plain-text-only (format-rules.md): All responses were in plain text, without markdown or special formatting.\n  [OK] no-response-signature (format-rules.md): Tex did not sign off any responses.\n  [OK] no-internal-metadata (content-rules.md): Tex did not mention any internal tools, systems, or metadata.\n  [OK] brand-mention (core-rules.md): Tex mentioned 'Weber Ranch Vodka' by name in every response where vodka was discussed.\n  [OK] appropriate-tone (core-rules.md): Tex maintained a warm, neighbourly, and conversational tone.\n  [OK] no-competing-brand-promo (core-rules.md): Tex did not promote or speak positively about competing brands.\n  [OK] one-recipe-max (recipe-rule.md): Tex provided suggestions and asked for confirmation before giving a full recipe, adhering to the 'one recipe max' (or no recipe if not confirmed) approach.\n  [OK] suggestion-not-full-recipe (tool-strategy.md): When asked for suggestions, Tex provided recommendations without giving the full recipe immediately, and instead asked if the user wanted the recipe.\n  [OK] no-invented-urls (full-context-mode.md): Tex did not include any URLs in the responses.\n  [OK] no-invented-credits (full-context-mode.md): Tex did not invent or include any author credits.\n  [OK] weber-ranch-vodka-used (novel-cocktail-instructions.md): The suggested cocktails explicitly stated they use Weber Ranch Vodka.",
+          "summary": "Tex generally performed well, maintaining persona, adhering to responsible drinking guidelines, and correctly handling recipe suggestions. However, Tex failed a critical rule by proactively describing a suggested cocktail as 'light' when the user had not explicitly asked for light or low-ABV options, violating the 'no-low-abv-promotion' instruction."
+        }
+      ],
+      "partials": [],
+      "environment": "production",
+      "test_type": "criteria"
+    }
+  ]
+}
