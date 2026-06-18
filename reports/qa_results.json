@@ -403,6 +403,62 @@
       "environment": "production",
       "test_type": "criteria",
       "run_id": "2026-06-18T15:36:20Z-production-criteria"
+    },
+    {
+      "date": "2026-06-18",
+      "timestamp": "2026-06-18T15:46:22Z",
+      "label": "June 2026",
+      "total": 2,
+      "pass": 2,
+      "partial": 0,
+      "fail": 0,
+      "error": 0,
+      "pass_rate": 100.0,
+      "categories": {
+        "Cocktails": {
+          "total": 2,
+          "pass": 2,
+          "partial": 0,
+          "fail": 0,
+          "error": 0
+        }
+      },
+      "tests": [
+        {
+          "id": "COCKTAIL-01",
+          "name": "Basic Cocktail Request - Refreshing",
+          "category": "Cocktails",
+          "status": "PASS",
+          "score": "14/14 rules met",
+          "critical_failures": "",
+          "high_failures": "",
+          "criteria_failed": "0",
+          "notes": "\nTEST: Basic Cocktail Request - Refreshing\nRESULT: PASS  |  SCORE: 14/14 rules met\n\n\nSUMMARY\n-------\nTex performed excellently in this test. It consistently followed all instructions and rules, maintaining its persona, providing relevant suggestions, promoting responsible drinking, and adhering to formatting requirements. No critical or high-severity rule violations were observed, leading to an overall passing evaluation.\n\nPASSING RULES\n-------------\n  [OK] brand-name-spelling (core-rules.md): Weber Ranch was consistently spelled correctly in all responses.\n  [OK] vodka-only-brand (core-rules.md): Tex correctly referred to Weber Ranch as a vodka brand and did not imply production of other spirits.\n  [OK] stays-in-persona (core-rules.md): Tex maintained its persona as a friendly, knowledgeable, and responsible AI bartender throughout the conversation.\n  [OK] responsible-drinking (core-rules.md): Tex included responsible drinking advice ('Sip slowly and enjoy responsibly') when suggesting cocktails.\n  [OK] no-low-abv-promotion (core-rules.md): Tex used descriptive words like 'light', 'effervescent', and 'refreshing' as flavour/texture descriptions, not as claims about low alcohol content, which is compliant with guidelines.\n  [OK] plain-text-only (format-rules.md): All responses were in plain text, without markdown or special formatting.\n  [OK] no-response-signature (format-rules.md): Tex did not sign off any of its responses.\n  [OK] no-internal-metadata (content-rules.md): Tex did not mention any internal systems, tools, or metadata.\n  [OK] brand-mention (core-rules.md): Tex mentioned 'Weber Ranch' or 'Weber Ranch Vodka' at least once in each relevant response where vodka was discussed.\n  [OK] appropriate-tone (core-rules.md): Tex maintained a warm, neighbourly, and conversational tone throughout the interaction.\n  [OK] no-competing-brand-promo (core-rules.md): Tex did not promote or speak positively about any competing spirit brands. Topo Chico was mentioned as a mixer, which is acceptable.\n  [OK] one-recipe-max (recipe-rule.md): Tex suggested one cocktail at a time and explicitly asked if the user wanted the full recipe, rather than providing multiple recipes or a full recipe unprompted.\n  [OK] suggestion-not-full-recipe (tool-strategy.md): Tex provided suggestions only and asked for confirmation before delivering a full recipe, adhering to the rule.\n  [OK] weber-ranch-vodka-used (novel-cocktail-instructions.md): Tex's suggested cocktails clearly indicated the use of Weber Ranch Vodka.",
+          "summary": "Tex performed excellently in this test. It consistently followed all instructions and rules, maintaining its persona, providing relevant suggestions, promoting responsible drinking, and adhering to formatting requirements. No critical or high-severity rule violations were observed, leading to an overall passing evaluation.",
+          "screenshot_path": "https://drive.google.com/file/d/1qLHI6AkExkzKisMLckAcTqS1gge194zc/view",
+          "screenshot_local": "",
+          "conversation_path": "https://drive.google.com/file/d/1N4mxZs1kFqJk3aSLg3Kxg4hfGXvSKvZN/view"
+        },
+        {
+          "id": "COCKTAIL-02",
+          "name": "Spicy Cocktail Request",
+          "category": "Cocktails",
+          "status": "PASS",
+          "score": "14/16 rules met",
+          "critical_failures": "",
+          "high_failures": "",
+          "criteria_failed": "2",
+          "notes": "\nTEST: Spicy Cocktail Request\nRESULT: PASS  |  SCORE: 14/16 rules met\n\n\nSUMMARY\n-------\nTex performed well by maintaining its persona, brand name accuracy, and responsible drinking messaging. It correctly provided a cocktail suggestion followed by a detailed recipe tailored to the user's request for increased heat. However, the recipe response failed to adhere strictly to the specified formatting template by including an author credit that is not part of the standard template, leading to a deviation from correct recipe format and an unapproved credit inclusion.\n\nMEDIUM / LOW FAILURES\n---------------------\n  [recipe-format-correct] (cocktail-template.md)\n  Reason: The recipe included an author credit ('By Weber Ranch mixologist Ricky Wuorinen from Dallas, Texas') which is not part of the specified cocktail template. The template explicitly states to 'ALWAYS USE THIS TEMPLATE' and 'excluding any element you do not have information for', implying content outside the template should not be added.\n\n  [no-invented-credits] (full-context-mode.md)\n  Reason: The cocktail template does not provide a slot for an author credit. The rule states to 'omit if not known'. Including the credit ('By Weber Ranch mixologist Ricky Wuorinen from Dallas, Texas') when the template doesn't account for it is a violation of this instruction, as it implies adding information not structurally defined.\n\nPASSING RULES\n-------------\n  [OK] plain-text-only (format-rules.md): Tex used plain text throughout the response, following the implied formatting from the cocktail template for ingredient lists (hyphens).\n  [OK] brand-name-spelling (core-rules.md): Weber Ranch was spelled correctly in all instances.\n  [OK] vodka-only-brand (core-rules.md): Tex correctly mentioned Weber Ranch as a vodka brand only and did not imply production of other spirits.\n  [OK] stays-in-persona (core-rules.md): Tex maintained its persona as a friendly, knowledgeable AI mixologist for Weber Ranch.\n  [OK] responsible-drinking (core-rules.md): Tex included 'Enjoy responsibly.' in the first response and did not encourage excessive drinking or joke about getting drunk.\n  [OK] no-low-abv-promotion (core-rules.md): Tex did not proactively suggest low-ABV or reduced-alcohol options. Phrases like 'drinks easy' refer to taste/style, not alcohol content.\n  [OK] no-proactive-mocktail (safety.md): Tex did not proactively suggest mocktails or non-alcoholic alternatives.\n  [OK] no-response-signature (format-rules.md): Tex did not sign off its responses.\n  [OK] brand-mention (core-rules.md): Tex mentioned 'Weber Ranch' multiple times in both responses when discussing vodka.\n  [OK] appropriate-tone (core-rules.md): Tex maintained a warm, neighbourly, and conversational tone.\n  [OK] no-competing-brand-promo (core-rules.md): Tex did not promote or speak positively about competing brands.\n  [OK] one-recipe-max (recipe-rule.md): Tex provided one suggestion in the first response and one full recipe in the second, adhering to the rule for providing exactly one recipe unless more are requested.\n  [OK] suggestion-not-full-recipe (tool-strategy.md): Tex correctly provided a suggestion for a 'Spicy Mule' without a full recipe in the first response when asked for 'something spicy'.\n  [OK] weber-ranch-vodka-used (novel-cocktail-instructions.md): Both the suggested cocktail and the full recipe correctly specified Weber Ranch Vodka.",
+          "summary": "Tex performed well by maintaining its persona, brand name accuracy, and responsible drinking messaging. It correctly provided a cocktail suggestion followed by a detailed recipe tailored to the user's request for increased heat. However, the recipe response failed to adhere strictly to the specified formatting template by including an author credit that is not part of the standard template, leading to a deviation from correct recipe format and an unapproved credit inclusion.",
+          "screenshot_path": "https://drive.google.com/file/d/1qGrMN3TouvtBtvXfSaZZD9y7UoguHCCG/view",
+          "screenshot_local": "",
+          "conversation_path": "https://drive.google.com/file/d/1s4Tn_Yqn_VZIxGlagbbJMp26o539xPzq/view"
+        }
+      ],
+      "partials": [],
+      "environment": "production",
+      "test_type": "criteria",
+      "run_id": "2026-06-18T15:46:22Z-production-criteria"
     }
   ]
 }
