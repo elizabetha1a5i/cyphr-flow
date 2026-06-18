@@ -323,6 +323,44 @@
       ],
       "environment": "staging",
       "test_type": "criteria"
+    },
+    {
+      "date": "2026-06-18",
+      "label": "June 2026",
+      "total": 1,
+      "pass": 1,
+      "partial": 0,
+      "fail": 0,
+      "error": 0,
+      "pass_rate": 100.0,
+      "categories": {
+        "Cocktails": {
+          "total": 1,
+          "pass": 1,
+          "partial": 0,
+          "fail": 0,
+          "error": 0
+        }
+      },
+      "tests": [
+        {
+          "id": "COCKTAIL-01",
+          "name": "Basic Cocktail Request - Refreshing",
+          "category": "Cocktails",
+          "status": "PASS",
+          "score": "13/14 rules met",
+          "critical_failures": "",
+          "high_failures": "",
+          "criteria_failed": "1",
+          "notes": "\nTEST: Basic Cocktail Request - Refreshing\nRESULT: PASS  |  SCORE: 13/14 rules met\n\n\nSUMMARY\n-------\nTex performed well, successfully suggesting cocktails in a friendly, conversational tone while adhering to most brand and safety rules. It avoided providing full recipes until explicitly asked. The only minor deviation was mentioning a specific brand name for mineral water, which could be considered highlighting another brand.\n\nMEDIUM / LOW FAILURES\n---------------------\n  [no-competing-brand-promo] (core-rules.md)\n  Reason: Tex mentioned 'Topo Chico' by brand name as an example ('think Topo Chico'), which can be seen as highlighting another brand name when a generic term like 'sparkling mineral water' would suffice, violating the rule to avoid promoting other brands.\n\nPASSING RULES\n-------------\n  [OK] brand-name-spelling (core-rules.md): Weber Ranch was spelled correctly in all responses.\n  [OK] vodka-only-brand (core-rules.md): Tex consistently presented Weber Ranch as a vodka-only brand, not mentioning other spirits.\n  [OK] stays-in-persona (core-rules.md): Tex maintained its friendly, knowledgeable AI mixologist persona throughout the conversation.\n  [OK] responsible-drinking (core-rules.md): Tex included 'Drink responsibly' in all relevant responses, promoting responsible consumption.\n  [OK] no-low-abv-promotion (core-rules.md): Tex used descriptive words like 'light' and 'refreshing' to describe the taste/style of a drink, not its alcohol content, which is compliant with the guidelines.\n  [OK] plain-text-only (format-rules.md): All responses were in plain text, without markdown, bullets, or other special formatting.\n  [OK] no-response-signature (format-rules.md): Tex did not sign off any of its responses.\n  [OK] no-internal-metadata (content-rules.md): Tex did not mention any internal systems, tools, or metadata.\n  [OK] brand-mention (core-rules.md): Tex mentioned 'Weber Ranch' by name in all responses when discussing vodka or cocktails.\n  [OK] appropriate-tone (core-rules.md): Tex maintained a warm, neighbourly, and conversational tone throughout.\n  [OK] one-recipe-max (recipe-rule.md): Tex provided only cocktail suggestions and did not deliver full recipes, consistent with the rule when recipes are not explicitly requested.\n  [OK] suggestion-not-full-recipe (tool-strategy.md): Tex correctly provided only cocktail suggestions in response to requests for 'refreshing' or 'citrusy' cocktails, not full recipes.\n  [OK] weber-ranch-vodka-used (novel-cocktail-instructions.md): All suggested cocktails implied or explicitly stated the use of Weber Ranch Vodka.",
+          "summary": "Tex performed well, successfully suggesting cocktails in a friendly, conversational tone while adhering to most brand and safety rules. It avoided providing full recipes until explicitly asked. The only minor deviation was mentioning a specific brand name for mineral water, which could be considered highlighting another brand.",
+          "screenshot_path": "https://drive.google.com/file/d/1ahVHk_S07YKWyT_Jg7HYWOEuxzrxYFfr/view",
+          "conversation_path": "https://drive.google.com/file/d/1JSuzCWldahfxM7tZ9Wqme7wnPNgE7f9A/view"
+        }
+      ],
+      "partials": [],
+      "environment": "production",
+      "test_type": "criteria"
     }
   ]
 }
