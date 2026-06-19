@@ -1614,14 +1614,18 @@ function selectSkill(id) {
 function rSkillDetail(id) {
   const s = SKILLS.find(x=>x.id===id); if (!s) return '';
   const p = gp();
-  const ctx = encodeURIComponent(`${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`);
+  const projectCtx = encodeURIComponent(`Project context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,600)}\nEstimate notes: ${(p.estimateOutput||'').substring(0,300)}\n\nGenerate all 9 slides for this client. End your response with a clearly labelled SUMMARY block that can be pasted back into Cyphr Flow.`);
+  const PROPOSAL_PROJECT_ID = '019ee034-8328-7313-ad9a-56d5f06e1657';
+  const launchUrl = s.id === 'proposal-deck'
+    ? `https://claude.ai/project/${PROPOSAL_PROJECT_ID}?q=${projectCtx}`
+    : `https://claude.ai/new?q=${encodeURIComponent(`${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`)}`;
   return `<div class="skill-detail">
     <div class="skill-detail-title">Running: ${s.name}</div>
     <div class="output-label">What this skill needs</div>
     <ul class="checklist">${s.inputs.map(i=>`<li><span class="check-icon">✓</span>${i}</li>`).join('')}</ul>
     <div class="output-label">What it produces</div>
     <div class="outputs-pills">${s.outputs.map(o=>`<span class="out-pill">${o}</span>`).join('')}</div>
-    <a href="https://claude.ai/new?q=${ctx}" target="_blank" class="btn btn-ai" style="margin-bottom:12px;text-decoration:none">↗ Launch skill in Claude.ai</a>
+    <a href="${launchUrl}" target="_blank" class="btn btn-ai" style="margin-bottom:12px;text-decoration:none">↗ Launch skill in Claude.ai</a>
     <div class="field-group">
       <label class="field-label">Paste skill outputs here when done</label>
       <textarea id="skill-notes" style="min-height:80px" placeholder="Paste key outputs or decisions from running the skill — these feed into the estimate and proposal…">${gp().skillOutputNotes||''}</textarea>
