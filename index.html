@@ -563,7 +563,7 @@ async function generateTextDoc(p, slug, type) {
     throw new Error(errMsg);
   }
   const blob = await res.blob();
-  const ext = (type==='estimate'||type==='gantt') ? 'xlsx' : 'docx';
+  const ext = (type==='estimate'||type==='gantt') ? 'xlsx' : type==='proposal' ? 'pptx' : 'docx';
   downloadBlob(blob, `${slug}_${type}.${ext}`);
 }
 
@@ -1796,7 +1796,7 @@ function rSetup() {
       <button class="action-btn" id="btn-dl-brief" onclick="generateFile('brief')">📋 Brief (.docx)</button>
       <button class="action-btn" id="btn-dl-estimate" onclick="generateFile('estimate')">📊 Estimate (.xlsx)</button>
       <button class="action-btn" id="btn-dl-sow" onclick="generateFile('sow')">📄 SOW (.docx)</button>
-      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📝 Proposal (.docx)</button>
+      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📊 Proposal (.pptx)</button>
       <button class="action-btn" id="btn-dl-gantt" onclick="generateFile('gantt')">📅 Gantt (.xlsx)</button>
       <button class="action-btn" id="btn-dl-status" onclick="generateStatusSheet()">📋 Status sheet (.xlsx)</button>
     </div>
