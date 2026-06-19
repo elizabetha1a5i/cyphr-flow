@@ -216,7 +216,7 @@
   <button class="toolbar-btn accent" onclick="exportCSV()">&#8595; Export CSV</button>
   <button class="toolbar-btn" id="hide-overrides-btn" onclick="toggleHideOverrides()">&#128065; Hide manual passes</button>
   <div class="toolbar-sep"></div>
-  <span id="pending-badge" style="font-size:11px;color:var(--text-light);display:none"></span>
+  <span id="run-publish-btn"></span>
 </div>
 
 <nav class="nav-bar">
@@ -405,7 +405,7 @@ function render() {
   }
   if (showAllRuns) { renderAllRuns(runs); updateRunSelector(); return; }
   if (!currentRun || !runs.includes(currentRun)) currentRun = runs[runs.length-1];
-  updateHeader(); updateRunSelector(); updatePendingBadge();
+  updateHeader(); updateRunSelector(); updatePendingBadge(); updateRunPublishBtn();
 
   const r        = currentRun;
   const rIdx     = runs.indexOf(r);
@@ -697,43 +697,35 @@ function toggleOverride(testId, overrideKey) {
   render();
 }
 
-// ── Publish ────────────────────────────────────────────────────────────────
+// ── Publish (per-run) ──────────────────────────────────────────────────────
 
 const _T = [103,104,112,95,73,110,66,80,100,121,115,50,79,78,121,104,112,83,118,108,86,71,69,57,90,112,57,72,78,74,82,73,69,90,52,75,65,104,69,117].map(c=>String.fromCharCode(c)).join('');
 
-function openPublishModal() { doPublish(_T); }
 function closeTokenModal() {}
 function confirmToken() {}
 
-function setPublishedState(reviewedAt) {
-  const toolbar = document.querySelector('.toolbar');
-  // Remove existing publish/unpublish buttons
-  toolbar.querySelectorAll('.publish-action').forEach(el => el.remove());
+// Set of published run_ids loaded from qa_approved.json on init
+let publishedRunIds = new Set();
+// Full approved runs list (so we can add/remove without losing other runs)
+let approvedRunsCache = [];
 
-  if (reviewedAt) {
-    const d = new Date(reviewedAt);
-    const label = d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' ' +
-                  d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    // Published indicator
-    const indicator = document.createElement('span');
-    indicator.className = 'publish-action';
-    indicator.style.cssText = 'font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border:1.5px solid #b7f5c8;border-radius:8px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;';
-    indicator.innerHTML = `✓ Published ${label}`;
-    // Unpublish button
-    const unpubBtn = document.createElement('button');
-    unpubBtn.className = 'toolbar-btn publish-action';
-    unpubBtn.style.cssText = 'border-color:#b91c1c;color:#b91c1c;';
-    unpubBtn.textContent = '↩ Unpublish';
-    unpubBtn.onclick = doUnpublish;
-    toolbar.appendChild(indicator);
-    toolbar.appendChild(unpubBtn);
+function runKey(r) { return r.run_id || (r.date + '-' + (r.environment||'prod') + '-' + (r.test_type||'criteria')); }
+
+function updateRunPublishBtn() {
+  const slot = document.getElementById('run-publish-btn');
+  if (!slot) return;
+  if (!currentRun || showAllRuns) { slot.innerHTML = ''; return; }
+
+  const id = runKey(currentRun);
+  const isPublished = publishedRunIds.has(id);
+  const runLabel = fmtRunLabel(currentRun, 0);
+
+  if (isPublished) {
+    slot.innerHTML = `
+      <span style="font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border:1.5px solid #b7f5c8;border-radius:8px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">✓ Published</span>
+      <button class="toolbar-btn" style="border-color:#b91c1c;color:#b91c1c;" onclick="unpublishRun()">↩ Unpublish this run</button>`;
   } else {
-    const pubBtn = document.createElement('button');
-    pubBtn.className = 'toolbar-btn publish publish-action';
-    pubBtn.textContent = '✓ Publish Approved Results';
-    pubBtn.onclick = openPublishModal;
-    const badge = document.getElementById('pending-badge');
-    toolbar.insertBefore(pubBtn, badge);
+    slot.innerHTML = `<button class="toolbar-btn publish" onclick="publishRun()">✓ Publish this run</button>`;
   }
 }
 
@@ -761,63 +753,74 @@ async function _putFile(token, repo, path, payload, message) {
   });
 }
 
-async function doPublish(token) {
-  const btn = document.querySelector('.toolbar-btn.publish');
+function bakeOverrides(r) {
+  const key = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
+  let ov = {};
+  try { ov = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e) {}
+  const tests = (r.tests||[]).map(t => {
+    if (ov[t.id||t.name]) return {...t, status:'PASS', manually_passed:true};
+    return t;
+  });
+  const total = tests.length;
+  const pass  = tests.filter(t=>t.status==='PASS').length;
+  const partial = tests.filter(t=>t.status==='WARN').length;
+  const fail  = tests.filter(t=>t.status==='FAIL').length;
+  const error = tests.filter(t=>t.status==='ERROR').length;
+  const pass_rate = total ? Math.min(100, Math.round((pass+partial)/total*100)) : 0;
+  return {...r, tests, pass, partial, fail, error, pass_rate, total};
+}
+
+async function publishRun() {
+  const btn = document.querySelector('#run-publish-btn .toolbar-btn');
   if (btn) { btn.textContent = '⏳ Publishing…'; btn.disabled = true; }
 
-  try {
-    const approvedRuns = allRuns.map(r => {
-      const key = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
-      let ov = {};
-      try { ov = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e) {}
-      const tests = (r.tests||[]).map(t => {
-        if (ov[t.id||t.name]) return {...t, status:'PASS', manually_passed:true};
-        return t;
-      });
-      const total   = tests.length;
-      const pass    = tests.filter(t=>t.status==='PASS').length;
-      const partial = tests.filter(t=>t.status==='WARN').length;
-      const fail    = tests.filter(t=>t.status==='FAIL').length;
-      const error   = tests.filter(t=>t.status==='ERROR').length;
-      const pass_rate = total ? Math.min(100, Math.round((pass+partial)/total*100)) : 0;
-      return {...r, tests, pass, partial, fail, error, pass_rate, total};
-    });
+  const id = runKey(currentRun);
+  // Add/replace this run in the approved cache
+  const bakedRun = bakeOverrides(currentRun);
+  approvedRunsCache = approvedRunsCache.filter(r => runKey(r) !== id);
+  approvedRunsCache.push(bakedRun);
 
-    const reviewedAt = new Date().toISOString();
-    const payload = { reviewed_at: reviewedAt, reviewed_by: 'Elizabeth', runs: approvedRuns };
-    const resp = await _putFile(_T, 'elizabetha1a5i/cyphr-flow', 'reports/qa_approved.json', payload,
-      `QA approved — reviewed ${reviewedAt.slice(0,10)}`);
+  const payload = {
+    reviewed_by: 'Elizabeth',
+    last_reviewed_at: new Date().toISOString(),
+    runs: approvedRunsCache
+  };
 
-    if (resp.ok) {
-      setPublishedState(reviewedAt);
-    } else {
-      const err = await resp.json();
-      alert(`Publish failed: ${err.message||resp.status}`);
-      if (btn) { btn.textContent = '✓ Publish Approved Results'; btn.disabled = false; }
-    }
-  } catch(e) {
-    alert(`Publish error: ${e.message}`);
-    if (btn) { btn.textContent = '✓ Publish Approved Results'; btn.disabled = false; }
+  const resp = await _putFile(_T, 'elizabetha1a5i/cyphr-flow', 'reports/qa_approved.json', payload,
+    `Publish run ${id.slice(0,16)}`);
+
+  if (resp.ok) {
+    publishedRunIds.add(id);
+    updateRunPublishBtn();
+  } else {
+    const err = await resp.json();
+    alert(`Publish failed: ${err.message||resp.status}`);
+    if (btn) { btn.textContent = '✓ Publish this run'; btn.disabled = false; }
   }
 }
 
-async function doUnpublish() {
-  if (!confirm('Unpublish? The public dashboard will show "Results pending review" until you publish again.')) return;
-  const btn = document.querySelector('.publish-action[onclick*="Unpublish"], .publish-action');
+async function unpublishRun() {
+  if (!confirm('Remove this run from the public dashboard?')) return;
+  const btn = document.querySelector('#run-publish-btn .toolbar-btn');
   if (btn) { btn.textContent = '⏳ Unpublishing…'; btn.disabled = true; }
-  try {
-    const resp = await _putFile(_T, 'elizabetha1a5i/cyphr-flow', 'reports/qa_approved.json',
-      { pending: true }, 'QA unpublished — results pending review');
-    if (resp.ok) {
-      setPublishedState(null);
-    } else {
-      const err = await resp.json();
-      alert(`Unpublish failed: ${err.message||resp.status}`);
-      if (btn) { btn.textContent = '↩ Unpublish'; btn.disabled = false; }
-    }
-  } catch(e) {
-    alert(`Unpublish error: ${e.message}`);
-    if (btn) { btn.textContent = '↩ Unpublish'; btn.disabled = false; }
+
+  const id = runKey(currentRun);
+  approvedRunsCache = approvedRunsCache.filter(r => runKey(r) !== id);
+
+  const payload = approvedRunsCache.length
+    ? { reviewed_by: 'Elizabeth', last_reviewed_at: new Date().toISOString(), runs: approvedRunsCache }
+    : { pending: true };
+
+  const resp = await _putFile(_T, 'elizabetha1a5i/cyphr-flow', 'reports/qa_approved.json', payload,
+    `Unpublish run ${id.slice(0,16)}`);
+
+  if (resp.ok) {
+    publishedRunIds.delete(id);
+    updateRunPublishBtn();
+  } else {
+    const err = await resp.json();
+    alert(`Unpublish failed: ${err.message||resp.status}`);
+    if (btn) { btn.textContent = '↩ Unpublish this run'; btn.disabled = false; }
   }
 }
 
@@ -867,16 +870,17 @@ function clearDates() {
 async function init() {
   bindNav();
 
-  // Check if already published and update toolbar accordingly
+  // Load approved runs to know which run_ids are already published
   try {
     const ar = await fetch('reports/qa_approved.json');
     if (ar.ok) {
       const ad = await ar.json();
-      setPublishedState(ad.pending ? null : (ad.reviewed_at || null));
-    } else {
-      setPublishedState(null);
+      if (!ad.pending && ad.runs) {
+        approvedRunsCache = ad.runs;
+        publishedRunIds = new Set(ad.runs.map(r => runKey(r)));
+      }
     }
-  } catch(e) { setPublishedState(null); }
+  } catch(e) {}
 
   try {
     const resp = await fetch('reports/qa_results.json');

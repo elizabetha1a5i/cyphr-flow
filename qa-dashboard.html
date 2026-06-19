@@ -701,11 +701,12 @@ async function init() {
     }
 
     // Show reviewed banner
-    if (data.reviewed_at) {
+    const reviewedAt = data.last_reviewed_at || data.reviewed_at;
+    if (reviewedAt) {
       const el = document.getElementById('reviewed-banner');
       el.className = 'reviewed-banner';
       el.style.display = '';
-      el.innerHTML = `✓ Last reviewed ${fmtDateTime(data.reviewed_at)} by ${esc(data.reviewed_by||'Elizabeth')}`;
+      el.innerHTML = `✓ Last reviewed ${fmtDateTime(reviewedAt)} by ${esc(data.reviewed_by||'Elizabeth')}`;
     }
 
     allRuns = (data.runs||[]).slice().sort((a,b)=>{
