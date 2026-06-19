@@ -404,24 +404,23 @@ function render() {
   if (!currentRun || !runs.includes(currentRun)) currentRun = runs[runs.length-1];
   updateHeader(); updateRunSelector(); updatePendingBadge(); updateRunPublishBtn();
 
-  const r        = currentRun;
-  const rIdx     = runs.indexOf(r);
+  const rIdx     = runs.indexOf(currentRun);
   const prevRun  = rIdx > 0 ? runs[rIdx-1] : null;
+  const r        = bakeOverrides(currentRun);
   const total    = r.total  || 0;
   const passed   = r.pass   || 0;
   const partial  = r.partial|| 0;
   const failed   = r.fail   || 0;
   const errored  = r.error  || 0;
-  const overrideKey = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
-  let overrides = {};
-  try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
-  const failIds = new Set((r.tests||[]).filter(t=>t.status==='FAIL'||t.status==='ERROR').map(t=>t.id));
-  const overrideCount = Object.keys(overrides).filter(id => failIds.has(id)).length;
-  const passRate = total ? Math.min(100, Math.round(((passed + partial + overrideCount) / total) * 100)) : (r.pass_rate ?? 0);
+  const passRate = r.pass_rate ?? 0;
   const isFB     = (r.test_type||'criteria') === 'feedback';
   const cats     = Object.entries(r.categories||{});
   const cleanCats= cats.filter(([,v])=>!(v.fail||0)&&!(v.partial||0)).length;
   const resolved = isFB ? cats.filter(([,v])=>pct((v.pass||0)+(v.partial||0),v.total||0)>=80).length : null;
+
+  const overrideKey = `overrides_${currentRun.date}_${currentRun.environment||'prod'}_${currentRun.test_type||'criteria'}`;
+  let overrides = {};
+  try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
 
   const warnBanner = isFB ? `
     <div class="warn-banner">
