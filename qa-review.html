@@ -923,10 +923,13 @@ const _SW = [104,116,116,112,115,58,47,47,104,111,111,107,115,46,115,108,97,99,1
 function deepLink() {
   const base = 'https://elizabetha1a5i.github.io/cyphr-flow/qa-dashboard.html';
   const p = new URLSearchParams();
-  if (activeEnv  !== 'all') p.set('env',  activeEnv);
-  if (activeType !== 'all') p.set('type', activeType);
-  if (!showAllRuns && currentRun) {
-    p.set('run', currentRun.run_id || (currentRun.date+'-'+(currentRun.environment||'prod')+'-'+(currentRun.test_type||'criteria')));
+  // Base link on published data's env/type, not review page filter state
+  if (approvedRunsCache.length) {
+    const r = approvedRunsCache[approvedRunsCache.length-1];
+    const env  = r.environment || 'production';
+    const type = r.test_type   || 'criteria';
+    if (env  !== 'all') p.set('env',  env);
+    if (type !== 'all') p.set('type', type);
   }
   const qs = p.toString();
   return qs ? base + '?' + qs : base;

@@ -401,14 +401,15 @@ function render() {
     ? `Issue-specific test run · ${esc(r.label||fmtDate(r.date))} · ${cats.length} issues tracked · ${total} test variants run · Overall pass rate <strong>${passRate}%</strong>${resolved!==null?` · ${resolved} of ${cats.length} issues resolved`:''}`
     : `${esc(r.test_type||'Criteria')} test run · ${esc(r.label||fmtDate(r.date))} · ${total} tests across ${cats.length} categories · Pass rate <strong>${passRate}%</strong>${cleanCats===cats.length?' · All categories clean':''}`;
 
-  const kpi3Val = isFB ? failed  : partial;
-  const kpi3Lbl = isFB ? 'Failures' : 'Partials';
-  const kpi3Sub = isFB
-    ? `<span class="chip ${failed===0?'green':'red'}">${pct(failed,total)}% fail rate</span>`
-    : `<span class="chip amber">to monitor</span>`;
-  const kpi4Val = isFB ? (resolved??cleanCats) : cleanCats;
-  const kpi4Lbl = isFB ? 'Issues Resolved' : 'Clean Categories';
-  const kpi4Sub = `<span class="chip green">of ${cats.length} ${isFB?'tracked':'categories'}</span>`;
+  const kpi3Val = isFB ? cats.filter(([,v])=>pct((v.pass||0)+(v.partial||0),v.total||0)>=80).length : cleanCats;
+  const kpi3Lbl = isFB ? 'Issues Resolved' : 'Clean Categories';
+  const kpi3Sub = `<span class="chip green">of ${cats.length} ${isFB?'tracked':'categories'}</span>`;
+  const kpi4Val = passRate >= 90 ? '✓' : passRate >= 70 ? '~' : '!';
+  const kpi4Lbl = 'Overall Health';
+  const kpi4Sub = passRate >= 90
+    ? `<span class="chip green">Passing</span>`
+    : passRate >= 70 ? `<span class="chip amber">Monitor</span>`
+    : `<span class="chip amber">Needs review</span>`;
 
   const splitCard = `
     <div class="card">
@@ -417,7 +418,7 @@ function render() {
       <div class="donut-wrap">
         <svg id="donut-svg" width="120" height="120" viewBox="0 0 110 110"></svg>
         <div class="donut-legend">
-          ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial'],[failed,'#b91c1c','Fail'],[errored,'#9ea3b8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
+          ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial']].filter(([v])=>v>0).map(([v,c,l])=>`
             <div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${esc(l)}<span class="legend-val">${v}</span></div>`).join('')}
         </div>
       </div>
@@ -515,7 +516,7 @@ function render() {
     </div>`;
 
   drawDonut(
-    [[passed,'#258ed8'],[partial,'#f0c040'],[failed,'#b91c1c'],[errored,'#9ea3b8']].filter(([v])=>v>0),
+    [[passed,'#258ed8'],[partial,'#f0c040']].filter(([v])=>v>0),
     total, passRate
   );
 }
@@ -629,7 +630,7 @@ function renderAllRuns(runs) {
       <div class="donut-wrap">
         <svg id="donut-svg" width="120" height="120" viewBox="0 0 110 110"></svg>
         <div class="donut-legend">
-          ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial'],[failed,'#b91c1c','Fail'],[errored,'#9ea3b8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
+          ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial']].filter(([v])=>v>0).map(([v,c,l])=>`
             <div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${esc(l)}<span class="legend-val">${v}</span></div>`).join('')}
         </div>
       </div>
@@ -642,8 +643,8 @@ function renderAllRuns(runs) {
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">Pass Rate</div><div class="kpi-num">${passRate}<span class="unit">%</span></div><span class="chip green">${passed+partial} of ${total} passing</span></div>
       <div class="kpi"><div class="kpi-label">Tests Run</div><div class="kpi-num">${total}</div></div>
-      <div class="kpi"><div class="kpi-label">Failing</div><div class="kpi-num">${failed+errored}</div></div>
-      <div class="kpi"><div class="kpi-label">Partials</div><div class="kpi-num">${partial}</div></div>
+      <div class="kpi"><div class="kpi-label">Clean Categories</div><div class="kpi-num">${Object.values(Object.entries(cats.reduce((a,[n,v])=>{if(!a[n])a[n]={pass:0,partial:0,fail:0};a[n].pass+=v.pass||0;a[n].partial+=v.partial||0;a[n].fail+=v.fail||0;return a},{})).filter(([,v])=>!v.fail&&!v.partial)).length}</div><span class="chip green">of ${cats.length} categories</span></div>
+      <div class="kpi"><div class="kpi-label">Overall Health</div><div class="kpi-num">${passRate>=90?'✓':passRate>=70?'~':'!'}</div>${passRate>=90?'<span class="chip green">Passing</span>':passRate>=70?'<span class="chip amber">Monitor</span>':'<span class="chip amber">Needs review</span>'}</div>
     </div>
     <div class="section-label">Breakdown</div>
     ${buildTrendHTML(runs)}
@@ -653,7 +654,7 @@ function renderAllRuns(runs) {
     </div>`;
 
   drawDonut(
-    [[passed,'#258ed8'],[partial,'#f0c040'],[failed,'#b91c1c'],[errored,'#9ea3b8']].filter(([v])=>v>0),
+    [[passed,'#258ed8'],[partial,'#f0c040']].filter(([v])=>v>0),
     total, passRate
   );
 }
