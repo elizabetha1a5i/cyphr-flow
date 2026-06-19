@@ -249,6 +249,19 @@
 <main class="main" id="main"></main>
 <footer class="footer" id="footer">Tex QA Review · Weber Ranch</footer>
 
+<!-- Slack preview modal -->
+<div class="modal-overlay" id="slack-preview-modal" onclick="if(event.target===this)closeSlackPreview()">
+  <div class="modal" style="max-width:520px">
+    <h2 style="margin-bottom:4px">Preview Slack Message</h2>
+    <p style="margin-bottom:16px">This is what will be posted to your channel.</p>
+    <div id="slack-preview-body" style="background:#1a1d21;border-radius:10px;padding:18px 20px;font-family:'Montserrat',sans-serif;color:#d1d2d3;font-size:13px;line-height:1.6"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="toolbar-btn" onclick="closeSlackPreview()">Cancel</button>
+      <button class="toolbar-btn publish" id="slack-confirm-btn" onclick="sendSlackConfirmed()">Send</button>
+    </div>
+  </div>
+</div>
+
 <!-- Token modal -->
 <div class="modal-overlay" id="token-modal">
   <div class="modal">
@@ -919,23 +932,22 @@ function deepLink() {
   return qs ? base + '?' + qs : base;
 }
 
-async function notifySlack(btn) {
-  if (!approvedRunsCache.length) { alert('No published runs to notify about. Publish a run first.'); return; }
-  const orig = btn.textContent;
-  btn.textContent = '⏳ Sending…'; btn.disabled = true;
+let _slackPayload = null, _slackTriggerBtn = null;
 
-  // Always use published (approved) data only
-  const runs   = approvedRunsCache;
-  const total  = runs.reduce((s,r)=>s+(r.total||0),0);
-  const passed = runs.reduce((s,r)=>s+(r.pass||0)+(r.partial||0),0);
+function notifySlack(btn) {
+  if (!approvedRunsCache.length) { alert('No published runs to notify about. Publish a run first.'); return; }
+
+  const runs     = approvedRunsCache;
+  const total    = runs.reduce((s,r)=>s+(r.total||0),0);
+  const passed   = runs.reduce((s,r)=>s+(r.pass||0)+(r.partial||0),0);
+  const failed   = runs.reduce((s,r)=>s+(r.fail||0)+(r.error||0),0);
   const passRate = total ? Math.min(100,Math.round(passed/total*100)) : 0;
   const runLabel = runs.length === 1 ? (runs[0].date||'') : `${runs.length} published runs`;
+  const env      = activeEnv === 'all' ? 'All environments' : activeEnv.charAt(0).toUpperCase()+activeEnv.slice(1);
+  const link     = deepLink();
+  const emoji    = passRate >= 90 ? '✅' : passRate >= 70 ? '⚠️' : '❌';
 
-  const env   = activeEnv === 'all' ? 'All environments' : activeEnv.charAt(0).toUpperCase()+activeEnv.slice(1);
-  const link  = deepLink();
-  const emoji = passRate >= 90 ? '✅' : passRate >= 70 ? '⚠️' : '❌';
-
-  const body = {
+  _slackPayload = {
     blocks: [
       { type: 'header', text: { type: 'plain_text', text: `${emoji} Tex QA Results — ${env}`, emoji: true } },
       { type: 'section', fields: [
@@ -949,14 +961,42 @@ async function notifySlack(btn) {
       ]}
     ]
   };
+  _slackTriggerBtn = btn;
 
+  // Render preview
+  document.getElementById('slack-preview-body').innerHTML = `
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:10px">${emoji} Tex QA Results — ${esc(env)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:14px">
+      <div><div style="font-size:10px;color:#888;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Pass Rate</div><div style="font-size:18px;font-weight:800;color:#fff">${passRate}%</div></div>
+      <div><div style="font-size:10px;color:#888;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Tests Run</div><div style="font-size:18px;font-weight:800;color:#fff">${total}</div></div>
+      <div><div style="font-size:10px;color:#888;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Passing</div><div style="font-size:18px;font-weight:800;color:#fff">${passed} of ${total}</div></div>
+      <div><div style="font-size:10px;color:#888;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Run</div><div style="font-size:14px;font-weight:600;color:#fff">${esc(runLabel)}</div></div>
+    </div>
+    <a href="${esc(link)}" target="_blank" style="display:inline-block;background:#1264a3;color:#fff;font-size:12px;font-weight:700;padding:8px 18px;border-radius:6px;text-decoration:none">📊 View Dashboard →</a>`;
+
+  document.getElementById('slack-preview-modal').style.display = 'flex';
+}
+
+function closeSlackPreview() {
+  document.getElementById('slack-preview-modal').style.display = 'none';
+  _slackPayload = null; _slackTriggerBtn = null;
+}
+
+async function sendSlackConfirmed() {
+  const confirmBtn = document.getElementById('slack-confirm-btn');
+  confirmBtn.textContent = '⏳ Sending…'; confirmBtn.disabled = true;
   try {
-    await fetch(_SW, { method: 'POST', body: JSON.stringify(body) });
-    btn.textContent = '✓ Sent!';
-    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
+    await fetch(_SW, { method: 'POST', body: JSON.stringify(_slackPayload) });
+    closeSlackPreview();
+    if (_slackTriggerBtn) {
+      const orig = _slackTriggerBtn.textContent;
+      _slackTriggerBtn.textContent = '✓ Sent!';
+      setTimeout(() => { _slackTriggerBtn.textContent = orig; }, 3000);
+    }
   } catch(e) {
     alert('Failed to send Slack notification.');
-    btn.textContent = orig; btn.disabled = false;
+  } finally {
+    confirmBtn.textContent = 'Send'; confirmBtn.disabled = false;
   }
 }
 
