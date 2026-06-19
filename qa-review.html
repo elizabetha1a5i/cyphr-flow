@@ -197,6 +197,11 @@
 <div class="review-banner">
   🔒 Private review mode — changes here are not visible to the team until you publish
 </div>
+<div id="new-run-banner" style="display:none;background:#e8f4fd;border-bottom:1px solid #bee3f8;padding:10px 40px;display:none;align-items:flex-start;gap:12px;font-size:12px;font-weight:600;color:#1a5f8a;flex-wrap:wrap;">
+  <span style="font-size:16px">🆕</span>
+  <div id="new-run-banner-text" style="flex:1;line-height:1.7"></div>
+  <button onclick="dismissNewRunBanner()" style="border:none;background:none;cursor:pointer;font-size:16px;color:#1a5f8a;padding:0;line-height:1">✕</button>
+</div>
 
 <header class="header">
   <div class="header-top">
@@ -213,7 +218,6 @@
 <div class="toolbar">
   <a href="https://elizabetha1a5i.github.io/cyphr-flow/qa-dashboard.html" class="toolbar-btn">&#8592; Back</a>
   <button class="toolbar-btn primary" onclick="exportPDF()">&#8659; Export PDF</button>
-  <button class="toolbar-btn accent" onclick="exportCSV()">&#8595; Export CSV</button>
   <button class="toolbar-btn" id="hide-overrides-btn" onclick="toggleHideOverrides()">&#128065; Hide manual passes</button>
   <button class="toolbar-btn" onclick="notifySlack(this)" style="border-color:#4A154B;color:#4A154B;">&#128276; Notify Slack</button>
   <div class="toolbar-sep"></div>
@@ -1031,11 +1035,41 @@ async function init() {
       document.getElementById('main').innerHTML = `<div class="empty"><h2>No data yet</h2><p>Run the test suite to generate results.</p></div>`;
       return;
     }
+
+    // Detect new runs since last visit
+    const seenKey = 'seen_run_ids';
+    let seenIds = new Set();
+    try { seenIds = new Set(JSON.parse(localStorage.getItem(seenKey)||'[]')); } catch(e) {}
+    const newRuns = allRuns.filter(r => !seenIds.has(runKey(r)));
+    // Mark all current runs as seen
+    localStorage.setItem(seenKey, JSON.stringify(allRuns.map(r => runKey(r))));
+
+    if (newRuns.length && seenIds.size > 0) {
+      // Only show banner if this isn't the very first visit (seenIds was populated before)
+      const lines = newRuns.map(r => {
+        const ts = r.timestamp
+          ? new Date(r.timestamp).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+          : r.date || 'Unknown time';
+        const env  = r.environment || 'production';
+        const type = r.test_type   || 'criteria';
+        return `<span style="display:block">Run: <strong>${esc(r.run_id||runKey(r))}</strong> &nbsp;·&nbsp; ${esc(ts)} &nbsp;·&nbsp; ${esc(env)} / ${esc(type)} &nbsp;·&nbsp; ${r.total||0} tests</span>`;
+      }).join('');
+      const banner = document.getElementById('new-run-banner');
+      document.getElementById('new-run-banner-text').innerHTML =
+        `<strong>${newRuns.length} new test run${newRuns.length>1?'s':''} added</strong>${lines}`;
+      banner.style.display = 'flex';
+    }
+
     render();
   } catch(e) {
     document.getElementById('main').innerHTML = `<div class="empty"><h2>No data yet</h2><p>Run the test suite to generate results.</p></div>`;
   }
 }
+
+function dismissNewRunBanner() {
+  document.getElementById('new-run-banner').style.display = 'none';
+}
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
