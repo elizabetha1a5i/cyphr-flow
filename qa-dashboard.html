@@ -209,7 +209,6 @@
   <button class="toolbar-btn primary" onclick="exportPDF()">&#8659; Export PDF</button>
   <button class="toolbar-btn accent" onclick="exportCSV()">&#8595; Export CSV</button>
   <div style="margin-left:auto"></div>
-  <button class="toolbar-btn" onclick="notifySlack(this)" style="border-color:#4A154B;color:#4A154B;">&#128276; Notify Slack</button>
   <button class="toolbar-btn" onclick="openReviewGate()" style="border-color:#9d174d;color:#9d174d;">&#128274; Review</button>
 </div>
 
@@ -705,74 +704,6 @@ function fmtDateTime(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' at ' +
          d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-}
-
-const _SW = [104,116,116,112,115,58,47,47,104,111,111,107,115,46,115,108,97,99,107,46,99,111,109,47,115,101,114,118,105,99,101,115,47,84,48,51,77,65,68,54,52,50,72,72,47,66,48,66,66,88,68,82,72,87,80,54,47,102,121,108,75,113,53,120,52,116,102,55,88,66,85,98,88,74,116,121,73,97,75,121,71].map(c=>String.fromCharCode(c)).join('');
-
-function deepLink() {
-  const base = 'https://elizabetha1a5i.github.io/cyphr-flow/qa-dashboard.html';
-  const params = new URLSearchParams();
-  if (activeEnv  !== 'all') params.set('env',  activeEnv);
-  if (activeType !== 'all') params.set('type', activeType);
-  if (!showAllRuns && currentRun) {
-    params.set('run', currentRun.run_id || (currentRun.date + '-' + (currentRun.environment||'prod') + '-' + (currentRun.test_type||'criteria')));
-  }
-  const qs = params.toString();
-  return qs ? base + '?' + qs : base;
-}
-
-async function notifySlack(btn) {
-  const runs = filteredRuns();
-  if (!runs.length) { alert('No data to notify about.'); return; }
-
-  const orig = btn.textContent;
-  btn.textContent = '⏳ Sending…'; btn.disabled = true;
-
-  // Build summary from aggregated or single run
-  let passRate, total, passed, runLabel, dateStr;
-  if (showAllRuns) {
-    total  = runs.reduce((s,r)=>s+(r.total||0),0);
-    passed = runs.reduce((s,r)=>s+(r.pass||0)+(r.partial||0),0);
-    passRate = total ? Math.min(100,Math.round(passed/total*100)) : 0;
-    runLabel = `${runs.length} runs aggregated`;
-    dateStr  = runs[runs.length-1].date || '';
-  } else {
-    const r = currentRun;
-    total    = r.total || 0;
-    passed   = (r.pass||0) + (r.partial||0);
-    passRate = r.pass_rate ?? (total ? Math.min(100,Math.round(passed/total*100)) : 0);
-    runLabel = fmtRunLabel(r, 0);
-    dateStr  = r.date || '';
-  }
-
-  const env  = activeEnv  === 'all' ? 'All environments' : activeEnv.charAt(0).toUpperCase()+activeEnv.slice(1);
-  const type = activeType === 'all' ? 'all types' : activeType;
-  const link = deepLink();
-  const emoji = passRate >= 90 ? '✅' : passRate >= 70 ? '⚠️' : '❌';
-
-  const body = {
-    blocks: [
-      { type: 'header', text: { type: 'plain_text', text: `${emoji} Tex QA Results — ${env}`, emoji: true } },
-      { type: 'section', fields: [
-        { type: 'mrkdwn', text: `*Pass Rate*\n${passRate}%` },
-        { type: 'mrkdwn', text: `*Tests Run*\n${total}` },
-        { type: 'mrkdwn', text: `*Passing*\n${passed} of ${total}` },
-        { type: 'mrkdwn', text: `*Run*\n${runLabel}` }
-      ]},
-      { type: 'actions', elements: [
-        { type: 'button', text: { type: 'plain_text', text: '📊 View Dashboard', emoji: true }, url: link, style: 'primary' }
-      ]}
-    ]
-  };
-
-  try {
-    await fetch(_SW, { method: 'POST', body: JSON.stringify(body) });
-    btn.textContent = '✓ Sent!';
-    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
-  } catch(e) {
-    alert('Failed to send Slack notification.');
-    btn.textContent = orig; btn.disabled = false;
-  }
 }
 
 async function init() {
