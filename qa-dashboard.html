@@ -472,19 +472,8 @@ function render() {
       </div>`;
   }
 
-  const partials = r.partials||[];
-  const partialsHTML = !isFB && partials.length ? `
-    <div class="section-label">Partials to Monitor</div>
-    <div class="partial-list">
-      ${partials.map(p=>testCard(p,'warn')).join('')}
-    </div>` : '';
-
-  const failTests = !isFB ? (r.tests||[]).filter(t=>t.status==='FAIL') : [];
-  const failsHTML = failTests.length ? `
-    <div class="section-label">Failing Tests</div>
-    <div class="fail-list">
-      ${failTests.map(t=>testCard(t,'fail')).join('')}
-    </div>` : '';
+  const partialsHTML = '';
+  const failsHTML = '';
 
   document.getElementById('main').innerHTML = `
     ${warnBanner}
