@@ -591,29 +591,71 @@ function buildTrendHTML(runs) {
 }
 
 function renderAllRuns(runs) {
-  // Aggregate all tests across all filtered runs, deduped by test id — most recent run wins
-  const seen = new Map();
-  [...runs].forEach(r => {
-    (r.tests||[]).forEach(t => { if (t.id) seen.set(t.id, {t, r}); });
+  // Aggregate all tests across all runs — each run counted fully (no cross-run dedup)
+  let total=0, passed=0, partial=0, failed=0, errored=0;
+  const allCats = {};
+  runs.forEach(r => {
+    total   += r.total   || 0;
+    passed  += r.pass    || 0;
+    partial += r.partial || 0;
+    failed  += r.fail    || 0;
+    errored += r.error   || 0;
+    // Merge categories
+    Object.entries(r.categories||{}).forEach(([name,v]) => {
+      if (!allCats[name]) allCats[name] = {total:0,pass:0,partial:0,fail:0,error:0};
+      allCats[name].total   += v.total   ||0;
+      allCats[name].pass    += v.pass    ||0;
+      allCats[name].partial += v.partial ||0;
+      allCats[name].fail    += v.fail    ||0;
+      allCats[name].error   += v.error   ||0;
+    });
   });
-  const all = [...seen.values()];
-  const total   = all.length;
-  const passed  = all.filter(({t})=>t.status==='PASS').length;
-  const partial = all.filter(({t})=>t.status==='WARN').length;
-  const failed  = all.filter(({t})=>t.status==='FAIL').length;
-  const errored = all.filter(({t})=>t.status==='ERROR').length;
   const passRate = total ? Math.min(100, Math.round((passed+partial)/total*100)) : 0;
+
+  const cats = Object.entries(allCats);
+  const catBars = cats.sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v]) => {
+    const t=v.total||0, p=(v.pass||0)+(v.partial||0), f=v.fail||0;
+    const cp=pct(p,t), fc=f>0?'fail':(v.partial||0)>0?'partial':'full';
+    return `<div class="cat-row">
+      <div class="cat-label"><span>${esc(name)}</span><span class="cat-pct">${cp}%&nbsp;(${p}/${t})</span></div>
+      <div class="bar-track"><div class="bar-fill ${fc}" style="width:${cp}%"></div></div>
+    </div>`;
+  }).join('');
+
+  const splitCard = `
+    <div class="card">
+      <h3>Results Split</h3>
+      <p class="card-sub">${runs.length} runs · ${total} total tests</p>
+      <div class="donut-wrap">
+        <svg id="donut-svg" width="120" height="120" viewBox="0 0 110 110"></svg>
+        <div class="donut-legend">
+          ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial'],[failed,'#b91c1c','Fail'],[errored,'#9ea3b8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
+            <div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${esc(l)}<span class="legend-val">${v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
 
   document.getElementById('main').innerHTML = `
     <div class="section-label">All Runs — Aggregated (${runs.length} run${runs.length!==1?'s':''})</div>
-    <div class="summary-card">Aggregated results across all approved runs · ${total} unique tests · Pass rate <strong>${passRate}%</strong></div>
+    <div class="summary-card">Aggregated results across all approved runs · ${total} total tests · Pass rate <strong>${passRate}%</strong></div>
     <div class="section-label">Test Results</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">Pass Rate</div><div class="kpi-num">${passRate}<span class="unit">%</span></div><span class="chip green">${passed+partial} of ${total} passing</span></div>
-      <div class="kpi"><div class="kpi-label">Tests</div><div class="kpi-num">${total}</div></div>
+      <div class="kpi"><div class="kpi-label">Tests Run</div><div class="kpi-num">${total}</div></div>
       <div class="kpi"><div class="kpi-label">Failing</div><div class="kpi-num">${failed+errored}</div></div>
       <div class="kpi"><div class="kpi-label">Partials</div><div class="kpi-num">${partial}</div></div>
+    </div>
+    <div class="section-label">Breakdown</div>
+    ${buildTrendHTML(runs)}
+    <div class="two-col">
+      ${cats.length ? `<div class="card"><h3>By Category</h3><p class="card-sub">Aggregated pass rate per category</p><div class="cat-bars">${catBars}</div></div>` : ''}
+      ${splitCard}
     </div>`;
+
+  drawDonut(
+    [[passed,'#258ed8'],[partial,'#f0c040'],[failed,'#b91c1c'],[errored,'#9ea3b8']].filter(([v])=>v>0),
+    total, passRate
+  );
 }
 
 
