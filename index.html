@@ -590,45 +590,74 @@ const SKILLS = [
   },
   {
     id: 'proposal-deck',
-    name: 'Proposal deck (Google Slides)',
-    desc: 'Generate a Cyphr proposal presentation in Google Slides format — cover, opportunity, approach, deliverables, team, and investment.',
+    name: 'Proposal deck',
+    desc: 'Generate a Cyphr branded proposal — 9 slides matching the Cyphr template.',
     inputs: ['Client name and project','Brief output','Estimate output','Key selling points or tone notes'],
-    outputs: ['Google Slides proposal deck (exported as link or PDF)'],
-    prompt: `Generate a Cyphr proposal presentation. Structure it as follows and return each slide as a clearly labelled section:
+    outputs: ['Formatted slide content in Cyphr template structure — paste back to generate PPTX'],
+    prompt: `You are generating a Cyphr Studio commercial proposal. Output each slide as a clearly labelled section using EXACTLY the headers below. Every word must be specific to this client — no generic filler, no lorem ipsum.
+
+CYPHR BRAND VOICE: Confident, direct, no fluff. Write like a senior consultant who knows their craft.
+
+TEMPLATE STRUCTURE (9 slides — follow this exactly):
 
 SLIDE 1 — COVER
-Title: [Project name]
+Title: [Project name — keep short and punchy]
 Subtitle: Proposal for [Client name]
 Date: [Today's date]
+Tagline: Creating tomorrow's digital products, services and experiences.
 
-SLIDE 2 — THE OPPORTUNITY
-Headline: 1 punchy sentence on the problem
-Body: 3 bullet points on the market context and why now
+SLIDE 2 — EXECUTIVE SUMMARY
+Body: 2–3 sentences. What Cyphr will deliver, for whom, and what outcome the client gets. Specific to this project, no boilerplate.
 
-SLIDE 3 — OUR APPROACH
-Headline: How Cyphr will tackle this
-Body: 4 bullet points on methodology — specific to this project
+SLIDE 3 — THE ASK
+Activity Overview: 2–3 sentences summarising the challenge or opportunity the client has brought to Cyphr.
+The Digital User Journey:
+1. [First key moment or touchpoint]
+2. [Second key moment or touchpoint]
+3. [Third key moment or touchpoint]
 
-SLIDE 4 — WHAT WE DELIVER
-Headline: Deliverables
-Body: List each deliverable with a one-line description
+SLIDE 4 — SCOPE + SERVICES
+List ONLY the services relevant to this project under whichever of these 4 categories apply (3–5 items each, skip categories not relevant):
+Strategy & Venture: [item], [item], [item]
+Product Design & Build: [item], [item], [item]
+Marketing: [item], [item], [item]
+Data & Insights: [item], [item], [item]
 
-SLIDE 5 — TIMELINE
-Headline: Project timeline
-Body: Phase name and duration, one per line
+SLIDE 5 — DETAILED DELIVERABLES
+List each deliverable with a one-line description. Group into phases:
+DISCOVER: [deliverable] — [one-line description]
+DEFINE: [deliverable] — [one-line description]
+DESIGN & DEVELOP: [deliverable] — [one-line description]
+DELIVER: [deliverable] — [one-line description]
 
-SLIDE 6 — INVESTMENT
-Headline: Investment
-Body: Fee summary, payment structure, what's included
+SLIDE 6 — PROJECT MILESTONES
+List 4–6 milestones as: [Milestone name] — [Week or date]
+Example format: Kick-off & discovery — Week 1
 
-SLIDE 7 — WHY CYPHR
-Headline: Why Cyphr
-Body: 3 bullet points — relevant credentials, specific to this sector
+SLIDE 7 — PROJECT TIMELINE
+[Phase name]: [start] – [end], [key output]
+Write one line per phase. Use weeks or months based on the timeline provided.
 
-SLIDE 8 — THANK YOU
-Closing line and contact details
+SLIDE 8 — COST BREAKDOWN
+For each work phase:
+[Phase name]: £[amount]
+Tasks: [bullet 1], [bullet 2], [bullet 3]
+Team: [roles]
+Duration: [X weeks]
 
-Use the brief and estimate to make every slide specific to this client. No generic filler.`,
+Assumptions & Exclusions:
+- [assumption 1]
+- [assumption 2]
+- [assumption 3]
+
+TOTAL: £[total]
+
+SLIDE 9 — THANK YOU
+Closing: [One punchy closing line specific to this client]
+Contact: hello@cyphr.studio | cyphr.studio
+
+---
+Use the brief and estimate provided to make every slide specific to this client and project. Match the fee to the estimate. No invented figures.`,
   },
 ];
 
