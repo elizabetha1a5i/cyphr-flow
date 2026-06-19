@@ -244,21 +244,8 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
             <span style="font-size:11px;color:var(--ink3);font-weight:400;font-family:var(--mono)" id="brief-summary"></span>
           </div>
           <div style="display:flex;align-items:center;gap:10px" onclick="event.stopPropagation()">
-            <div class="tooltip-wrap" onmouseenter="positionTooltip(event,this)" onmousemove="positionTooltip(event,this)">
-              <div style="display:flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--border);border-radius:20px;padding:4px 10px">
-                <span style="font-size:11px;font-family:var(--mono);color:var(--ink3)" id="mode-label">Knowledge mode</span>
-                <div id="mode-toggle" onclick="toggleMode()" style="width:32px;height:18px;border-radius:9px;background:var(--border2);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0">
-                  <div id="mode-knob" style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>
-                </div>
-              </div>
-              <div class="tooltip" style="width:280px">
-                <strong style="display:block;margin-bottom:6px">Knowledge mode — what you get</strong>
-                <span style="opacity:0.75;display:block;margin-bottom:6px;font-size:10px">Brand · Headline · TL;DR · Sector · Journey stage · Source · Date · What happened · Why it matters · Who it's for · Problem solved · Technology involved · What's clever · What feels weak · Rating · Blarney relevance · AEO/GEO relevance · Sales angle · LinkedIn draft · Video hook · Article angle</span>
-                <span style="opacity:0.6;display:block;margin-bottom:10px;font-size:10px">Uses Gemini training data. Stories are real but may not be from this exact week — verify before sharing.</span>
-                <strong style="display:block;margin-bottom:6px">Live search ON — also gets</strong>
-                <span style="opacity:0.75;display:block;margin-bottom:6px;font-size:10px">Verified current source URLs · This week's stories only · Content pulled directly from your tracked source sites</span>
-                <span style="opacity:0.6;display:block;font-size:10px">Requires Google AI Studio billing enabled.</span>
-              </div>
+            <div style="display:flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--border);border-radius:20px;padding:4px 10px">
+              <span style="font-size:11px;font-family:var(--mono);color:var(--accent)">Live search</span>
             </div>
             <span class="brief-toggle" id="brief-toggle-icon">▼</span>
           </div>
@@ -459,11 +446,10 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY     = 'cyphr_intelligence_v3';
 const BRIEF_STORE     = 'cyphr_intel_brief';
-const MODE_STORE      = 'cyphr_intel_mode'; // 'knowledge' or 'live'
 // ⚠️ API key lives in Cloudflare Worker — update WORKER_URL to your Worker domain
 const WORKER_URL      = 'https://cyphr-proxy.elizabeth-537.workers.dev/gemini';
-const MODEL_MAIN      = 'gemini-2.5-flash';
-const MODEL_QA        = 'gemini-2.5-flash';
+const MODEL_MAIN      = 'gemini-3.5-flash';
+const MODEL_QA        = 'gemini-3.5-flash';
 
 const DEFAULT_TOPICS  = ['Samsung Blarney AI retail', 'HP AI', 'Weber Ranch AI chatbot', 'EE AI', 'John Lewis AI', 'retail AI agents', 'AEO answer engine optimisation', 'conversational commerce AI'];
 const DEFAULT_SOURCES = [
@@ -482,12 +468,11 @@ let briefOpen    = true;
 let activeStory  = null;
 let running      = false;
 let brief        = { topics: [...DEFAULT_TOPICS], sources: [...DEFAULT_SOURCES] };
-let searchMode   = 'knowledge'; // 'knowledge' or 'live'
+const searchMode = 'live';
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadBrief();
-  loadMode();
   loadData();
   renderBrief();
   renderDigest();
@@ -509,25 +494,6 @@ function loadBrief() {
 function saveBrief() {
   localStorage.setItem(BRIEF_STORE, JSON.stringify(brief));
   renderBrief();
-}
-function loadMode() {
-  searchMode = localStorage.getItem(MODE_STORE) || 'knowledge';
-  renderMode();
-}
-function toggleMode() {
-  searchMode = searchMode === 'knowledge' ? 'live' : 'knowledge';
-  localStorage.setItem(MODE_STORE, searchMode);
-  renderMode();
-}
-function renderMode() {
-  const isLive = searchMode === 'live';
-  document.getElementById('mode-label').textContent = isLive ? 'Live search' : 'Knowledge mode';
-  document.getElementById('mode-label').style.color = isLive ? 'var(--accent)' : 'var(--ink3)';
-  document.getElementById('mode-toggle').style.background = isLive ? 'var(--accent)' : 'var(--border2)';
-  document.getElementById('mode-knob').style.transform = isLive ? 'translateX(14px)' : 'translateX(0)';
-  // Show/hide sources panel hint
-  const hint = document.getElementById('sources-hint');
-  if (hint) hint.style.display = isLive ? 'block' : 'none';
 }
 function toggleBrief() {
   briefOpen = !briefOpen;
