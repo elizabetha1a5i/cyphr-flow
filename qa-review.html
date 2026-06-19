@@ -764,7 +764,17 @@ function bakeOverrides(r) {
   const fail  = tests.filter(t=>t.status==='FAIL').length;
   const error = tests.filter(t=>t.status==='ERROR').length;
   const pass_rate = total ? Math.min(100, Math.round((pass+partial)/total*100)) : 0;
-  return {...r, tests, pass, partial, fail, error, pass_rate, total};
+  const categories = {};
+  tests.forEach(t => {
+    const cat = t.category || 'Unknown';
+    if (!categories[cat]) categories[cat] = {total:0, pass:0, partial:0, fail:0, error:0};
+    categories[cat].total++;
+    if (t.status==='PASS') categories[cat].pass++;
+    else if (t.status==='WARN') categories[cat].partial++;
+    else if (t.status==='FAIL') categories[cat].fail++;
+    else categories[cat].error++;
+  });
+  return {...r, tests, pass, partial, fail, error, pass_rate, total, categories};
 }
 
 async function publishRun() {
