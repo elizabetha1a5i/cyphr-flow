@@ -920,24 +920,16 @@ function deepLink() {
 }
 
 async function notifySlack(btn) {
-  const runs = filteredRuns();
-  if (!runs.length) { alert('No data to notify about.'); return; }
+  if (!approvedRunsCache.length) { alert('No published runs to notify about. Publish a run first.'); return; }
   const orig = btn.textContent;
   btn.textContent = '⏳ Sending…'; btn.disabled = true;
 
-  let passRate, total, passed, runLabel;
-  if (showAllRuns) {
-    total    = runs.reduce((s,r)=>s+(r.total||0),0);
-    passed   = runs.reduce((s,r)=>s+(r.pass||0)+(r.partial||0),0);
-    passRate = total ? Math.min(100,Math.round(passed/total*100)) : 0;
-    runLabel = `${runs.length} runs aggregated`;
-  } else {
-    const baked = bakeOverrides(currentRun);
-    total    = baked.total || 0;
-    passed   = (baked.pass||0) + (baked.partial||0);
-    passRate = baked.pass_rate ?? 0;
-    runLabel = fmtRunLabel(currentRun, 0);
-  }
+  // Always use published (approved) data only
+  const runs   = approvedRunsCache;
+  const total  = runs.reduce((s,r)=>s+(r.total||0),0);
+  const passed = runs.reduce((s,r)=>s+(r.pass||0)+(r.partial||0),0);
+  const passRate = total ? Math.min(100,Math.round(passed/total*100)) : 0;
+  const runLabel = runs.length === 1 ? (runs[0].date||'') : `${runs.length} published runs`;
 
   const env   = activeEnv === 'all' ? 'All environments' : activeEnv.charAt(0).toUpperCase()+activeEnv.slice(1);
   const link  = deepLink();
