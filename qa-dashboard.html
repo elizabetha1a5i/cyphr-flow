@@ -431,7 +431,7 @@ function render() {
         <div class="cat-bars">
           ${cats.sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v]) => {
             const t=v.total||0, p=(v.pass||0)+(v.partial||0), f=v.fail||0;
-            const cp=pct(p,t), fc=f>0?'fail':(v.partial||0)>0?'partial':'full';
+            const cp=pct(p,t), fc=cp>=80?'full':cp>=50?'partial':'fail';
             return `<div class="cat-row">
               <div class="cat-label"><span>${esc(name)}</span><span class="cat-pct">${cp}%&nbsp;(${p}/${t})</span></div>
               <div class="bar-track"><div class="bar-fill ${fc}" style="width:${cp}%"></div></div>
@@ -614,8 +614,8 @@ function renderAllRuns(runs) {
 
   const cats = Object.entries(allCats);
   const catBars = cats.sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v]) => {
-    const t=v.total||0, p=(v.pass||0)+(v.partial||0), f=v.fail||0;
-    const cp=pct(p,t), fc=f>0?'fail':(v.partial||0)>0?'partial':'full';
+    const t=v.total||0, p=(v.pass||0)+(v.partial||0);
+    const cp=pct(p,t), fc=cp>=80?'full':cp>=50?'partial':'fail';
     return `<div class="cat-row">
       <div class="cat-label"><span>${esc(name)}</span><span class="cat-pct">${cp}%&nbsp;(${p}/${t})</span></div>
       <div class="bar-track"><div class="bar-fill ${fc}" style="width:${cp}%"></div></div>
