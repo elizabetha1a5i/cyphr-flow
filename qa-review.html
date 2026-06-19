@@ -347,13 +347,10 @@ function countPendingOverrides() {
 
 function updatePendingBadge() {
   const n = countPendingOverrides();
-  const el = document.getElementById('pending-badge');
-  if (n > 0) {
-    el.style.display = '';
-    el.textContent = `(${n} manual pass${n!==1?'es':''} pending)`;
-  } else {
-    el.style.display = 'none';
-  }
+  const el = document.getElementById('run-publish-btn');
+  if (!el) return;
+  // pending count shown as a data attr so publish btn can reference it
+  el.dataset.pending = n;
 }
 
 function buildIssueTracker(r, prevRun) {
