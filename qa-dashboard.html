@@ -604,29 +604,16 @@ function renderAllRuns(runs) {
   const errored = all.filter(({t})=>t.status==='ERROR').length;
   const passRate = total ? Math.min(100, Math.round((passed+partial)/total*100)) : 0;
 
-  const failCards = all.filter(({t})=>t.status==='FAIL'||t.status==='ERROR').map(({t,r})=>{
-    const tip = t.summary || '';
-    return `<div class="partial-item ${tip?'has-tooltip':''}" style="position:relative">
-      ${tip ? `<div class="tip">${esc(tip)}</div>` : ''}
-      <div class="partial-header">
-        <span class="partial-name">${esc(t.name)}</span>
-        <span class="partial-badge">${esc(t.status)}</span>
-        <span style="font-size:10px;color:var(--text-light);margin-left:8px">[${esc(r.environment||'prod')} · ${esc(r.date||'')}]</span>
-      </div>
-    </div>`;
-  }).join('');
-
   document.getElementById('main').innerHTML = `
     <div class="section-label">All Runs — Aggregated (${runs.length} run${runs.length!==1?'s':''})</div>
-    <div class="summary-card">Showing latest result per test across all filtered runs · ${total} unique tests · Pass rate <strong>${passRate}%</strong></div>
+    <div class="summary-card">Aggregated results across all approved runs · ${total} unique tests · Pass rate <strong>${passRate}%</strong></div>
     <div class="section-label">Test Results</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">Pass Rate</div><div class="kpi-num">${passRate}<span class="unit">%</span></div><span class="chip green">${passed+partial} of ${total} passing</span></div>
       <div class="kpi"><div class="kpi-label">Tests</div><div class="kpi-num">${total}</div></div>
       <div class="kpi"><div class="kpi-label">Failing</div><div class="kpi-num">${failed+errored}</div></div>
       <div class="kpi"><div class="kpi-label">Partials</div><div class="kpi-num">${partial}</div></div>
-    </div>
-    ${failCards ? `<div class="section-label">Failing Tests</div><div class="fail-list">${failCards}</div>` : '<div class="summary-card">All tests passing across selected runs ✓</div>'}`;
+    </div>`;
 }
 
 
