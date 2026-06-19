@@ -2118,7 +2118,8 @@ async function generateGanttXLSX(p, slug) {
 }
 
 async function generateTextDoc(p, slug, type) {
-  const fileApiUrl = settings.fileApiUrl || settings.proxyUrl;
+  const s = (typeof getSettings === 'function') ? getSettings() : settings;
+  const fileApiUrl = s.fileApiUrl || s.proxyUrl || 'https://cyphr-api-production.up.railway.app';
   if (!fileApiUrl) throw new Error('File generation failed — please try again.');
 
   const projectData = {
@@ -2126,6 +2127,7 @@ async function generateTextDoc(p, slug, type) {
     budget: p.budget||'0', timeline: p.timeline||'', sector: p.sector||'',
     briefOutput: p.briefOutput||'', estimateOutput: p.estimateOutput||'',
     proposalOutput: p.proposalOutput||'', sowOutput: p.sowOutput||'',
+    requirements: p.requirements||'', bgNotes: p.bgNotes||'',
   };
 
   const res = await fetch(fileApiUrl + '/generate', {
@@ -2133,9 +2135,13 @@ async function generateTextDoc(p, slug, type) {
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({type, projectData}),
   });
-  if (!res.ok) throw new Error('Generation failed — please try again.');
+  if (!res.ok) {
+    let errMsg = 'Generation failed — please try again.';
+    try { const err = await res.json(); errMsg = err.error || err.message || errMsg; } catch(e) {}
+    throw new Error(errMsg);
+  }
   const blob = await res.blob();
-  const ext = type === 'estimate' || type === 'gantt' ? 'xlsx' : 'docx';
+  const ext = (type==='estimate'||type==='gantt') ? 'xlsx' : type==='proposal' ? 'pptx' : 'docx';
   downloadBlob(blob, `${slug}_${type}.${ext}`);
 }
 
