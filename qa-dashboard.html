@@ -702,6 +702,15 @@ async function init() {
     }
     const data = await resp.json();
 
+    // Treat {pending:true} the same as a missing file
+    if (data.pending) {
+      document.getElementById('reviewed-banner').outerHTML =
+        `<div class="pending-banner">⏳ Results pending review — check back soon for the latest approved results.</div>`;
+      document.getElementById('main').innerHTML =
+        `<div class="empty"><h2>Results pending review</h2><p>The latest test run has not yet been reviewed and approved. Check back soon.</p></div>`;
+      return;
+    }
+
     // Show reviewed banner
     if (data.reviewed_at) {
       const el = document.getElementById('reviewed-banner');

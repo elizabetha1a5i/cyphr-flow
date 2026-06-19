@@ -216,7 +216,6 @@
   <button class="toolbar-btn accent" onclick="exportCSV()">&#8595; Export CSV</button>
   <button class="toolbar-btn" id="hide-overrides-btn" onclick="toggleHideOverrides()">&#128065; Hide manual passes</button>
   <div class="toolbar-sep"></div>
-  <button class="toolbar-btn publish" onclick="openPublishModal()">&#10003; Publish Approved Results</button>
   <span id="pending-badge" style="font-size:11px;color:var(--text-light);display:none"></span>
 </div>
 
@@ -700,26 +699,77 @@ function toggleOverride(testId, overrideKey) {
 
 // ── Publish ────────────────────────────────────────────────────────────────
 
-function openPublishModal() {
-  doPublish([103,104,112,95,73,110,66,80,100,121,115,50,79,78,121,104,112,83,118,108,86,71,69,57,90,112,57,72,78,74,82,73,69,90,52,75,65,104,69,117].map(c=>String.fromCharCode(c)).join(''));
-}
+const _T = [103,104,112,95,73,110,66,80,100,121,115,50,79,78,121,104,112,83,118,108,86,71,69,57,90,112,57,72,78,74,82,73,69,90,52,75,65,104,69,117].map(c=>String.fromCharCode(c)).join('');
 
+function openPublishModal() { doPublish(_T); }
 function closeTokenModal() {}
 function confirmToken() {}
 
+function setPublishedState(reviewedAt) {
+  const toolbar = document.querySelector('.toolbar');
+  // Remove existing publish/unpublish buttons
+  toolbar.querySelectorAll('.publish-action').forEach(el => el.remove());
+
+  if (reviewedAt) {
+    const d = new Date(reviewedAt);
+    const label = d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' ' +
+                  d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    // Published indicator
+    const indicator = document.createElement('span');
+    indicator.className = 'publish-action';
+    indicator.style.cssText = 'font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border:1.5px solid #b7f5c8;border-radius:8px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;';
+    indicator.innerHTML = `✓ Published ${label}`;
+    // Unpublish button
+    const unpubBtn = document.createElement('button');
+    unpubBtn.className = 'toolbar-btn publish-action';
+    unpubBtn.style.cssText = 'border-color:#b91c1c;color:#b91c1c;';
+    unpubBtn.textContent = '↩ Unpublish';
+    unpubBtn.onclick = doUnpublish;
+    toolbar.appendChild(indicator);
+    toolbar.appendChild(unpubBtn);
+  } else {
+    const pubBtn = document.createElement('button');
+    pubBtn.className = 'toolbar-btn publish publish-action';
+    pubBtn.textContent = '✓ Publish Approved Results';
+    pubBtn.onclick = openPublishModal;
+    const badge = document.getElementById('pending-badge');
+    toolbar.insertBefore(pubBtn, badge);
+  }
+}
+
+async function _getFileSHA(token, repo, path) {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (r.ok) return (await r.json()).sha;
+  } catch(e) {}
+  return null;
+}
+
+async function _putFile(token, repo, path, payload, message) {
+  const sha = await _getFileSHA(token, repo, path);
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+  return fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json'
+    },
+    body: JSON.stringify({ message, content, ...(sha ? {sha} : {}) })
+  });
+}
+
 async function doPublish(token) {
   const btn = document.querySelector('.toolbar-btn.publish');
-  const orig = btn.textContent;
-  btn.textContent = '⏳ Publishing…';
-  btn.disabled = true;
+  if (btn) { btn.textContent = '⏳ Publishing…'; btn.disabled = true; }
 
   try {
-    // Build approved JSON — bake overrides in as PASS status
     const approvedRuns = allRuns.map(r => {
       const key = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
       let ov = {};
       try { ov = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e) {}
-
       const tests = (r.tests||[]).map(t => {
         if (ov[t.id||t.name]) return {...t, status:'PASS', manually_passed:true};
         return t;
@@ -733,51 +783,41 @@ async function doPublish(token) {
       return {...r, tests, pass, partial, fail, error, pass_rate, total};
     });
 
-    const payload = {
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: 'Elizabeth',
-      runs: approvedRuns
-    };
+    const reviewedAt = new Date().toISOString();
+    const payload = { reviewed_at: reviewedAt, reviewed_by: 'Elizabeth', runs: approvedRuns };
+    const resp = await _putFile(_T, 'elizabetha1a5i/cyphr-flow', 'reports/qa_approved.json', payload,
+      `QA approved — reviewed ${reviewedAt.slice(0,10)}`);
 
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
-    const repo = 'elizabetha1a5i/cyphr-flow';
-    const path = 'reports/qa_approved.json';
-
-    // Get existing file SHA if it exists
-    let sha = null;
-    try {
-      const getResp = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-      });
-      if (getResp.ok) sha = (await getResp.json()).sha;
-    } catch(e) {}
-
-    const putResp = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify({
-        message: `QA approved — reviewed ${new Date().toISOString().slice(0,10)}`,
-        content,
-        ...(sha ? {sha} : {})
-      })
-    });
-
-    if (putResp.ok) {
-      btn.textContent = '✓ Published!';
-      btn.style.background = '#137333';
-      setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.disabled = false; }, 3000);
+    if (resp.ok) {
+      setPublishedState(reviewedAt);
     } else {
-      const err = await putResp.json();
-      alert(`Publish failed: ${err.message||putResp.status}`);
-      btn.textContent = orig; btn.disabled = false;
+      const err = await resp.json();
+      alert(`Publish failed: ${err.message||resp.status}`);
+      if (btn) { btn.textContent = '✓ Publish Approved Results'; btn.disabled = false; }
     }
   } catch(e) {
     alert(`Publish error: ${e.message}`);
-    btn.textContent = orig; btn.disabled = false;
+    if (btn) { btn.textContent = '✓ Publish Approved Results'; btn.disabled = false; }
+  }
+}
+
+async function doUnpublish() {
+  if (!confirm('Unpublish? The public dashboard will show "Results pending review" until you publish again.')) return;
+  const btn = document.querySelector('.publish-action[onclick*="Unpublish"], .publish-action');
+  if (btn) { btn.textContent = '⏳ Unpublishing…'; btn.disabled = true; }
+  try {
+    const resp = await _putFile(_T, 'elizabetha1a5i/cyphr-flow', 'reports/qa_approved.json',
+      { pending: true }, 'QA unpublished — results pending review');
+    if (resp.ok) {
+      setPublishedState(null);
+    } else {
+      const err = await resp.json();
+      alert(`Unpublish failed: ${err.message||resp.status}`);
+      if (btn) { btn.textContent = '↩ Unpublish'; btn.disabled = false; }
+    }
+  } catch(e) {
+    alert(`Unpublish error: ${e.message}`);
+    if (btn) { btn.textContent = '↩ Unpublish'; btn.disabled = false; }
   }
 }
 
@@ -826,6 +866,18 @@ function clearDates() {
 
 async function init() {
   bindNav();
+
+  // Check if already published and update toolbar accordingly
+  try {
+    const ar = await fetch('reports/qa_approved.json');
+    if (ar.ok) {
+      const ad = await ar.json();
+      setPublishedState(ad.pending ? null : (ad.reviewed_at || null));
+    } else {
+      setPublishedState(null);
+    }
+  } catch(e) { setPublishedState(null); }
+
   try {
     const resp = await fetch('reports/qa_results.json');
     if (!resp.ok) throw new Error();
