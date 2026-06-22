@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blarney — Transcript Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede6;
+  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);
+  --text:#1a1916;--muted:#6b6862;
+  --blue:#1a5fd4;--blue-bg:#eef3fd;
+  --green:#166534;--green-bg:#dcfce7;
+  --amber:#92400e;--amber-bg:#fef3c7;
+  --purple:#534AB7;--purple-bg:rgba(83,74,183,.1);
+  --red:#991b1b;--red-bg:#fee2e2;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* — HEADER — */
+.header{background:var(--text);padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
+.header-brand{display:flex;align-items:center;gap:12px}
+.logo{width:32px;height:32px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--text)}
+.header h1{font-size:16px;font-weight:500;color:#fff}
+.header-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
+.header-badge{background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,.7)}
+
+/* — UPLOAD ZONE — */
+.upload-zone{margin:32px;border:1.5px dashed var(--border2);border-radius:16px;padding:48px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-bg)}
+.upload-icon{width:48px;height:48px;margin:0 auto 16px;background:var(--surface2);border-radius:12px;display:flex;align-items:center;justify-content:center}
+.upload-title{font-size:16px;font-weight:500;margin-bottom:6px}
+.upload-sub{font-size:12px;color:var(--muted)}
+.upload-btn{display:inline-block;margin-top:16px;padding:8px 20px;background:var(--text);color:#fff;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer}
+input[type=file]{display:none}
+
+/* — LOADING — */
+.loading{display:none;margin:32px;text-align:center;padding:48px}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* — MAIN CONTENT — */
+.main{display:none;padding:0 32px 32px}
+
+/* — FILE INFO — */
+.file-info{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.file-name{font-size:13px;font-weight:500}
+.file-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.reset-btn{font-size:11px;color:var(--muted);cursor:pointer;padding:4px 10px;border:0.5px solid var(--border2);border-radius:6px;background:none;font-family:'DM Sans',sans-serif}
+.reset-btn:hover{background:var(--surface2)}
+
+/* — TABS — */
+.tabs{display:flex;gap:8px;margin-bottom:20px}
+.tab{padding:8px 20px;border-radius:20px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.tab.active-advert{background:var(--blue);border-color:var(--blue);color:#fff}
+.tab.active-internal{background:var(--text);border-color:var(--text);color:#fff}
+.tab.active-flags{background:var(--red);border-color:var(--red);color:#fff}
+.panel{display:none}
+.panel.active{display:block}
+
+/* — SECTION GRID — */
+.section-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.section-grid.single{grid-template-columns:1fr}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:18px}
+.card-title{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.card-title-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* — QUOTE CARDS — */
+.quote-list{display:flex;flex-direction:column;gap:8px}
+.quote-item{background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.5;color:var(--text);border-left:2px solid var(--purple)}
+.quote-item.green{border-left-color:var(--green)}
+.quote-item.amber{border-left-color:#d97706}
+.quote-item.red{border-left-color:var(--red)}
+.quote-meta{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* — TAG CLOUD — */
+.tag-cloud{display:flex;flex-wrap:wrap;gap:6px}
+.tag{padding:4px 10px;border-radius:20px;font-size:11px;background:var(--surface2);color:var(--text);border:0.5px solid var(--border2)}
+.tag.big{background:var(--purple-bg);color:var(--purple);border-color:rgba(83,74,183,.2);font-weight:500}
+.tag.med{background:var(--blue-bg);color:var(--blue);border-color:rgba(26,95,212,.2)}
+
+/* — STAT ROWS — */
+.stat-list{display:flex;flex-direction:column;gap:6px}
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:var(--text)}
+.stat-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.stat-bar{flex:1;height:4px;background:var(--surface2);border-radius:2px;margin:0 10px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;background:var(--purple)}
+
+/* — FLAG ITEMS — */
+.flag-list{display:flex;flex-direction:column;gap:8px}
+.flag-item{background:var(--red-bg);border:0.5px solid rgba(153,27,27,.2);border-radius:8px;padding:10px 14px}
+.flag-type{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:4px}
+.flag-msg{font-size:12px;color:var(--text);line-height:1.5}
+.flag-meta{font-size:10px;color:var(--muted);margin-top:3px}
+.flag-item.amber{background:var(--amber-bg);border-color:rgba(146,64,14,.2)}
+.flag-item.amber .flag-type{color:var(--amber)}
+
+/* — TRANSCRIPT DRAWER — */
+.quote-item{cursor:pointer;position:relative}
+.quote-item .expand-hint{font-size:9px;color:var(--muted);margin-top:4px;opacity:0.7}
+.quote-item .transcript-drawer{display:none;margin-top:10px;border-top:0.5px solid rgba(0,0,0,.1);padding-top:10px}
+.quote-item.open .transcript-drawer{display:block}
+.transcript-line{font-size:11px;line-height:1.6;padding:3px 0}
+.transcript-line.user{color:var(--blue);font-weight:500}
+.transcript-line.ai{color:var(--text)}
+.transcript-line.system{color:var(--muted);font-style:italic}
+.flag-item{cursor:pointer}
+.flag-item .transcript-drawer{display:none;margin-top:10px;border-top:0.5px solid rgba(153,27,27,.2);padding-top:10px}
+.flag-item.open .transcript-drawer{display:block}
+.flag-item.amber .transcript-drawer{border-top-color:rgba(146,64,14,.2)}
+
+/* — PAGINATED TRANSCRIPT VIEWER — */
+.transcript-pager{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.pager-label{font-size:10px;color:var(--muted);font-weight:500}
+.pager-btns{display:flex;gap:6px}
+.pager-btn{border:0.5px solid var(--border2);background:var(--surface);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif}
+.pager-btn:hover{background:var(--surface2)}
+.pager-btn:disabled{opacity:0.35;cursor:default}
+.pager-dots{display:flex;gap:3px;align-items:center}
+.pager-dot{width:5px;height:5px;border-radius:50%;background:var(--border2);transition:background 0.15s}
+.pager-dot.active{background:var(--purple)}
+
+/* — EMPTY STATE — */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:12px}
+
+/* — SUMMARY BAR — */
+.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.summary-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.summary-val{font-size:24px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:-1px}
+.summary-label{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="logo">B</div>
+    <div>
+      <h1>Transcript Intelligence</h1>
+      <div class="header-sub">Blarney · Samsung Kiosk</div>
+    </div>
+  </div>
+  <div class="header-badge">Upload CSV to analyse</div>
+</div>
+
+<!-- Upload zone -->
+<div class="upload-zone" id="uploadZone">
+  <div class="upload-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b6862" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </div>
+  <div class="upload-title">Upload user logs CSV</div>
+  <div class="upload-sub">Drag and drop or click to browse</div>
+  <label class="upload-btn" for="fileInput">Choose file</label>
+  <input type="file" id="fileInput" accept=".csv">
+</div>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--muted)">Analysing transcripts...</div>
+</div>
+
+<!-- Main content -->
+<div class="main" id="main">
+  <div class="file-info">
+    <div>
+      <div class="file-name" id="fileName">—</div>
+      <div class="file-meta" id="fileMeta">—</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="dateFilterBar" style="display:none;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--muted)">Filter:</span>
+        <input type="date" id="filterFrom" style="font-size:11px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:6px;font-family:'DM Sans',sans-serif;background:var(--surface2)">
+        <span style="font-size:11px;color:var(--muted)">to</span>
+        <input type="date" id="filterTo" style="font-size:11px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:6px;font-family:'DM Sans',sans-serif;background:var(--surface2)">
+        <button onclick="applyFilter()" style="font-size:11px;padding:4px 12px;background:var(--text);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif">Apply</button>
+      </div>
+      <button class="reset-btn" onclick="reset()">Upload new file</button>
+    </div>
+  </div>
+
+  <div class="summary-bar">
+    <div class="summary-card"><div class="summary-val" id="sumSessions">—</div><div class="summary-label">Sessions analysed</div></div>
+    <div class="summary-card"><div class="summary-val" id="sumTranscripts">—</div><div class="summary-label">With transcripts</div></div>
+    <div class="summary-card"><div class="summary-val" id="sumUserMsgs">—</div><div class="summary-label">Customer messages</div></div>
+    <div class="summary-card"><div class="summary-val" id="sumFlags">—</div><div class="summary-label">Flags raised</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active-advert" onclick="switchTab('advert')">📣 Advertising insights</button>
+    <button class="tab" onclick="switchTab('internal')">🔍 Internal analysis</button>
+    <button class="tab" onclick="switchTab('flags')">🚩 Flags &amp; alerts</button>
+  </div>
+
+  <!-- ADVERTISING INSIGHTS -->
+  <div class="panel active" id="panel-advert">
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--purple)"></div>What customers are actually asking</div>
+        <div class="quote-list" id="topQuestions"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--green)"></div>Voice of the customer</div>
+        <div class="quote-list" id="vocQuotes"></div>
+      </div>
+    </div>
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--blue)"></div>Product intelligence — mentioned in conversation</div>
+        <div class="tag-cloud" id="productMentions"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--amber)"></div>Features customers care about</div>
+        <div class="tag-cloud" id="featureMentions"></div>
+      </div>
+    </div>
+    <div class="section-grid single">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--red)"></div>Competitor mentions</div>
+        <div class="tag-cloud" id="competitorMentions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERNAL ANALYSIS -->
+  <div class="panel" id="panel-internal">
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--purple)"></div>Conversation drop off — turns before disengaging</div>
+        <div class="stat-list" id="dropOff"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--green)"></div>Turns before conversion</div>
+        <div class="stat-list" id="turnsToConvert"></div>
+      </div>
+    </div>
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--blue)"></div>Out of scope requests</div>
+        <div class="quote-list" id="outOfScope"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--amber)"></div>Customer frustration signals</div>
+        <div class="quote-list" id="frustration"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLAGS & ALERTS -->
+  <div class="panel" id="panel-flags">
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--red)"></div>Jailbreak attempts</div>
+        <div class="flag-list" id="jailbreaks"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--amber)"></div>Possible AI hallucination signals</div>
+        <div class="flag-list" id="hallucinations"></div>
+      </div>
+    </div>
+    <div class="section-grid single">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:#dc2626"></div>Offensive or inappropriate content</div>
+        <div class="flag-list" id="offensiveContent"></div>
+      </div>
+    </div>
+    <div class="section-grid single">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--purple)"></div>Off-brand or unexpected responses flagged by customers</div>
+        <div class="flag-list" id="offBrand"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// — Tab switching —
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-advert','active-internal','active-flags'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add(`active-${tab}`);
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+// — Upload handling —
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag'); processFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => processFile(e.target.files[0]));
+uploadZone.addEventListener('click', () => fileInput.click());
+
+function reset() {
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('main').style.display = 'none';
+  fileInput.value = '';
+}
+
+function processFile(file) {
+  if (!file) return;
+  uploadZone.style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: results => {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      analyse(results.data, file.name);
+    }
+  });
+}
+
+// — Helpers —
+function getUserMsgs(transcript) {
+  if (!transcript) return [];
+  return transcript.split('\n')
+    .filter(l => l.startsWith('[User]'))
+    .map(l => l.replace('[User]','').trim())
+    .filter(m => m.length > 0);
+}
+
+function getAIMsgs(transcript) {
+  if (!transcript) return [];
+  return transcript.split('\n')
+    .filter(l => l.startsWith('[AI]'))
+    .map(l => l.replace('[AI]','').trim())
+    .filter(m => m.length > 0);
+}
+
+function renderTranscript(transcript) {
+  if (!transcript) return '<div style="font-size:11px;color:var(--muted)">No transcript available</div>';
+  return transcript.split('\n')
+    .filter(l => l.trim())
+    .map(l => {
+      if (l.startsWith('[User]')) return `<div class="transcript-line user">🙋 ${l.replace('[User]','').trim()}</div>`;
+      if (l.startsWith('[AI]'))   return `<div class="transcript-line ai">🤖 ${l.replace('[AI]','').trim()}</div>`;
+      return `<div class="transcript-line system">${l}</div>`;
+    }).join('');
+}
+
+// Builds a paginated multi-transcript drawer for a question asked N times
+function buildPagerDrawer(sessions) {
+  if (!sessions.length) return '';
+  const id = 'pager_' + Math.random().toString(36).slice(2);
+  // Store sessions on a global map
+  window._pagerData = window._pagerData || {};
+  window._pagerData[id] = { sessions, idx: 0 };
+
+  return `<div class="transcript-drawer" id="${id}_drawer">
+    <div class="transcript-pager">
+      <span class="pager-label" id="${id}_label">Session 1 of ${sessions.length}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="pager-dots" id="${id}_dots">${sessions.map((_,i)=>`<div class="pager-dot${i===0?' active':''}" id="${id}_dot${i}"></div>`).join('')}</div>
+        <div class="pager-btns">
+          <button class="pager-btn" id="${id}_prev" onclick="pagerNav('${id}',-1)" disabled>‹</button>
+          <button class="pager-btn" id="${id}_next" onclick="pagerNav('${id}',1)" ${sessions.length<=1?'disabled':''}>›</button>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:6px" id="${id}_meta"></div>
+    <div id="${id}_content">${renderTranscript(sessions[0].session.Transcript)}</div>
+  </div>`;
+}
+
+function pagerNav(id, dir) {
+  const d = window._pagerData[id];
+  d.idx = Math.max(0, Math.min(d.sessions.length - 1, d.idx + dir));
+  const s = d.sessions[d.idx];
+  document.getElementById(`${id}_content`).innerHTML = renderTranscript(s.session.Transcript);
+  document.getElementById(`${id}_label`).textContent = `Session ${d.idx+1} of ${d.sessions.length}`;
+  document.getElementById(`${id}_meta`).textContent = [s.session.Date, s.session['Session ID']].filter(Boolean).join(' · ');
+  document.querySelectorAll(`[id^="${id}_dot"]`).forEach((dot, i) => dot.classList.toggle('active', i === d.idx));
+  document.getElementById(`${id}_prev`).disabled = d.idx === 0;
+  document.getElementById(`${id}_next`).disabled = d.idx === d.sessions.length - 1;
+}
+
+function quoteEl(text, type='', meta='', sessions=[], date='') {
+  const sessArr = Array.isArray(sessions) ? sessions : (sessions ? [sessions] : []);
+  const dateBit = date ? `<span style="font-size:9px;color:var(--muted);margin-left:6px">${date}</span>` : '';
+  const hasTranscript = sessArr.some(s => s && s.session && s.session.Transcript);
+  const drawerHtml = hasTranscript ? buildPagerDrawer(sessArr.filter(s => s && s.session && s.session.Transcript)) : '';
+  return `<div class="quote-item ${type}" onclick="this.classList.toggle('open')">
+    ${text}${dateBit}
+    ${meta ? `<div class="quote-meta">${meta}</div>` : ''}
+    ${hasTranscript ? `<div class="expand-hint">▸ Click to view transcript${sessArr.length > 1 ? 's' : ''}</div>${drawerHtml}` : ''}
+  </div>`;
+}
+
+function flagEl(type, msg, meta='', level='', transcript='', date='') {
+  const hasTranscript = transcript && transcript.trim().length > 0;
+  const dateBit = date ? `<span style="font-size:9px;opacity:0.7;margin-left:6px">${date}</span>` : '';
+  return `<div class="flag-item ${level}" onclick="this.classList.toggle('open')">
+    <div class="flag-type">${type}${dateBit}</div>
+    <div class="flag-msg">${msg}</div>
+    ${meta ? `<div class="flag-meta">${meta}</div>` : ''}
+    ${hasTranscript ? `<div class="expand-hint" style="font-size:9px;color:var(--muted);margin-top:4px;opacity:0.7">▸ Click to view transcript</div>
+    <div class="transcript-drawer">${renderTranscript(transcript)}</div>` : ''}
+  </div>`;
+}
+
+function tagEl(text, size='') {
+  return `<span class="tag ${size}">${text}</span>`;
+}
+
+function statRow(label, val, pct=null, max=1) {
+  const barPct = pct !== null ? pct : 0;
+  return `<div class="stat-row">
+    <span class="stat-label">${label}</span>
+    ${pct !== null ? `<div class="stat-bar"><div class="stat-fill" style="width:${Math.min(barPct/max*100,100)}%"></div></div>` : ''}
+    <span class="stat-val">${val}</span>
+  </div>`;
+}
+
+// — Main analysis —
+let ALL_ROWS = [];
+let ALL_FILENAME = '';
+
+function analyse(rows, filename) {
+  ALL_ROWS = rows;
+  ALL_FILENAME = filename;
+  const sessions0 = rows.filter(r => r.Mode === 'Kiosk' || r.Mode === 'QR');
+  const dates = sessions0.map(r => r.Date).filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('filterFrom').value = dates[0];
+    document.getElementById('filterTo').value = dates[dates.length-1];
+  }
+  document.getElementById('dateFilterBar').style.display = 'flex';
+  runAnalysis(rows, filename);
+}
+
+function applyFilter() {
+  const from = document.getElementById('filterFrom').value;
+  const to   = document.getElementById('filterTo').value;
+  const filtered = ALL_ROWS.filter(r => {
+    if (!r.Date) return true;
+    if (from && r.Date < from) return false;
+    if (to   && r.Date > to)   return false;
+    return true;
+  });
+  runAnalysis(filtered, ALL_FILENAME);
+}
+
+function runAnalysis(rows, filename) {
+  window._pagerData = {};
+
+  const sessions = rows.filter(r => r.Mode === 'Kiosk' || r.Mode === 'QR');
+  const withTranscript = sessions.filter(r => r.Transcript && r.Transcript.trim().length > 0);
+
+  const allUserMsgs = [];
+  withTranscript.forEach(r => getUserMsgs(r.Transcript).forEach(m => allUserMsgs.push({msg: m, session: r})));
+
+  const msgCounts = {};
+  allUserMsgs.forEach(({msg}) => { msgCounts[msg] = (msgCounts[msg]||0)+1; });
+  const sortedMsgs = Object.entries(msgCounts).sort((a,b)=>b[1]-a[1]);
+
+  const converted = sessions.filter(r => r['Buy In Store']==='Yes' || r['Buy Online (QRs)']==='Yes');
+
+  // — Summary —
+  document.getElementById('fileName').textContent = filename;
+  document.getElementById('fileMeta').textContent = `${sessions.length} sessions · ${withTranscript.length} with transcripts · Date range: ${getDateRange(sessions)}`;
+  document.getElementById('sumSessions').textContent = sessions.length;
+  document.getElementById('sumTranscripts').textContent = withTranscript.length;
+  document.getElementById('sumUserMsgs').textContent = allUserMsgs.length;
+
+  // — ADVERTISING INSIGHTS —
+
+  // Top questions — group all sessions per question for pager
+  const realQuestions = sortedMsgs.filter(([msg]) => {
+    const lower = msg.toLowerCase();
+    const questionWords = ['how','what','which','why','can','is','are','do','does','will','would','should','could','tell','explain','compare','difference','better','vs','versus','help','looking','want','need','thinking','have','i\'m','im ','my '];
+    return msg.length > 20 && questionWords.some(w => lower.includes(w));
+  }).slice(0, 8);
+
+  document.getElementById('topQuestions').innerHTML = realQuestions.length
+    ? realQuestions.map(([msg, count]) => {
+        const allSessions = allUserMsgs.filter(m => m.msg === msg);
+        const firstDate = allSessions[0] ? allSessions[0].session.Date : '';
+        return quoteEl(`"${msg}"`, 'green', count > 1 ? `Asked ${count} times` : '', allSessions, firstDate);
+      }).join('')
+    : '<div class="empty">No questions found</div>';
+
+  // Voice of customer
+  const vocKeywords = ['iphone','android','switch','switching','upgrade','upgrading','birthday','present','gift','mum','dad','daughter','son','cousin','abroad','work','camera','dog','photo','trip','holiday','£','price','budget','afford','cheap','expensive','monthly','contract'];
+  const vocMsgs = allUserMsgs
+    .filter(({msg}) => msg.length > 25 && vocKeywords.some(k => msg.toLowerCase().includes(k)))
+    .map(({msg}) => msg)
+    .filter((m,i,a) => a.indexOf(m) === i)
+    .slice(0, 8);
+
+  document.getElementById('vocQuotes').innerHTML = vocMsgs.length
+    ? vocMsgs.map(m => {
+        const allSessions = allUserMsgs.filter(u => u.msg === m);
+        return quoteEl(`"${m}"`, '', '', allSessions, allSessions[0] ? allSessions[0].session.Date : '');
+      }).join('')
+    : '<div class="empty">No voice of customer moments found</div>';
+
+  // Product mentions
+  const products = ['S26 Ultra','S26+','S26','S25 Ultra','S25 FE','S25','S24','A57','A56','A36','A17','A16','Z Fold7','Z Fold6','Z Flip7','Z Flip6','Watch Ultra','Watch8','Ring','Buds4','Tab S10','Galaxy AI'];
+  const productCounts = {};
+  allUserMsgs.forEach(({msg}) => {
+    products.forEach(p => { if (msg.toLowerCase().includes(p.toLowerCase())) productCounts[p] = (productCounts[p]||0)+1; });
+  });
+  const sortedProducts = Object.entries(productCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('productMentions').innerHTML = sortedProducts.length
+    ? sortedProducts.map(([p,c]) => tagEl(`${p} (${c})`, c >= 5 ? 'big' : c >= 2 ? 'med' : '')).join('')
+    : '<div class="empty">No product mentions found</div>';
+
+  // Feature mentions
+  const features = ['camera','battery','storage','screen','display','5G','AI','processor','chip','speed','memory','RAM','weight','size','colour','color','trade-in','trade in','price','cost','monthly','contract','water','dust','proof','zoom','selfie','video','charging','wireless'];
+  const featureCounts = {};
+  allUserMsgs.forEach(({msg}) => {
+    features.forEach(f => { if (msg.toLowerCase().includes(f.toLowerCase())) featureCounts[f] = (featureCounts[f]||0)+1; });
+  });
+  const sortedFeatures = Object.entries(featureCounts).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  document.getElementById('featureMentions').innerHTML = sortedFeatures.length
+    ? sortedFeatures.map(([f,c]) => tagEl(`${f} (${c})`, c >= 5 ? 'big' : c >= 2 ? 'med' : '')).join('')
+    : '<div class="empty">No feature mentions found</div>';
+
+  // Competitor mentions
+  const competitors = ['iPhone','Apple','iOS','Google Pixel','Pixel','Huawei','OnePlus','Sony','Xiaomi','Motorola','Nokia','Nothing Phone','Nothing'];
+  const compData = {};
+  competitors.forEach(c => { compData[c] = []; });
+  allUserMsgs.forEach(({msg, session}) => {
+    competitors.forEach(c => { if (msg.toLowerCase().includes(c.toLowerCase())) compData[c].push({msg, session}); });
+  });
+  const sortedComps = Object.entries(compData)
+    .filter(([,msgs]) => msgs.length > 0)
+    .sort((a,b) => b[1].length - a[1].length);
+
+  document.getElementById('competitorMentions').innerHTML = sortedComps.length
+    ? sortedComps.map(([brand, mentions]) => {
+        const quotesHtml = mentions.map(({msg, session}) =>
+          `<div style="font-size:11px;padding:6px 0;border-bottom:0.5px solid rgba(0,0,0,.06);color:var(--text)">"${msg}"<span style="font-size:9px;color:var(--muted);margin-left:6px">${session.Date||''}</span></div>`
+        ).join('');
+        return `<div class="quote-item" onclick="this.classList.toggle('open')" style="border-left-color:var(--red)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-weight:500">${brand}</span>
+            <span style="font-size:11px;color:var(--muted)">${mentions.length} mention${mentions.length>1?'s':''}</span>
+          </div>
+          <div class="expand-hint">▸ Click to see all mentions</div>
+          <div class="transcript-drawer">${quotesHtml}</div>
+        </div>`;
+      }).join('')
+    : '<div class="empty">No competitor mentions found</div>';
+
+  // — INTERNAL ANALYSIS —
+
+  const msgCountDist = {};
+  sessions.forEach(r => {
+    const count = getUserMsgs(r.Transcript || '').length;
+    const bucket = count === 0 ? '0 (bounced)' : count <= 2 ? '1–2' : count <= 5 ? '3–5' : count <= 10 ? '6–10' : '10+';
+    msgCountDist[bucket] = (msgCountDist[bucket]||0)+1;
+  });
+  const maxDrop = Math.max(...Object.values(msgCountDist));
+  const dropOrder = ['0 (bounced)','1–2','3–5','6–10','10+'];
+  document.getElementById('dropOff').innerHTML = dropOrder
+    .filter(k => msgCountDist[k])
+    .map(k => statRow(k + ' turns', msgCountDist[k] + ' sessions', msgCountDist[k], maxDrop))
+    .join('');
+
+  const convTurns = converted.map(r => getUserMsgs(r.Transcript||'').length).filter(n=>n>0);
+  const avgConvTurns = convTurns.length ? (convTurns.reduce((a,b)=>a+b,0)/convTurns.length).toFixed(1) : '—';
+  const minConvTurns = convTurns.length ? Math.min(...convTurns) : '—';
+  const maxConvTurns = convTurns.length ? Math.max(...convTurns) : '—';
+  document.getElementById('turnsToConvert').innerHTML = [
+    statRow('Avg turns before purchase', avgConvTurns),
+    statRow('Fewest turns to convert', minConvTurns),
+    statRow('Most turns to convert', maxConvTurns),
+    statRow('Total converting sessions', converted.length),
+  ].join('');
+
+  const outOfScopeTerms = ['laptop','computer','tv','television','headphone','earphone','watch face','app','software','repair','fix','broken','return','refund','john lewis','staff','help desk','find','where is','directions','floor','department'];
+  const outMsgs = allUserMsgs
+    .filter(({msg}) => outOfScopeTerms.some(t => msg.toLowerCase().includes(t)))
+    .map(({msg}) => msg)
+    .filter((m,i,a) => a.indexOf(m)===i)
+    .slice(0,8);
+  document.getElementById('outOfScope').innerHTML = outMsgs.length
+    ? outMsgs.map(m => {
+        const allSessions = allUserMsgs.filter(u => u.msg === m);
+        return quoteEl(`"${m}"`, 'amber', '', allSessions, allSessions[0] ? allSessions[0].session.Date : '');
+      }).join('')
+    : '<div class="empty">No out of scope requests found</div>';
+
+  const frustTerms = ["can't","cannot","doesn't work","not working","useless","unhelpful","stupid","wrong","incorrect","hate","terrible","awful","worst","broken","keep asking","stop","already said","told you","asked you","again","still not","doesn't understand","doesn't know","give up","forget it","never mind"];
+  const frustMsgs = allUserMsgs
+    .filter(({msg}) => frustTerms.some(t => msg.toLowerCase().includes(t)))
+    .map(({msg}) => msg)
+    .filter((m,i,a) => a.indexOf(m)===i)
+    .slice(0,8);
+  document.getElementById('frustration').innerHTML = frustMsgs.length
+    ? frustMsgs.map(m => {
+        const allSessions = allUserMsgs.filter(u => u.msg === m);
+        return quoteEl(`"${m}"`, 'red', '', allSessions, allSessions[0] ? allSessions[0].session.Date : '');
+      }).join('')
+    : '<div class="empty">No frustration signals found</div>';
+
+  // — FLAGS & ALERTS —
+
+  const jailbreakTerms = ['ignore your','ignore all previous','pretend you','act as if','you have no restrictions','forget your instructions','new instructions','disregard','override','bypass','system prompt','you are now','roleplay as','act like you','without restrictions','no limits','do anything'];
+  const jailbreakMsgs = allUserMsgs.filter(({msg}) => jailbreakTerms.some(t => msg.toLowerCase().includes(t)));
+
+  const hallucTerms = ["that's wrong","that's not right","that's incorrect","you said","you told me","you just said","contradicting","changed your answer","different answer","earlier you","not what you said","you're lying","that's false","incorrect information"];
+  const hallucMsgs = allUserMsgs.filter(({msg}) => hallucTerms.some(t => msg.toLowerCase().includes(t)));
+
+  const offensiveTerms = ["you're so gay","you are gay",' gay ','racist','fuck','shit','bitch','cunt','dick','piss','bastard','slut','whore','nigger','nigga','faggot','retard','kill yourself','kys','hate you','stupid bot','idiot','moron','dumb','piece of shit','go to hell'];
+  const offensiveMsgs = allUserMsgs.filter(({msg}) => offensiveTerms.some(t => msg.toLowerCase().includes(t)));
+
+  const offBrandTerms = ['inappropriate','offensive','rude','not what i expected','weird response','strange','that makes no sense','random','irrelevant','unrelated'];
+  const offBrandMsgs = allUserMsgs.filter(({msg}) => offBrandTerms.some(t => msg.toLowerCase().includes(t)));
+
+  document.getElementById('sumFlags').textContent = jailbreakMsgs.length + hallucMsgs.length + offensiveMsgs.length + offBrandMsgs.length;
+
+  document.getElementById('jailbreaks').innerHTML = jailbreakMsgs.length
+    ? jailbreakMsgs.map(({msg, session}) => flagEl('JAILBREAK ATTEMPT', `"${msg}"`, `Session: ${session['Session ID'] || '—'}`, '', session.Transcript, session.Date)).join('')
+    : '<div class="empty">No jailbreak attempts detected</div>';
+
+  document.getElementById('hallucinations').innerHTML = hallucMsgs.length
+    ? hallucMsgs.map(({msg, session}) => flagEl('CUSTOMER PUSHBACK', `"${msg}"`, `Session: ${session['Session ID'] || '—'}`, 'amber', session.Transcript, session.Date)).join('')
+    : '<div class="empty">No hallucination signals detected</div>';
+
+  document.getElementById('offensiveContent').innerHTML = offensiveMsgs.length
+    ? offensiveMsgs.map(({msg, session}) => flagEl('OFFENSIVE CONTENT', `"${msg}"`, `Session: ${session['Session ID'] || '—'} · ${session.Date || ''}`, '', session.Transcript, session.Date)).join('')
+    : '<div class="empty">No offensive content detected</div>';
+
+  document.getElementById('offBrand').innerHTML = offBrandMsgs.length
+    ? offBrandMsgs.map(({msg, session}) => flagEl('OFF-BRAND SIGNAL', `"${msg}"`, `Session: ${session['Session ID'] || '—'}`, '', session.Transcript, session.Date)).join('')
+    : '<div class="empty">No off-brand signals detected</div>';
+}
+
+function getDateRange(sessions) {
+  const dates = sessions.map(r => r.Date).filter(Boolean).sort();
+  if (!dates.length) return '—';
+  return `${dates[0]} – ${dates[dates.length-1]}`;
+}
+</script>
+</body>
+</html>
