@@ -146,6 +146,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .empty{font-size:12px;color:var(--muted);padding:8px 0}
 
 .flags-section-header{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px;padding-left:2px}
+
+/* ── AI analysis bar ─────────────────────────────── */
+.ai-bar{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ai-bar-label{font-size:12px;color:var(--text);flex:1;min-width:200px}
+.ai-bar-label span{color:var(--muted);font-size:11px;display:block;margin-top:2px}
+.ai-analyse-btn{padding:7px 18px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.ai-analyse-btn:hover{opacity:.88}
+.ai-analyse-btn:disabled{opacity:.45;cursor:default}
+.ai-progress-wrap{width:100%;display:none}
+.ai-progress-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:6px}
+.ai-progress-fill{height:100%;background:var(--purple);border-radius:2px;transition:width 0.3s}
+.ai-progress-label{font-size:10px;color:var(--muted)}
+.ai-source-tag{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:var(--purple-bg);color:var(--purple);margin-left:6px}
+.ai-source-tag.kw{background:var(--surface2);color:var(--muted)}
+
+/* ── API key modal ───────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:16px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.modal-box h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.modal-box p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.modal-box input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:12px;background:var(--surface2)}
+.modal-box input:focus{outline:none;border-color:var(--purple)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.modal-btn{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;border:none}
+.modal-btn.primary{background:var(--purple);color:#fff}
+.modal-btn.secondary{background:var(--surface2);color:var(--text)}
 </style>
 </head>
 <body>
@@ -243,6 +270,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
   <!-- ── Flags & alerts ──────────────────────────────────────── -->
   <div class="panel" id="panel-flags">
+    <div class="ai-bar">
+      <div class="ai-bar-label">
+        🤖 AI-powered conversation analysis
+        <span>Reads the full context of each transcript — catches frustration, sarcasm, and implied intent that keyword matching misses.</span>
+      </div>
+      <button class="ai-analyse-btn" id="aiAnalyseBtn" onclick="startAIAnalysis()">✦ Analyse with AI</button>
+      <div class="ai-progress-wrap" id="aiProgressWrap">
+        <div class="ai-progress-bar"><div class="ai-progress-fill" id="aiProgressFill" style="width:0%"></div></div>
+        <div class="ai-progress-label" id="aiProgressLabel">Starting…</div>
+      </div>
+    </div>
     <div class="severity-filter">
       <span style="font-size:11px;color:var(--muted);padding-top:4px">Severity:</span>
       <button class="sev-pill active" onclick="filterFlags('all',this)">All flags</button>
@@ -251,6 +289,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <button class="sev-pill" onclick="filterFlags('low',this)">🔵 Low</button>
     </div>
     <div id="allFlagsContainer"></div>
+  </div>
+
+  <!-- ── API key modal ──────────────────────────────────────── -->
+  <div class="modal-overlay" id="apiKeyModal" onclick="if(event.target===this)closeApiKeyModal()">
+    <div class="modal-box">
+      <h3>Anthropic API key</h3>
+      <p>Enter your Anthropic API key to enable AI-powered transcript analysis. It's stored in session memory only — never saved to disk or committed anywhere.</p>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off">
+      <div class="modal-btns">
+        <button class="modal-btn secondary" onclick="closeApiKeyModal()">Cancel</button>
+        <button class="modal-btn primary" onclick="confirmApiKey()">Save &amp; analyse</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Internal analysis ──────────────────────────────────── -->
@@ -540,6 +591,182 @@ const FLAG_RULES = [
   },
 ];
 
+// ═══════════════════════════════════════════════════════════
+// AI-powered analysis
+// ═══════════════════════════════════════════════════════════
+
+const AI_CACHE_KEY = 'blarney_ai_flags_v2';
+let AI_FLAGS = [];
+
+function getApiKey() { return sessionStorage.getItem('blarney_api_key') || ''; }
+function setApiKey(k) { sessionStorage.setItem('blarney_api_key', k); }
+
+function startAIAnalysis() {
+  if (!getApiKey()) {
+    document.getElementById('apiKeyModal').classList.add('open');
+    document.getElementById('apiKeyInput').value = '';
+    setTimeout(() => document.getElementById('apiKeyInput').focus(), 80);
+    return;
+  }
+  runAIAnalysis();
+}
+
+function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.remove('open'); }
+
+function confirmApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k.startsWith('sk-')) { alert('That doesn\'t look like a valid Anthropic API key (should start with sk-ant-…)'); return; }
+  setApiKey(k);
+  closeApiKeyModal();
+  runAIAnalysis();
+}
+
+async function runAIAnalysis() {
+  const sessions = (window._CURRENT_SESSIONS || []).filter(r => r.Transcript && r.Transcript.trim().length > 20);
+  if (!sessions.length) { alert('No transcripts loaded — upload a CSV first.'); return; }
+
+  const btn = document.getElementById('aiAnalyseBtn');
+  const progressWrap = document.getElementById('aiProgressWrap');
+  const progressFill = document.getElementById('aiProgressFill');
+  const progressLabel = document.getElementById('aiProgressLabel');
+  btn.disabled = true;
+  btn.textContent = 'Analysing…';
+  progressWrap.style.display = 'block';
+
+  // Load cache
+  let cache = {};
+  try { cache = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || '{}'); } catch(e) {}
+
+  const toProcess = sessions.filter(s => !cache[s['Session ID']]);
+  const total = sessions.length;
+  let done = sessions.length - toProcess.length;
+
+  progressFill.style.width = `${Math.round(done/total*100)}%`;
+  progressLabel.textContent = `${done} / ${total} sessions analysed (${toProcess.length} new)`;
+
+  const BATCH = 5;
+  for (let i = 0; i < toProcess.length; i += BATCH) {
+    const batch = toProcess.slice(i, i + BATCH);
+    await Promise.all(batch.map(async s => {
+      try {
+        const result = await analyseTranscriptWithAI(s.Transcript, getApiKey());
+        cache[s['Session ID']] = { flags: result.flags, analysed: true };
+      } catch(e) {
+        cache[s['Session ID']] = { flags: [], analysed: false, error: e.message };
+      }
+      done++;
+      progressFill.style.width = `${Math.round(done/total*100)}%`;
+      progressLabel.textContent = `${done} / ${total} sessions analysed…`;
+    }));
+    localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache));
+  }
+
+  // Merge AI flags with keyword flags
+  AI_FLAGS = [];
+  sessions.forEach(s => {
+    const cached = cache[s['Session ID']];
+    if (!cached || !cached.flags) return;
+    cached.flags.forEach(f => {
+      AI_FLAGS.push({
+        cat: f.type,
+        sev: f.severity,
+        label: f.label,
+        message: f.quote || '',
+        explanation: f.explanation || '',
+        session: s,
+        match: '',
+        source: 'ai',
+      });
+    });
+  });
+
+  mergeAndRenderFlags();
+  progressLabel.textContent = `✓ ${done} / ${total} sessions analysed`;
+  btn.disabled = false;
+  btn.textContent = '✦ Re-analyse';
+}
+
+async function analyseTranscriptWithAI(transcript, apiKey) {
+  const prompt = `You are a quality assurance analyst reviewing customer conversations from a Samsung AI kiosk at John Lewis.
+
+Analyse this transcript for any issues. Be sensitive to frustration even when expressed subtly — hesitation, repetition, giving up, sarcasm, being dismissive. Also flag offensive language, jailbreak attempts, and moments where the AI may have given wrong information.
+
+For each issue found, return a flag object. Only flag real issues — don't over-flag polite or neutral conversations.
+
+Return JSON only, no other text:
+{
+  "flags": [
+    {
+      "type": "offensive" | "jailbreak" | "frustration" | "hallucination" | "offbrand",
+      "severity": "high" | "medium" | "low",
+      "label": "short label in caps e.g. OFFENSIVE CONTENT",
+      "quote": "the exact message or phrase that triggered this flag",
+      "explanation": "one sentence explaining why this is flagged and what the context suggests"
+    }
+  ]
+}
+
+Severity guide:
+- high: slurs, threats, explicit jailbreak, dangerous misinformation
+- medium: clear frustration, borderline language, possible hallucination, customer explicitly correcting AI
+- low: mild frustration signals, subtle confusion, slightly off-brand response
+
+Transcript:
+${transcript.slice(0, 3000)}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) { sessionStorage.removeItem('blarney_api_key'); throw new Error('Invalid API key'); }
+    throw new Error(`API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data.content?.[0]?.text || '{"flags":[]}';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { flags: [] };
+  return JSON.parse(jsonMatch[0]);
+}
+
+function mergeAndRenderFlags() {
+  const combined = [...ALL_FLAGS, ...AI_FLAGS];
+  // Deduplicate: same session + same category + similar quote
+  const seen = new Set();
+  const deduped = combined.filter(f => {
+    const key = (f.session['Session ID'] || '') + '|' + f.cat + '|' + (f.message || '').substring(0, 30);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const sevOrder = { high: 0, medium: 1, low: 2 };
+  deduped.sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
+
+  // Update summary count
+  document.getElementById('sumFlags').textContent = deduped.length;
+  const tabFlags = document.getElementById('tab-flags');
+  const badge = tabFlags.querySelector('.badge');
+  if (badge) badge.remove();
+  const highCount = deduped.filter(f => f.sev === 'high').length;
+  if (highCount > 0) tabFlags.insertAdjacentHTML('beforeend', `<span class="badge">${highCount}</span>`);
+
+  // Render using merged set
+  renderFlagsFromList(deduped, 'all');
+}
+
+// ═══════════════════════════════════════════════════════════
 // Score a message against all rules. Returns array of flag objects.
 function detectFlags(msg, session) {
   const found = [];
@@ -591,8 +818,8 @@ const catMeta = {
   frustration:  { label:'Customer Frustration',          typeClass:'ft-frustration' },
 };
 
-function renderFlags(severityFilter) {
-  const filtered = severityFilter === 'all' ? ALL_FLAGS : ALL_FLAGS.filter(f => f.sev === severityFilter);
+function renderFlagsFromList(flagList, severityFilter) {
+  const filtered = severityFilter === 'all' ? flagList : flagList.filter(f => f.sev === severityFilter);
   const container = document.getElementById('allFlagsContainer');
 
   if (!filtered.length) {
@@ -608,16 +835,17 @@ function renderFlags(severityFilter) {
     html += `<div class="flags-section-header">${meta.label} <span style="font-weight:400;font-size:10px;opacity:.7">(${catFlags.length})</span></div>`;
     html += '<div class="flag-list">';
     catFlags.forEach(f => {
-      const ctx = getContext(f.message, f.session.Transcript);
+      const isAI = f.source === 'ai';
       html += `<div class="flag-item severity-${f.sev}" onclick="this.classList.toggle('open')">
         <div class="flag-type-row">
           <span class="flag-type ${meta.typeClass}">${f.label}</span>
           <span class="severity-pip">${f.sev}</span>
-          ${f.session.Date ? `<span style="font-size:9px;color:var(--muted)">${f.session.Date}</span>` : ''}
+          <span class="ai-source-tag ${isAI ? '' : 'kw'}">${isAI ? '✦ AI' : 'keyword'}</span>
+          ${f.session.Date ? `<span style="font-size:9px;color:var(--muted);margin-left:auto">${f.session.Date}</span>` : ''}
         </div>
         <div class="flag-msg">"${escHtml(f.message)}"</div>
-        ${f.match ? `<div class="flag-context">Matched: "${escHtml(f.match)}"</div>` : ''}
-        <div class="flag-meta">Session: ${f.session['Session ID']||'—'} · ${f.session.Mode||'—'}</div>
+        ${f.explanation ? `<div class="flag-context">${escHtml(f.explanation)}</div>` : f.match ? `<div class="flag-context">Matched: "${escHtml(f.match)}"</div>` : ''}
+        <div class="flag-meta">Session: ${escHtml(f.session['Session ID']||'—')} · ${escHtml(f.session.Mode||'—')}</div>
         <div class="expand-hint">▸ Click to view full transcript</div>
         <div class="transcript-drawer">${renderTranscript(f.session.Transcript||'')}</div>
       </div>`;
@@ -625,6 +853,20 @@ function renderFlags(severityFilter) {
     html += '</div>';
   }
   container.innerHTML = html;
+}
+
+function renderFlags(severityFilter) {
+  const combined = [...ALL_FLAGS, ...AI_FLAGS];
+  const seen = new Set();
+  const deduped = combined.filter(f => {
+    const key = (f.session['Session ID'] || '') + '|' + f.cat + '|' + (f.message || '').substring(0, 30);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const sevOrder = { high: 0, medium: 1, low: 2 };
+  deduped.sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
+  renderFlagsFromList(deduped, severityFilter);
 }
 
 function filterFlags(sev, btn) {
@@ -686,6 +928,10 @@ function runAnalysis(rows, filename) {
   document.getElementById('sumTranscripts').textContent = withTranscript.length;
   document.getElementById('sumUserMsgs').textContent    = allUserMsgs.length;
   document.getElementById('headerBadge').textContent    = `${sessions.length} sessions loaded`;
+
+  // Store sessions for AI analysis
+  window._CURRENT_SESSIONS = sessions;
+  AI_FLAGS = [];
 
   // ── Run flagging engine ───────────────────────────────────
   ALL_FLAGS = [];
