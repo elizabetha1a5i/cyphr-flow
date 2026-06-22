@@ -99,7 +99,31 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .tab.t-flags.active{background:var(--red)}
 .tab.t-advert.active{background:var(--blue)}
 .tab.t-journey.active{background:var(--purple)}
+.tab.t-wins.active{background:#d97706}
 .panel{display:none}.panel.active{display:block}
+
+/* ── Wins tab ── */
+.win-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px 22px;position:relative;overflow:hidden}
+.win-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--green)}
+.win-metric{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.win-numbers{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.win-our{font-size:28px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green);letter-spacing:-1.5px;line-height:1}
+.win-vs{font-size:11px;color:var(--muted)}
+.win-bench{font-size:14px;font-weight:500;color:var(--muted)}
+.win-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:var(--green-bg);border:0.5px solid var(--green-border);border-radius:12px;font-size:10px;font-weight:600;color:var(--green);margin-bottom:12px}
+.win-talking-point{font-size:12px;line-height:1.6;color:var(--text);padding:10px 12px;background:var(--surface2);border-radius:var(--radius-xs);margin-bottom:10px;font-style:italic}
+.win-copy-btn{font-size:11px;padding:5px 12px;border:0.5px solid var(--border2);border-radius:var(--radius-xs);background:none;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .15s}
+.win-copy-btn:hover{background:var(--surface2);color:var(--text)}
+.win-source{font-size:10px;color:var(--muted2);margin-top:8px}
+.win-source a{color:var(--blue);text-decoration:none}
+.win-source a:hover{text-decoration:underline}
+
+/* ── Talk ratio bar ── */
+.talk-bar-wrap{margin:10px 0}
+.talk-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px}
+.talk-bar-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;display:flex}
+.talk-bar-user{height:100%;background:var(--blue);border-radius:4px 0 0 4px;transition:width .4s}
+.talk-bar-ai{height:100%;background:var(--surface3)}
 
 /* ── Grid / Card ── */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
@@ -367,6 +391,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <button class="tab t-advert" onclick="switchTab('advert')">📣 Advertising</button>
     <button class="tab t-journey" onclick="switchTab('journey')">🗺 Journeys</button>
     <button class="tab t-internal" onclick="switchTab('internal')">📊 Internal</button>
+    <button class="tab t-wins" onclick="switchTab('wins')">🏆 Your wins</button>
   </div>
 
   <!-- PANEL: Flags -->
@@ -399,6 +424,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="panel" id="panel-advert">
     <div class="g2">
       <div class="card">
+        <div class="card-hd"><div class="hd-dot" style="background:#7c3aed"></div>The questions no one else could answer <span style="font-size:9px;color:var(--muted2);font-weight:400;margin-left:6px">Specific, personal, hard</span></div>
+        <div class="quote-list" id="hardQuestions"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="hd-dot" style="background:var(--green)"></div>The moment they decided <span style="font-size:9px;color:var(--muted2);font-weight:400;margin-left:6px">Last message before conversion</span></div>
+        <div class="quote-list" id="decisionMoments"></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
         <div class="card-hd"><div class="hd-dot" style="background:var(--purple)"></div>What customers are asking</div>
         <div class="quote-list" id="topQuestions"></div>
       </div>
@@ -419,7 +454,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
     <div class="g1">
       <div class="card">
-        <div class="card-hd"><div class="hd-dot" style="background:var(--red)"></div>Competitor mentions — click to expand all quotes</div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--red)"></div>Competitor mentions <span id="compConvStat" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px"></span></div>
         <div class="comp-list" id="competitorMentions"></div>
       </div>
     </div>
@@ -460,13 +495,45 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
     <div class="g2">
       <div class="card">
-        <div class="card-hd"><div class="hd-dot" style="background:var(--blue)"></div>Out of scope requests</div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--blue)"></div>Talk ratio <span style="font-size:9px;color:var(--muted2);font-weight:400;margin-left:6px">Customer vs AI messages — higher = more two-way</span></div>
+        <div class="stat-list" id="talkRatio"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="hd-dot" style="background:var(--red)"></div>Questions the AI couldn't answer</div>
+        <div class="quote-list" id="unansweredList"></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><div class="hd-dot" style="background:#d97706"></div>Out of scope requests</div>
         <div class="quote-list" id="outOfScope"></div>
       </div>
       <div class="card">
-        <div class="card-hd"><div class="hd-dot" style="background:#d97706"></div>Customer frustration signals <span style="font-size:9px;font-weight:400;color:var(--muted2);margin-left:6px">✦ AI-detected</span></div>
+        <div class="card-hd"><div class="hd-dot" style="background:#b45309"></div>Customer frustration signals <span style="font-size:9px;font-weight:400;color:var(--muted2);margin-left:6px">✦ AI-detected</span></div>
         <div class="quote-list" id="frustrationList"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- PANEL: Your Wins -->
+  <div class="panel" id="panel-wins">
+    <div id="winsLoading" style="padding:48px 0;text-align:center;font-size:13px;color:var(--muted)">
+      <div class="spinner" style="margin:0 auto 14px"></div>
+      Searching for current industry benchmarks…
+    </div>
+    <div id="winsContent" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:18px;font-weight:600;letter-spacing:-.02em">Where Blarney wins</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">Metrics where your pilot beats industry benchmarks — ready to copy into proposals</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted2);text-align:right">
+          <div id="winsPowered">Benchmarks via Google Search</div>
+          <div id="winsTimestamp"></div>
+        </div>
+      </div>
+      <div id="winsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px"></div>
+      <div id="winsNoData" style="display:none;padding:40px 0;text-align:center;font-size:13px;color:var(--muted2)">No benchmark wins to show yet — try uploading more session data.</div>
     </div>
   </div>
 </div>
@@ -941,6 +1008,7 @@ function showDashboard(rows){
   document.getElementById('dateFilterBar').style.display='flex';
   runAnalysis(rows);
   runAIFlagging();
+  fetchWins();
 }
 
 function applyFilter(){
@@ -1080,6 +1148,43 @@ function runAnalysis(rows){
     ?`<div class="comp-tag-cloud">${compTagHtml}</div>`
     :'<div class="empty-msg">No competitor mentions detected</div>';
 
+  // ── Competitor conversion rate ──
+  const compBrands=['iPhone','Apple','iOS','Google Pixel','Huawei','OnePlus','Sony Xperia','Xiaomi','Motorola','Nokia','Nothing Phone'];
+  const compSessions=sessions.filter(r=>getUserMsgs(r.Transcript||'').some(m=>compBrands.some(b=>m.toLowerCase().includes(b.toLowerCase()))));
+  const compConverted=compSessions.filter(r=>r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes');
+  const compConvRate=compSessions.length?Math.round(compConverted.length/compSessions.length*100):0;
+  const compStatEl=document.getElementById('compConvStat');
+  if(compSessions.length>0){
+    compStatEl.textContent=`· ${compConvRate}% of sessions mentioning a competitor still converted to Samsung`;
+    compStatEl.style.color=compConvRate>=10?'var(--green)':'var(--muted)';
+  } else { compStatEl.textContent=''; }
+
+  // ── Hardest questions (The question no one else could answer) ──
+  const hardKw=[/\bvs\b|\bversus\b|better than|difference between/i,/£|\bprice\b|\bcost\b|\bcheaper\b|\bhow much\b/i,/\bmy\b|\bi have\b|\bi need\b|\bi('m| am)\b|\bswitching from\b|\bi('ve| have) got\b/i,/s2[4-6]|a[1-5]\d|z fold|z flip|watch ultra|buds|tab s/i,/\bspecifically\b|\bexactly\b|\bpersonally\b|\bactually\b/i];
+  const hardQ=sortedMsgs.filter(([m])=>{
+    if(m.length<40) return false;
+    const lo=m.toLowerCase();
+    const isQ=lo.includes('?')||['how','what','which','why','can','is','will','would','should','could'].some(w=>lo.startsWith(w));
+    return isQ&&hardKw.some(rx=>rx.test(m));
+  }).slice(0,6);
+  document.getElementById('hardQuestions').innerHTML=hardQ.length
+    ?hardQ.map(([m,ss])=>multiQuoteEl(m,ss,'ql-purple')).join('')
+    :'<div class="empty-msg">No highly specific questions detected yet</div>';
+
+  // ── Decision moments (last user msg in converted sessions) ──
+  const decisionMap=new Map();
+  sessions.filter(r=>r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes').forEach(r=>{
+    const uMsgs=getUserMsgs(r.Transcript||'');
+    if(!uMsgs.length) return;
+    const last=uMsgs[uMsgs.length-1];
+    if(!decisionMap.has(last)) decisionMap.set(last,[]);
+    if(!decisionMap.get(last).some(s=>s['Session ID']===r['Session ID'])) decisionMap.get(last).push(r);
+  });
+  const sortedDecisions=[...decisionMap.entries()].sort((a,b)=>b[1].length-a[1].length).slice(0,6);
+  document.getElementById('decisionMoments').innerHTML=sortedDecisions.length
+    ?sortedDecisions.map(([m,ss])=>multiQuoteEl(m,ss,'ql-green')).join('')
+    :'<div class="empty-msg">No conversions in this date range</div>';
+
   // ── Internal: drop-off ──
   const buckets=['0 (bounced)','1–2','3–5','6–10','10+'];
   const dist={};
@@ -1097,6 +1202,50 @@ function runAnalysis(rows){
     statRow('Fewest messages',convTurns.length?Math.min(...convTurns):'—'),
     statRow('Most messages',convTurns.length?Math.max(...convTurns):'—'),
   ].join('');
+
+  // ── Talk ratio ──
+  function getAIMsgs(t){ return t?(t.split('\n').filter(l=>/^\[AI\]/i.test(l))):[];}
+  const talkData=withTx.map(r=>{ const u=getUserMsgs(r.Transcript||'').length; const a=getAIMsgs(r.Transcript||'').length; const total=u+a; return {r,u,a,ratio:total>0?u/total:0,conv:r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes'}; });
+  const avgRatio=talkData.length?(talkData.reduce((s,d)=>s+d.ratio,0)/talkData.length):0;
+  const convRatio=talkData.filter(d=>d.conv).length?(talkData.filter(d=>d.conv).reduce((s,d)=>s+d.ratio,0)/talkData.filter(d=>d.conv).length):0;
+  const nonConvRatio=talkData.filter(d=>!d.conv).length?(talkData.filter(d=>!d.conv).reduce((s,d)=>s+d.ratio,0)/talkData.filter(d=>!d.conv).length):0;
+  function talkBar(label, ratio){
+    const pct=Math.round(ratio*100);
+    return `<div style="margin-bottom:10px"><div class="talk-bar-label"><span>${label}</span><span>${pct}% customer / ${100-pct}% AI</span></div><div class="talk-bar-track"><div class="talk-bar-user" style="width:${pct}%"></div></div></div>`;
+  }
+  document.getElementById('talkRatio').innerHTML=`
+    ${talkBar('All sessions',avgRatio)}
+    ${converted.length?talkBar('Converted sessions',convRatio):''}
+    ${talkBar('Non-converted',nonConvRatio)}
+    ${convRatio>nonConvRatio?`<div style="margin-top:8px;font-size:11px;padding:7px 10px;background:var(--green-bg);border-radius:var(--radius-xs);color:var(--green)">✓ Customers who converted talked more — ${Math.round(convRatio*100)}% vs ${Math.round(nonConvRatio*100)}% — evidence of genuine two-way conversation</div>`:''}
+  `;
+
+  // ── Unanswered questions ──
+  const unansweredSignal=/i('m| am) not sure|i don't (know|have)|i can't (access|find|provide|answer|help with that)|you (may|might|should) (want to )?(speak|ask|check|contact|visit)|i don't have (information|access|that|details)|unfortunately i (don't|can't|am not)|i'm unable to/i;
+  const unansweredMsgs=[];
+  withTx.forEach(r=>{
+    const lines=(r.Transcript||'').split('\n').filter(l=>l.trim());
+    for(let i=0;i<lines.length-1;i++){
+      const userLine=lines[i];
+      const aiLine=lines[i+1];
+      if(/^\[User\]/i.test(userLine)&&/^\[AI\]/i.test(aiLine)){
+        const q=userLine.replace(/^\[User\]/i,'').trim();
+        const aiTxt=aiLine.replace(/^\[AI\]/i,'').trim();
+        if(q.length>15&&unansweredSignal.test(aiTxt)){
+          unansweredMsgs.push({msg:q,session:r});
+        }
+      }
+    }
+  });
+  const unansweredMap=new Map();
+  unansweredMsgs.forEach(({msg,session})=>{
+    if(!unansweredMap.has(msg)) unansweredMap.set(msg,[]);
+    if(!unansweredMap.get(msg).some(s=>s['Session ID']===session['Session ID'])) unansweredMap.get(msg).push(session);
+  });
+  const sortedUnanswered=[...unansweredMap.entries()].sort((a,b)=>b[1].length-a[1].length).slice(0,8);
+  document.getElementById('unansweredList').innerHTML=sortedUnanswered.length
+    ?sortedUnanswered.map(([m,ss])=>multiQuoteEl(m,ss,'ql-red')).join('')
+    :'<div class="empty-msg">No unanswered questions detected</div>';
 
   // ── Out of scope ──
   const ooTerms=['laptop','computer','tv','television','headphone','repair','fix','broken','return','refund','john lewis','staff','help desk','where is','directions','floor','department','receipt','other phone','other brand'];
@@ -1225,6 +1374,107 @@ function toggleExportMenu(e){
   m.style.display=m.style.display==='block'?'none':'block';
 }
 document.addEventListener('click',()=>{ const m=document.getElementById('exportMenu'); if(m) m.style.display='none'; });
+
+// ════════════════════════════════════
+// Your Wins — benchmark comparison
+// ════════════════════════════════════
+const WINS_CACHE_KEY = 'blarney_benchmarks_v1';
+const WINS_CACHE_TTL = 86400000; // 24h
+
+async function fetchWins(){
+  document.getElementById('winsLoading').style.display='block';
+  document.getElementById('winsContent').style.display='none';
+
+  // Gather our metrics from current data
+  const sessions=ALL_ROWS.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR');
+  if(!sessions.length) return;
+  const withTx=sessions.filter(r=>r.Transcript&&r.Transcript.trim().length>0);
+  const converted=sessions.filter(r=>r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes');
+  const allU=[];
+  withTx.forEach(r=>{ const u=getUserMsgs(r.Transcript||'').length; const a=(r.Transcript||'').split('\n').filter(l=>/^\[AI\]/i.test(l)).length; allU.push(u+a>0?u/(u+(r.Transcript||'').split('\n').filter(l=>/^\[AI\]/i.test(l)).length):0); });
+  const avgTurns=withTx.length?(withTx.reduce((s,r)=>s+getUserMsgs(r.Transcript||'').length,0)/withTx.length).toFixed(1):0;
+
+  const compBrands=['iPhone','Apple','iOS','Google Pixel','Huawei','OnePlus','Sony Xperia','Xiaomi','Motorola','Nokia','Nothing Phone'];
+  const compSess=sessions.filter(r=>getUserMsgs(r.Transcript||'').some(m=>compBrands.some(b=>m.toLowerCase().includes(b.toLowerCase()))));
+  const compConv=compSess.filter(r=>r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes');
+
+  const ourMetrics={
+    conversionRate: sessions.length?+(converted.length/sessions.length*100).toFixed(1):0,
+    engagementRate: sessions.length?+(withTx.length/sessions.length*100).toFixed(1):0,
+    avgTurns: +avgTurns,
+    competitorRetention: compSess.length?+(compConv.length/compSess.length*100).toFixed(1):0,
+  };
+
+  // Check cache
+  try {
+    const cached=JSON.parse(localStorage.getItem(WINS_CACHE_KEY)||'null');
+    if(cached&&Date.now()-cached.ts<WINS_CACHE_TTL){
+      renderWins(cached.data, ourMetrics, true);
+      return;
+    }
+  } catch(e){}
+
+  // Fetch from Railway
+  try {
+    const res=await fetch(`${RAILWAY_URL}/benchmarks`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({metrics:ourMetrics})
+    });
+    if(!res.ok) throw new Error(res.status);
+    const data=await res.json();
+    localStorage.setItem(WINS_CACHE_KEY,JSON.stringify({ts:Date.now(),data}));
+    renderWins(data, ourMetrics, false);
+  } catch(err){
+    console.error('Benchmarks failed:',err);
+    document.getElementById('winsLoading').style.display='none';
+    document.getElementById('winsContent').style.display='block';
+    document.getElementById('winsGrid').innerHTML='';
+    document.getElementById('winsNoData').style.display='block';
+    document.getElementById('winsNoData').textContent='Could not load benchmarks — check Railway /benchmarks endpoint.';
+  }
+}
+
+function renderWins(benchmarks, ourMetrics, fromCache){
+  document.getElementById('winsLoading').style.display='none';
+  document.getElementById('winsContent').style.display='block';
+  document.getElementById('winsPowered').textContent=fromCache?'Benchmarks cached (< 24h)':'Benchmarks via Google Search · Gemini';
+  document.getElementById('winsTimestamp').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+  const wins=(Array.isArray(benchmarks)?benchmarks:[]).filter(b=>b.is_win);
+  const grid=document.getElementById('winsGrid');
+  const noData=document.getElementById('winsNoData');
+
+  if(!wins.length){ grid.innerHTML=''; noData.style.display='block'; return; }
+  noData.style.display='none';
+
+  grid.innerHTML=wins.map((w,i)=>`
+    <div class="win-card">
+      <div class="win-metric">${esc(w.metric_name||w.metric||'')}</div>
+      <div class="win-numbers">
+        <div class="win-our">${esc(String(w.our_value??''))}</div>
+        <div class="win-vs">vs</div>
+        <div class="win-bench">${esc(String(w.benchmark_value||''))}</div>
+      </div>
+      ${w.multiplier?`<div class="win-badge">↑ ${esc(String(w.multiplier))}× industry average</div>`:''}
+      <div class="win-talking-point">${esc(w.talking_point||'')}</div>
+      <button class="win-copy-btn" onclick="copyWin(this,${i})">Copy talking point</button>
+      ${w.source_name?`<div class="win-source">${esc(w.source_name)}${w.source_date?' · '+esc(w.source_date):''}${w.source_url?` · <a href="${esc(w.source_url)}" target="_blank" rel="noopener">source ↗</a>`:''}</div>`:''}
+    </div>
+  `).join('');
+
+  // Store for copy function
+  window._winsData=wins;
+}
+
+function copyWin(btn, idx){
+  const w=window._winsData?.[idx];
+  if(!w) return;
+  navigator.clipboard?.writeText(w.talking_point||'').then(()=>{
+    btn.textContent='Copied!';
+    setTimeout(()=>btn.textContent='Copy talking point',1800);
+  });
+}
 
 function copyPilotSummary(btn){
   const txt=document.getElementById('pilotHeadline')?.textContent||'';
