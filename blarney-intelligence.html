@@ -377,9 +377,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <button class="cat-pill" onclick="filterFlags('cat','frustration',this)">Frustration</button>
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
         <span id="aiStatusTxt" style="font-size:11px;color:var(--muted2)"></span>
-        <button id="aiRunBtn" onclick="runAIFlagging()" style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s" title="Analyse all transcripts with Gemini AI for context-aware flags">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          Run AI analysis
+        <button id="aiRunBtn" onclick="runAIFlagging()" style="display:none;align-items:center;gap:6px;padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s" title="Retry AI analysis">
+          ↺ Retry AI
         </button>
       </div>
     </div>
@@ -768,8 +767,8 @@ async function runAIFlagging(){
     return;
   }
 
-  btn.disabled=true; btn.style.opacity='.5'; btn.textContent='Analysing…';
-  status.textContent=`Sending ${sessions.length} transcripts to AI…`;
+  btn.style.display='none';
+  status.textContent=`Analysing ${sessions.length} transcripts…`;
 
   try {
     const res = await fetch(`${RAILWAY_URL}/ai-flag`, {
@@ -822,12 +821,12 @@ async function runAIFlagging(){
     badge.textContent=highCount; badge.style.display=highCount>0?'inline':'none';
 
     renderFlags();
-    status.textContent=`✓ AI found ${fresh.length} additional flag${fresh.length!==1?'s':''} (${newFlags.length} total across all sessions)`;
-    btn.textContent='Re-run AI analysis'; btn.disabled=false; btn.style.opacity='1';
+    status.textContent=`✦ AI: ${newFlags.length} flag${newFlags.length!==1?'s':''} found`;
+    btn.style.display='none';
   } catch(err){
     console.error(err);
-    status.textContent=`Error: ${err.message}`;
-    btn.textContent='Run AI analysis'; btn.disabled=false; btn.style.opacity='1';
+    status.textContent='AI analysis failed';
+    btn.style.display='flex'; btn.disabled=false; btn.style.opacity='1';
   }
 }
 
@@ -889,6 +888,7 @@ function showDashboard(rows){
   }
   document.getElementById('dateFilterBar').style.display='flex';
   runAnalysis(rows);
+  runAIFlagging();
 }
 
 function applyFilter(){
