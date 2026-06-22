@@ -796,79 +796,85 @@ function filterFlags(type,val,btn){
 // ════════════════════════════════════
 // Gemini AI contextual flagging
 // ════════════════════════════════════
+function applyAIFlags(aiFlags, sessions){
+  const sessionMap = new Map(sessions.map(s=>[s['Session ID'],s]));
+  const newFlags = aiFlags.map(f=>{
+    const session = sessionMap.get(f.sessionId) || sessions.find(s=>s['Session ID']===f.sessionId) || {};
+    return {
+      cat: f.category,
+      sev: f.severity,
+      label: {
+        jailbreak:'JAILBREAK ATTEMPT',offensive:'OFFENSIVE CONTENT',
+        hallucination:'HALLUCINATION SIGNAL',offbrand:'OFF-BRAND SIGNAL',frustration:'CUSTOMER FRUSTRATION'
+      }[f.category] || f.category.toUpperCase(),
+      fb: {
+        jailbreak:'fb-jailbreak',offensive:'fb-offensive',
+        hallucination:'fb-hallucination',offbrand:'fb-offbrand',frustration:'fb-frustration'
+      }[f.category] || 'fb-ai',
+      message: f.message||'(see transcript)',
+      match: f.reason||'',
+      session,
+      source:'ai',
+    };
+  }).filter(f=>f.session['Session ID']);
+
+  const existingKeys = new Set(ALL_FLAGS.map(f=>f.session['Session ID']+'|'+f.cat+'|'+f.message.substring(0,40)));
+  const fresh = newFlags.filter(f=>{
+    const key = f.session['Session ID']+'|'+f.cat+'|'+(f.message||'').substring(0,40);
+    return !existingKeys.has(key);
+  });
+  ALL_FLAGS.push(...fresh);
+  const sevOrder={high:0,medium:1,low:2};
+  ALL_FLAGS.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
+  const highCount=ALL_FLAGS.filter(f=>f.sev==='high').length;
+  document.getElementById('kpiFlags').textContent=ALL_FLAGS.length;
+  document.getElementById('kpiFlagsSub').textContent=`${highCount} high severity`;
+  const badge=document.getElementById('flagBadge');
+  badge.textContent=highCount; badge.style.display=highCount>0?'inline':'none';
+  renderFlags();
+  return fresh.length;
+}
+
 async function runAIFlagging(){
   const btn = document.getElementById('aiRunBtn');
   const status = document.getElementById('aiStatusTxt');
 
-  // Collect all sessions with transcripts
   const sessions = ALL_ROWS.filter(r =>
     (r.Mode==='Kiosk'||r.Mode==='QR') && r.Transcript && r.Transcript.trim().length>0
   );
-  if(!sessions.length){
-    status.textContent='No transcripts to analyse';
-    return;
-  }
+  if(!sessions.length){ status.textContent='No transcripts to analyse'; return; }
+
+  const BATCH = 20;
+  const batches = [];
+  for(let i=0;i<sessions.length;i+=BATCH) batches.push(sessions.slice(i,i+BATCH));
 
   btn.style.display='none';
-  status.textContent=`Analysing ${sessions.length} transcripts…`;
+  let totalFound=0, errors=0;
 
-  try {
-    const res = await fetch(`${RAILWAY_URL}/ai-flag`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({transcripts: sessions})
-    });
-    if(!res.ok) throw new Error(`AI analysis error ${res.status}: ${await res.text()}`);
-    let aiFlags;
-    try { aiFlags = await res.json(); } catch(e){ aiFlags=[]; }
-    if(!Array.isArray(aiFlags)) aiFlags=[];
+  for(let i=0;i<batches.length;i++){
+    status.textContent=`✦ AI scanning batch ${i+1} of ${batches.length} (${Math.round((i/batches.length)*100)}%)…`;
+    try {
+      const res = await fetch(`${RAILWAY_URL}/ai-flag`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({transcripts: batches[i]})
+      });
+      if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      let aiFlags;
+      try { aiFlags = await res.json(); } catch(e){ aiFlags=[]; }
+      if(!Array.isArray(aiFlags)) aiFlags=[];
+      totalFound += applyAIFlags(aiFlags, sessions);
+    } catch(err){
+      console.error(`Batch ${i+1} failed:`, err);
+      errors++;
+    }
+  }
 
-    // Match flags back to session objects
-    const sessionMap = new Map(sessions.map(s=>[s['Session ID'],s]));
-    const newFlags = aiFlags.map(f=>{
-      const session = sessionMap.get(f.sessionId) || sessions.find(s=>s['Session ID']===f.sessionId) || {};
-      return {
-        cat: f.category,
-        sev: f.severity,
-        label: {
-          jailbreak:'JAILBREAK ATTEMPT',offensive:'OFFENSIVE CONTENT',
-          hallucination:'HALLUCINATION SIGNAL',offbrand:'OFF-BRAND SIGNAL',frustration:'CUSTOMER FRUSTRATION'
-        }[f.category] || f.category.toUpperCase(),
-        fb: {
-          jailbreak:'fb-jailbreak',offensive:'fb-offensive',
-          hallucination:'fb-hallucination',offbrand:'fb-offbrand',frustration:'fb-frustration'
-        }[f.category] || 'fb-ai',
-        message: f.message||'(see transcript)',
-        match: f.reason||'',
-        session,
-        source:'ai',
-      };
-    }).filter(f=>f.session['Session ID']); // drop any that couldn't be matched
-
-    // Merge — AI flags that are NEW (not already caught by regex for same session+cat)
-    const existingKeys = new Set(ALL_FLAGS.map(f=>f.session['Session ID']+'|'+f.cat+'|'+f.message.substring(0,40)));
-    const fresh = newFlags.filter(f=>{
-      const key = f.session['Session ID']+'|'+f.cat+'|'+(f.message||'').substring(0,40);
-      return !existingKeys.has(key);
-    });
-    ALL_FLAGS.push(...fresh);
-    const sevOrder={high:0,medium:1,low:2};
-    ALL_FLAGS.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
-
-    // Update KPI
-    const highCount=ALL_FLAGS.filter(f=>f.sev==='high').length;
-    document.getElementById('kpiFlags').textContent=ALL_FLAGS.length;
-    document.getElementById('kpiFlagsSub').textContent=`${highCount} high severity`;
-    const badge=document.getElementById('flagBadge');
-    badge.textContent=highCount; badge.style.display=highCount>0?'inline':'none';
-
-    renderFlags();
-    status.textContent=`✦ AI: ${newFlags.length} flag${newFlags.length!==1?'s':''} found`;
-    btn.style.display='none';
-  } catch(err){
-    console.error(err);
-    status.textContent='AI analysis failed';
+  if(errors===batches.length){
+    status.textContent='AI analysis failed — check console';
     btn.style.display='flex'; btn.disabled=false; btn.style.opacity='1';
+  } else {
+    status.textContent=`✦ AI complete · ${totalFound} flag${totalFound!==1?'s':''} found${errors?` (${errors} batch${errors>1?'es':''} failed)`:''}`;
   }
 }
 
