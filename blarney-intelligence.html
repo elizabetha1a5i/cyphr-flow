@@ -9,209 +9,308 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede6;
-  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);
-  --text:#1a1916;--muted:#6b6862;
-  --blue:#1a5fd4;--blue-bg:#eef3fd;
-  --green:#166534;--green-bg:#dcfce7;
-  --amber:#92400e;--amber-bg:#fef3c7;
-  --purple:#534AB7;--purple-bg:rgba(83,74,183,.1);
-  --red:#991b1b;--red-bg:#fee2e2;
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede6;--surface3:#e8e4db;
+  --border:rgba(0,0,0,.07);--border2:rgba(0,0,0,.13);
+  --text:#1a1916;--muted:#6b6862;--muted2:#9a9590;
+  --blue:#1a5fd4;--blue-bg:#eef3fd;--blue-border:rgba(26,95,212,.18);
+  --green:#166534;--green-bg:#dcfce7;--green-border:rgba(22,101,52,.2);
+  --amber:#92400e;--amber-bg:#fef3c7;--amber-border:rgba(146,64,14,.2);
+  --purple:#534AB7;--purple-bg:rgba(83,74,183,.09);--purple-border:rgba(83,74,183,.2);
+  --red:#991b1b;--red-bg:#fee2e2;--red-border:rgba(153,27,27,.2);
+  --radius:12px;--radius-sm:8px;--radius-xs:6px;
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-.header{background:var(--text);padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
-.header-brand{display:flex;align-items:center;gap:12px}
-.back-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border:0.5px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-size:12px;font-weight:500;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all 0.15s}
-.back-btn:hover{background:rgba(255,255,255,.14);color:#fff}
-.logo{width:32px;height:32px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--text)}
-.header h1{font-size:16px;font-weight:500;color:#fff}
-.header-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
-.header-badge{background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,.7)}
+/* ── Header ── */
+.header{background:var(--text);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:14px}
+.back-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:0.5px solid rgba(255,255,255,.15);border-radius:var(--radius-xs);background:rgba(255,255,255,.06);color:rgba(255,255,255,.65);font-size:11px;font-weight:500;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.back-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+.hdiv{width:1px;height:20px;background:rgba(255,255,255,.12)}
+.logo{width:28px;height:28px;background:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--text);flex-shrink:0}
+.header-title{font-size:14px;font-weight:500;color:#fff;letter-spacing:-.01em}
+.header-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;letter-spacing:.02em}
+.header-right{display:flex;align-items:center;gap:10px}
+.hstat-val{font-size:13px;font-weight:500;color:#fff;font-family:'DM Mono',monospace;text-align:right}
+.hstat-label{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.05em;text-transform:uppercase;margin-top:1px;text-align:right}
+.h-upload-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.2);border-radius:var(--radius-xs);color:rgba(255,255,255,.8);font-size:11px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.h-upload-btn:hover{background:rgba(255,255,255,.17);color:#fff}
 
-.upload-zone{margin:32px;border:1.5px dashed var(--border2);border-radius:16px;padding:48px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface)}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-bg)}
-.upload-icon{width:48px;height:48px;margin:0 auto 16px;background:var(--surface2);border-radius:12px;display:flex;align-items:center;justify-content:center}
-.upload-title{font-size:16px;font-weight:500;margin-bottom:6px}
-.upload-sub{font-size:12px;color:var(--muted)}
-.upload-btn{display:inline-block;margin-top:16px;padding:8px 20px;background:var(--text);color:#fff;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif}
-.upload-btn:hover{opacity:.85}
-#fileInput{display:none}
+/* ── Empty state ── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 56px);padding:40px;text-align:center}
+.empty-icon{width:64px;height:64px;background:var(--surface);border:0.5px solid var(--border2);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.empty-state h2{font-size:18px;font-weight:500;margin-bottom:8px}
+.empty-state p{font-size:13px;color:var(--muted);max-width:300px;line-height:1.65;margin-bottom:24px}
+.empty-btn{display:flex;align-items:center;gap:8px;padding:10px 24px;background:var(--text);color:#fff;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif}
+.empty-btn:hover{opacity:.85}
 
-.loading{display:none;margin:32px;text-align:center;padding:48px}
-.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+/* ── Modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);padding:28px 30px;width:360px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:18px}
+.modal-input{width:100%;padding:9px 13px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s;margin-bottom:6px}
+.modal-input:focus{border-color:var(--blue)}
+.modal-err{font-size:11px;color:var(--red);min-height:16px;margin-bottom:10px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.m-cancel{padding:7px 16px;border:0.5px solid var(--border2);border-radius:var(--radius-xs);background:none;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted)}
+.m-cancel:hover{background:var(--surface2)}
+.m-confirm{padding:7px 16px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-xs);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif}
+.m-confirm:hover{opacity:.85}
+.m-danger{background:var(--red)}
+
+/* ── Loading ── */
+.loading{display:none;position:fixed;inset:0;background:rgba(245,244,240,.88);z-index:150;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading.show{display:flex}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.main{display:none;padding:0 32px 32px}
+/* ── Main ── */
+.main{padding:24px 32px 48px}
 
-.file-info{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.file-name{font-size:13px;font-weight:500}
-.file-meta{font-size:11px;color:var(--muted);margin-top:2px}
-.reset-btn{font-size:11px;color:var(--muted);cursor:pointer;padding:4px 10px;border:0.5px solid var(--border2);border-radius:6px;background:none;font-family:'DM Sans',sans-serif}
-.reset-btn:hover{background:var(--surface2)}
+/* ── Top bar ── */
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.top-bar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.data-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--green-bg);border:0.5px solid var(--green-border);border-radius:20px;font-size:11px;color:var(--green);font-weight:500}
+.data-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 .date-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.date-filter input{font-size:11px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:6px;font-family:'DM Sans',sans-serif;background:var(--surface2)}
-.apply-btn{font-size:11px;padding:4px 12px;background:var(--text);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.date-filter input{font-size:11px;padding:5px 9px;border:0.5px solid var(--border2);border-radius:var(--radius-xs);font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text)}
+.apply-btn{font-size:11px;padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-xs);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500}
+.danger-btn{font-size:11px;color:var(--red);cursor:pointer;padding:5px 12px;border:0.5px solid var(--red-border);border-radius:var(--radius-xs);background:none;font-family:'DM Sans',sans-serif;transition:all .15s}
+.danger-btn:hover{background:var(--red-bg)}
 
-.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.tab{padding:8px 20px;border-radius:20px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;transition:all 0.15s;position:relative}
-.tab .badge{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:10px;min-width:18px;text-align:center}
-.tab.active-advert{background:var(--blue);border-color:var(--blue);color:#fff}
-.tab.active-internal{background:var(--text);border-color:var(--text);color:#fff}
-.tab.active-flags{background:var(--red);border-color:var(--red);color:#fff}
-.tab.active-journey{background:var(--purple);border-color:var(--purple);color:#fff}
-.panel{display:none}
-.panel.active{display:block}
+/* ── KPI strip ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+.kpi{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.kpi.clickable{cursor:pointer;transition:border-color .15s}
+.kpi.clickable:hover{border-color:var(--border2)}
+.kpi-val{font-size:26px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:-1.5px;line-height:1}
+.kpi-label{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.kpi-sub{font-size:10px;color:var(--muted2);margin-top:3px}
+.kpi.kpi-alert{border-color:var(--red-border);background:#fff9f9}
+.kpi.kpi-alert .kpi-val{color:var(--red)}
 
-.section-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.section-grid.single{grid-template-columns:1fr}
-.card{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:18px}
-.card-title{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.card-title-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;margin-bottom:24px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:4px;width:fit-content}
+.tab{padding:7px 18px;border-radius:var(--radius-sm);border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab .badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;display:none}
+.tab.active{background:var(--text);color:#fff}
+.tab.t-flags.active{background:var(--red)}
+.tab.t-advert.active{background:var(--blue)}
+.tab.t-journey.active{background:var(--purple)}
+.panel{display:none}.panel.active{display:block}
 
-.quote-list{display:flex;flex-direction:column;gap:8px}
-.quote-item{background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.5;color:var(--text);border-left:2px solid var(--purple);cursor:pointer;position:relative}
-.quote-item.green{border-left-color:var(--green)}
-.quote-item.amber{border-left-color:#d97706}
-.quote-item.red{border-left-color:var(--red)}
-.quote-meta{font-size:10px;color:var(--muted);margin-top:4px}
-.expand-hint{font-size:9px;color:var(--muted);margin-top:4px;opacity:0.7}
-.transcript-drawer{display:none;margin-top:10px;border-top:0.5px solid rgba(0,0,0,.1);padding-top:10px}
-.quote-item.open .transcript-drawer{display:block}
+/* ── Grid / Card ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g1{margin-bottom:14px}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:18px}
+.card-hd{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.hd-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.empty-msg{font-size:12px;color:var(--muted2);font-style:italic;padding:4px 0}
 
-.transcript-line{font-size:11px;line-height:1.6;padding:3px 0}
-.transcript-line.user{color:var(--blue);font-weight:500}
-.transcript-line.ai{color:var(--text)}
-.transcript-line.system{color:var(--muted);font-style:italic}
+/* ── Quote items ──
+   Each quote shows ALL sessions that said the same thing.
+   Click the quote to expand — inside is a list of every session's transcript. */
+.quote-list{display:flex;flex-direction:column;gap:7px}
+.quote-item{background:var(--surface2);border-radius:var(--radius-sm);border-left:2px solid var(--border2);cursor:pointer;user-select:none;overflow:hidden}
+.quote-item.ql-purple{border-left-color:var(--purple)}
+.quote-item.ql-green{border-left-color:#16a34a}
+.quote-item.ql-amber{border-left-color:#d97706}
+.quote-item.ql-red{border-left-color:var(--red)}
+.quote-head{padding:10px 13px;font-size:12px;line-height:1.55;color:var(--text)}
+.quote-head-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px}
+.quote-count{font-size:10px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:2px 8px;border-radius:10px}
+.quote-expand{font-size:9px;color:var(--muted2);letter-spacing:.01em}
+.quote-sessions{display:none;border-top:0.5px solid rgba(0,0,0,.08)}
+.quote-item.open .quote-sessions{display:block}
+/* Each individual session inside the expanded quote */
+.session-block{border-bottom:0.5px solid rgba(0,0,0,.06)}
+.session-block:last-child{border-bottom:none}
+.session-block-hd{padding:8px 13px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.02);cursor:pointer;font-size:11px;color:var(--muted)}
+.session-block-hd:hover{background:rgba(0,0,0,.04)}
+.session-block-hd strong{color:var(--text);font-size:11px}
+.session-tx{display:none;padding:8px 13px 12px;background:var(--surface)}
+.session-block.open .session-tx{display:block}
+.tl{font-size:11px;line-height:1.65;padding:2px 0}
+.tl.user{color:var(--blue);font-weight:500}
+.tl.ai{color:var(--text)}
+.tl.sys{color:var(--muted2);font-style:italic;font-size:10px}
 
+/* ── Tags ── */
 .tag-cloud{display:flex;flex-wrap:wrap;gap:6px}
 .tag{padding:4px 10px;border-radius:20px;font-size:11px;background:var(--surface2);color:var(--text);border:0.5px solid var(--border2)}
-.tag.big{background:var(--purple-bg);color:var(--purple);border-color:rgba(83,74,183,.2);font-weight:500}
-.tag.med{background:var(--blue-bg);color:var(--blue);border-color:rgba(26,95,212,.2)}
+.tag.t-big{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-border);font-weight:500}
+.tag.t-med{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)}
 
-.stat-list{display:flex;flex-direction:column;gap:6px}
-.stat-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+/* ── Competitor list ── */
+.comp-list{display:flex;flex-direction:column;gap:7px}
+.comp-item{border:0.5px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;cursor:pointer}
+.comp-hd{padding:9px 13px;display:flex;align-items:center;gap:10px;background:var(--surface)}
+.comp-hd:hover{background:var(--surface2)}
+.comp-name{font-size:12px;font-weight:500;min-width:80px}
+.comp-bar-track{flex:1;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.comp-bar-fill{height:100%;background:var(--red);border-radius:2px}
+.comp-count{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;min-width:30px;text-align:right}
+.comp-quotes{display:none;border-top:0.5px solid var(--border);background:var(--surface2);max-height:220px;overflow-y:auto}
+.comp-item.open .comp-quotes{display:block}
+.comp-q{font-size:11px;padding:7px 13px;border-bottom:0.5px solid rgba(0,0,0,.06);line-height:1.5;color:var(--text);cursor:pointer}
+.comp-q:last-child{border-bottom:none}
+.comp-q:hover{background:rgba(0,0,0,.03)}
+.comp-q-date{font-size:9px;color:var(--muted2);margin-left:8px}
+.comp-q-tx{display:none;padding:6px 13px 10px;background:var(--surface);border-top:0.5px solid var(--border)}
+.comp-q.open .comp-q-tx{display:block}
+
+/* ── Stats ── */
+.stat-list{display:flex;flex-direction:column}
+.stat-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:12px}
 .stat-row:last-child{border-bottom:none}
-.stat-label{color:var(--text)}
-.stat-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
-.stat-bar{flex:1;height:4px;background:var(--surface2);border-radius:2px;margin:0 10px;overflow:hidden}
-.stat-fill{height:100%;border-radius:2px;background:var(--purple)}
+.stat-label{color:var(--text);flex:0 0 130px;font-size:11px}
+.stat-bar-track{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:2px;background:var(--purple)}
+.stat-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;min-width:70px;text-align:right}
 
-/* ── Flag items ─────────────────────────────── */
-.flag-list{display:flex;flex-direction:column;gap:8px}
-.flag-item{border-radius:8px;padding:10px 14px;cursor:pointer}
-.flag-item.severity-high{background:#fef2f2;border:0.5px solid rgba(153,27,27,.25)}
-.flag-item.severity-medium{background:var(--amber-bg);border:0.5px solid rgba(146,64,14,.2)}
-.flag-item.severity-low{background:#fffbeb;border:0.5px solid rgba(180,130,0,.2)}
-.flag-type-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.flag-type{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:10px}
-.ft-jailbreak{background:#fee2e2;color:var(--red)}
-.ft-offensive{background:#fecaca;color:#7f1d1d}
-.ft-hallucination{background:var(--amber-bg);color:var(--amber)}
-.ft-offbrand{background:var(--purple-bg);color:var(--purple)}
-.ft-frustration{background:#fef3c7;color:#78350f}
-.ft-ooscope{background:var(--blue-bg);color:var(--blue)}
-.severity-pip{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
-.flag-msg{font-size:12px;color:var(--text);line-height:1.5}
-.flag-context{font-size:10px;color:var(--muted);margin-top:3px;font-style:italic}
-.flag-meta{font-size:10px;color:var(--muted);margin-top:3px}
-.flag-item .transcript-drawer{display:none;margin-top:10px;border-top:0.5px solid rgba(0,0,0,.1);padding-top:10px}
-.flag-item.open .transcript-drawer{display:block}
+/* ── Flags ── */
+.flag-controls{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.fc-label{font-size:11px;color:var(--muted);flex-shrink:0}
+.fc-div{width:1px;height:14px;background:var(--border2);margin:0 2px}
+.sev-pill,.cat-pill{font-size:11px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;gap:5px}
+.sev-pill.active,.cat-pill.active{background:var(--text);color:#fff;border-color:var(--text)}
+.sev-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sev-dot.high{background:var(--red)}.sev-dot.medium{background:#f59e0b}.sev-dot.low{background:#60a5fa}
+.flags-shd{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+.flags-shd span{font-weight:400;opacity:.6}
+.flag-list{display:flex;flex-direction:column;gap:7px}
+.flag-item{border-radius:var(--radius-sm);padding:11px 14px;cursor:pointer;border:0.5px solid transparent}
+.flag-item.sev-high{background:#fef2f2;border-color:var(--red-border)}
+.flag-item.sev-medium{background:var(--amber-bg);border-color:var(--amber-border)}
+.flag-item.sev-low{background:#fffbeb;border-color:rgba(180,140,0,.18)}
+.flag-type-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.fbadge{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:8px;flex-shrink:0}
+.fb-jailbreak{background:#fee2e2;color:#7f1d1d}
+.fb-offensive{background:#fecaca;color:#6b1010}
+.fb-hallucination{background:var(--amber-bg);color:var(--amber)}
+.fb-offbrand{background:var(--purple-bg);color:var(--purple)}
+.fb-frustration{background:#fef9e7;color:#78350f}
+.flag-msg{font-size:12px;color:var(--text);line-height:1.55;font-style:italic;margin-bottom:4px}
+.flag-match{font-size:10px;color:var(--muted);margin-bottom:3px}
+.flag-meta-row{display:flex;gap:10px;font-size:10px;color:var(--muted2);flex-wrap:wrap}
+.flag-expand{font-size:9px;color:var(--muted2);margin-top:6px}
+.flag-drawer{display:none;margin-top:10px;border-top:0.5px solid rgba(0,0,0,.08);padding-top:10px;max-height:320px;overflow-y:auto}
+.flag-item.open .flag-drawer{display:block}
 
-.severity-filter{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.sev-pill{font-size:11px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif}
-.sev-pill.active{background:var(--text);color:#fff;border-color:var(--text)}
-
-/* ── Journey ─────────────────────────────────── */
-.journey-card{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer}
-.journey-header{padding:14px 18px;display:flex;align-items:center;gap:12px}
-.journey-outcome{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:20px;flex-shrink:0}
-.outcome-converted{background:var(--green-bg);color:var(--green)}
-.outcome-viewed{background:var(--blue-bg);color:var(--blue)}
-.outcome-browsed{background:var(--surface2);color:var(--muted)}
-.outcome-bounced{background:var(--red-bg);color:var(--red)}
-.journey-flow{display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap}
-.journey-step{font-size:10px;color:var(--text);background:var(--surface2);padding:3px 8px;border-radius:6px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
-.journey-arrow{font-size:10px;color:var(--muted);flex-shrink:0}
-.journey-meta{font-size:10px;color:var(--muted);flex-shrink:0;text-align:right;line-height:1.5}
-.journey-transcript{display:none;border-top:0.5px solid var(--border);padding:14px 18px;background:var(--surface2)}
-.journey-card.open .journey-transcript{display:block}
-.filter-pill{font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif}
+/* ── Journey ── */
+.journey-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.journey-filters{display:flex;gap:6px;flex-wrap:wrap}
+.filter-pill{font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
 .filter-pill.active{background:var(--text);color:#fff;border-color:var(--text)}
-
-.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-.summary-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer}
-.summary-val{font-size:24px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:-1px}
-.summary-label{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px}
-.empty{font-size:12px;color:var(--muted);padding:8px 0}
-
-.flags-section-header{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px;padding-left:2px}
-
-/* ── AI analysis bar ─────────────────────────────── */
-.ai-bar{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.ai-bar-label{font-size:12px;color:var(--text);flex:1;min-width:200px}
-.ai-bar-label span{color:var(--muted);font-size:11px;display:block;margin-top:2px}
-.ai-analyse-btn{padding:7px 18px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;flex-shrink:0}
-.ai-analyse-btn:hover{opacity:.88}
-.ai-analyse-btn:disabled{opacity:.45;cursor:default}
-.ai-progress-wrap{width:100%;display:none}
-.ai-progress-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:6px}
-.ai-progress-fill{height:100%;background:var(--purple);border-radius:2px;transition:width 0.3s}
-.ai-progress-label{font-size:10px;color:var(--muted)}
-.ai-source-tag{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:var(--purple-bg);color:var(--purple);margin-left:6px}
-.ai-source-tag.kw{background:var(--surface2);color:var(--muted)}
-
-/* ── API key modal ───────────────────────────────── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.modal-box{background:#fff;border-radius:16px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.18)}
-.modal-box h3{font-size:16px;font-weight:600;margin-bottom:8px}
-.modal-box p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px}
-.modal-box input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:12px;background:var(--surface2)}
-.modal-box input:focus{outline:none;border-color:var(--purple)}
-.modal-btns{display:flex;gap:8px;justify-content:flex-end}
-.modal-btn{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;border:none}
-.modal-btn.primary{background:var(--purple);color:#fff}
-.modal-btn.secondary{background:var(--surface2);color:var(--text)}
+.export-btn{font-size:11px;padding:6px 14px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-xs);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;display:flex;align-items:center;gap:5px}
+.export-btn:hover{opacity:.85}
+.journey-kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.jkpi{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;cursor:pointer;transition:border-color .15s}
+.jkpi:hover{border-color:var(--border2)}
+.jkpi-val{font-size:22px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:-1px}
+.jkpi-label{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.journey-list{display:flex;flex-direction:column;gap:8px}
+.j-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .15s}
+.j-card:hover{border-color:var(--border2)}
+.j-head{padding:13px 16px;display:flex;align-items:center;gap:12px}
+.j-outcome{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:20px;flex-shrink:0}
+.oc-converted{background:var(--green-bg);color:var(--green)}
+.oc-viewed{background:var(--blue-bg);color:var(--blue)}
+.oc-browsed{background:var(--surface2);color:var(--muted)}
+.oc-bounced{background:var(--red-bg);color:var(--red)}
+.j-flow{display:flex;align-items:center;gap:5px;flex:1;flex-wrap:wrap;min-width:0}
+.j-step{font-size:10px;color:var(--text);background:var(--surface2);padding:3px 8px;border-radius:5px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;border:0.5px solid var(--border)}
+.j-arr{font-size:9px;color:var(--muted);flex-shrink:0}
+.j-meta{font-size:10px;color:var(--muted);flex-shrink:0;text-align:right;line-height:1.6;min-width:80px}
+.j-transcript{display:none;border-top:0.5px solid var(--border);padding:13px 16px;background:var(--surface2);max-height:300px;overflow-y:auto}
+.j-card.open .j-transcript{display:block}
 </style>
 </head>
 <body>
 
+<!-- Header -->
 <div class="header">
-  <div class="header-brand">
-    <a href="index.html" class="back-btn">← Back</a>
+  <div class="header-left">
+    <a href="index.html" class="back-btn">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Back
+    </a>
+    <div class="hdiv"></div>
     <div class="logo">B</div>
     <div>
-      <h1>Transcript Intelligence</h1>
-      <div class="header-sub">Blarney — Samsung Kiosk</div>
+      <div class="header-title">Transcript Intelligence</div>
+      <div class="header-sub">BLARNEY · SAMSUNG KIOSK</div>
     </div>
   </div>
-  <div class="header-badge" id="headerBadge">Upload CSV to analyse</div>
-</div>
-
-<div class="upload-zone" id="uploadZone">
-  <div class="upload-icon">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b6862" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  <div class="header-right">
+    <div id="hdrStat" style="display:none">
+      <div class="hstat-val" id="hdrVal">—</div>
+      <div class="hstat-label">sessions loaded</div>
+    </div>
+    <button class="h-upload-btn" id="uploadHeaderBtn" style="display:none" onclick="requestUpload()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Update data
+    </button>
   </div>
-  <div class="upload-title">Upload user logs CSV</div>
-  <div class="upload-sub">Drag and drop, or click to choose a file</div>
-  <button class="upload-btn" id="uploadTrigger">Choose file</button>
-  <input type="file" id="fileInput" accept=".csv">
-  <div id="savedNotice" style="margin-top:14px;font-size:11px;color:var(--muted)"></div>
 </div>
 
+<!-- Empty state -->
+<div class="empty-state" id="emptyState">
+  <div class="empty-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6b6862" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </div>
+  <h2>No data loaded yet</h2>
+  <p>Upload a Blarney user logs CSV to begin. Results are saved automatically for next time.</p>
+  <button class="empty-btn" onclick="requestUpload()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload CSV file
+  </button>
+</div>
+
+<!-- Upload password modal -->
+<div class="overlay" id="pwModal">
+  <div class="modal">
+    <h3>🔒 Upload requires authorisation</h3>
+    <div class="modal-sub">Enter the password to upload a new data file. It will merge with existing sessions.</div>
+    <input class="modal-input" type="password" id="pwInput" placeholder="Password" autocomplete="off">
+    <div class="modal-err" id="pwErr"></div>
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="closePwModal()">Cancel</button>
+      <button class="m-confirm" onclick="checkPw()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear data modal -->
+<div class="overlay" id="clearModal">
+  <div class="modal">
+    <h3>Clear all saved data?</h3>
+    <div class="modal-sub">This removes all session data from this browser permanently. Requires the upload password.</div>
+    <input class="modal-input" type="password" id="clearPwInput" placeholder="Password" autocomplete="off">
+    <div class="modal-err" id="clearPwErr"></div>
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="closeClearModal()">Cancel</button>
+      <button class="m-confirm m-danger" onclick="checkClearPw()">Clear all data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
 <div class="loading" id="loading">
   <div class="spinner"></div>
-  <div style="font-size:13px;color:var(--muted)">Analysing transcripts…</div>
+  <div style="font-size:12px;color:var(--muted)">Analysing transcripts…</div>
 </div>
 
-<div class="main" id="main">
-  <div class="file-info">
-    <div>
-      <div class="file-name" id="fileName">—</div>
-      <div class="file-meta" id="fileMeta">—</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<input type="file" id="fileInput" accept=".csv" style="display:none">
+
+<!-- Main dashboard -->
+<div class="main" id="main" style="display:none">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="data-badge"><div class="data-dot"></div><span id="dataBadgeTxt">—</span></div>
       <div class="date-filter" id="dateFilterBar" style="display:none">
         <span style="font-size:11px;color:var(--muted)">Date:</span>
         <input type="date" id="filterFrom">
@@ -219,905 +318,725 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <input type="date" id="filterTo">
         <button class="apply-btn" onclick="applyFilter()">Apply</button>
       </div>
-      <button class="reset-btn" onclick="resetUpload()">Upload new file</button>
-      <button class="reset-btn" onclick="clearStorage()" style="color:var(--red);border-color:rgba(153,27,27,.3)">Clear saved data</button>
     </div>
+    <button class="danger-btn" onclick="requestClear()">Clear saved data</button>
   </div>
 
-  <div class="summary-bar">
-    <div class="summary-card"><div class="summary-val" id="sumSessions">—</div><div class="summary-label">Sessions</div></div>
-    <div class="summary-card"><div class="summary-val" id="sumTranscripts">—</div><div class="summary-label">With transcripts</div></div>
-    <div class="summary-card"><div class="summary-val" id="sumUserMsgs">—</div><div class="summary-label">Customer messages</div></div>
-    <div class="summary-card" onclick="switchTab('flags')" style="border-color:rgba(153,27,27,.2)"><div class="summary-val" id="sumFlags" style="color:var(--red)">—</div><div class="summary-label">Flags raised</div></div>
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-val" id="kpiSessions">—</div>
+      <div class="kpi-label">Sessions</div>
+      <div class="kpi-sub" id="kpiRange">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiTx">—</div>
+      <div class="kpi-label">With transcripts</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiMsgs">—</div>
+      <div class="kpi-label">Customer messages</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiConv">—</div>
+      <div class="kpi-label">Conversions</div>
+      <div class="kpi-sub" id="kpiConvPct"></div>
+    </div>
+    <div class="kpi kpi-alert clickable" onclick="switchTab('flags')">
+      <div class="kpi-val" id="kpiFlags">—</div>
+      <div class="kpi-label">Flags raised</div>
+      <div class="kpi-sub" id="kpiFlagsSub"></div>
+    </div>
   </div>
 
   <div class="tabs">
-    <button class="tab active-advert" onclick="switchTab('advert')">📣 Advertising insights</button>
-    <button class="tab" onclick="switchTab('internal')">📊 Internal analysis</button>
-    <button class="tab" id="tab-flags" onclick="switchTab('flags')">🚩 Flags &amp; alerts</button>
-    <button class="tab" onclick="switchTab('journey')">🗺 Session journeys</button>
+    <button class="tab t-flags active" id="tab-flags" onclick="switchTab('flags')">
+      🚩 Flags &amp; alerts <span class="badge" id="flagBadge">0</span>
+    </button>
+    <button class="tab t-advert" onclick="switchTab('advert')">📣 Advertising</button>
+    <button class="tab t-journey" onclick="switchTab('journey')">🗺 Journeys</button>
+    <button class="tab t-internal" onclick="switchTab('internal')">📊 Internal</button>
   </div>
 
-  <!-- ── Advertising insights ────────────────────────────────── -->
-  <div class="panel active" id="panel-advert">
-    <div class="section-grid">
+  <!-- PANEL: Flags -->
+  <div class="panel active" id="panel-flags">
+    <div class="flag-controls">
+      <span class="fc-label">Severity:</span>
+      <button class="sev-pill active" onclick="filterFlags('sev','all',this)">All</button>
+      <button class="sev-pill" onclick="filterFlags('sev','high',this)"><span class="sev-dot high"></span>High</button>
+      <button class="sev-pill" onclick="filterFlags('sev','medium',this)"><span class="sev-dot medium"></span>Medium</button>
+      <button class="sev-pill" onclick="filterFlags('sev','low',this)"><span class="sev-dot low"></span>Low</button>
+      <div class="fc-div"></div>
+      <span class="fc-label">Category:</span>
+      <button class="cat-pill active" onclick="filterFlags('cat','all',this)">All</button>
+      <button class="cat-pill" onclick="filterFlags('cat','jailbreak',this)">Jailbreak</button>
+      <button class="cat-pill" onclick="filterFlags('cat','offensive',this)">Offensive</button>
+      <button class="cat-pill" onclick="filterFlags('cat','hallucination',this)">Hallucination</button>
+      <button class="cat-pill" onclick="filterFlags('cat','offbrand',this)">Off-brand</button>
+      <button class="cat-pill" onclick="filterFlags('cat','frustration',this)">Frustration</button>
+    </div>
+    <div id="flagsContainer"></div>
+  </div>
+
+  <!-- PANEL: Advertising -->
+  <div class="panel" id="panel-advert">
+    <div class="g2">
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--purple)"></div>What customers are actually asking</div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--purple)"></div>What customers are asking</div>
         <div class="quote-list" id="topQuestions"></div>
       </div>
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--green)"></div>Voice of the customer</div>
+        <div class="card-hd"><div class="hd-dot" style="background:#16a34a"></div>Voice of the customer</div>
         <div class="quote-list" id="vocQuotes"></div>
       </div>
     </div>
-    <div class="section-grid">
+    <div class="g2">
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--blue)"></div>Products mentioned in conversation</div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--blue)"></div>Products mentioned</div>
         <div class="tag-cloud" id="productMentions"></div>
       </div>
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--amber)"></div>Features customers care about</div>
+        <div class="card-hd"><div class="hd-dot" style="background:#d97706"></div>Features customers care about</div>
         <div class="tag-cloud" id="featureMentions"></div>
       </div>
     </div>
-    <div class="section-grid single">
+    <div class="g1">
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--red)"></div>Competitor mentions</div>
-        <div class="tag-cloud" id="competitorMentions"></div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--red)"></div>Competitor mentions — click to expand all quotes</div>
+        <div class="comp-list" id="competitorMentions"></div>
       </div>
     </div>
   </div>
 
-  <!-- ── Flags & alerts ──────────────────────────────────────── -->
-  <div class="panel" id="panel-flags">
-    <div class="ai-bar">
-      <div class="ai-bar-label">
-        🤖 AI-powered conversation analysis
-        <span>Reads the full context of each transcript — catches frustration, sarcasm, and implied intent that keyword matching misses.</span>
-      </div>
-      <button class="ai-analyse-btn" id="aiAnalyseBtn" onclick="startAIAnalysis()">✦ Analyse with AI</button>
-      <div class="ai-progress-wrap" id="aiProgressWrap">
-        <div class="ai-progress-bar"><div class="ai-progress-fill" id="aiProgressFill" style="width:0%"></div></div>
-        <div class="ai-progress-label" id="aiProgressLabel">Starting…</div>
-      </div>
+  <!-- PANEL: Journeys -->
+  <div class="panel" id="panel-journey">
+    <div class="journey-controls">
+      <div class="journey-filters" id="journeyFilters"></div>
+      <button class="export-btn" onclick="exportJourneyCSV()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
     </div>
-    <div class="severity-filter">
-      <span style="font-size:11px;color:var(--muted);padding-top:4px">Severity:</span>
-      <button class="sev-pill active" onclick="filterFlags('all',this)">All flags</button>
-      <button class="sev-pill" onclick="filterFlags('high',this)">🔴 High</button>
-      <button class="sev-pill" onclick="filterFlags('medium',this)">🟡 Medium</button>
-      <button class="sev-pill" onclick="filterFlags('low',this)">🔵 Low</button>
-    </div>
-    <div id="allFlagsContainer"></div>
+    <div class="journey-kpi" id="journeyKpi"></div>
+    <div class="journey-list" id="journeyList"></div>
   </div>
 
-  <!-- ── API key modal ──────────────────────────────────────── -->
-  <div class="modal-overlay" id="apiKeyModal" onclick="if(event.target===this)closeApiKeyModal()">
-    <div class="modal-box">
-      <h3>Anthropic API key</h3>
-      <p>Enter your Anthropic API key to enable AI-powered transcript analysis. It's stored in session memory only — never saved to disk or committed anywhere.</p>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off">
-      <div class="modal-btns">
-        <button class="modal-btn secondary" onclick="closeApiKeyModal()">Cancel</button>
-        <button class="modal-btn primary" onclick="confirmApiKey()">Save &amp; analyse</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Internal analysis ──────────────────────────────────── -->
+  <!-- PANEL: Internal -->
   <div class="panel" id="panel-internal">
-    <div class="section-grid">
+    <div class="g2">
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--purple)"></div>Drop-off — turns before disengaging</div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--purple)"></div>Drop-off — messages before disengaging</div>
         <div class="stat-list" id="dropOff"></div>
       </div>
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--green)"></div>Turns before conversion</div>
-        <div class="stat-list" id="turnsToConvert"></div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--green)"></div>Conversion stats</div>
+        <div class="stat-list" id="convStats"></div>
       </div>
     </div>
-    <div class="section-grid">
+    <div class="g2">
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--blue)"></div>Out of scope requests</div>
+        <div class="card-hd"><div class="hd-dot" style="background:var(--blue)"></div>Out of scope requests</div>
         <div class="quote-list" id="outOfScope"></div>
       </div>
       <div class="card">
-        <div class="card-title"><div class="card-title-dot" style="background:var(--amber)"></div>Customer frustration signals</div>
-        <div class="quote-list" id="frustration"></div>
+        <div class="card-hd"><div class="hd-dot" style="background:#d97706"></div>Customer frustration signals</div>
+        <div class="quote-list" id="frustrationList"></div>
       </div>
     </div>
-  </div>
-
-  <!-- ── Session journeys ───────────────────────────────────── -->
-  <div class="panel" id="panel-journey">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="journeyFilters"></div>
-      <button onclick="exportJourneyCSV()" style="font-size:11px;padding:6px 14px;background:var(--text);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif">↓ Export CSV</button>
-    </div>
-    <div class="summary-bar" id="journeySummary"></div>
-    <div id="journeyList" style="display:flex;flex-direction:column;gap:8px"></div>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════
+// CONFIG — change password here
+// ════════════════════════════════════
+const UPLOAD_PASSWORD = 'blarney25';
+
+// ════════════════════════════════════
 // Helpers
-// ═══════════════════════════════════════════════════════════
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-advert','active-internal','active-flags','active-journey'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  const btn = document.querySelector(`.tab[onclick="switchTab('${tab}')"]`);
-  if (btn) btn.classList.add(`active-${tab}`);
+// ════════════════════════════════════
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const btn=document.querySelector(`.tab.t-${tab}`);
+  if(btn) btn.classList.add('active');
   document.getElementById(`panel-${tab}`).classList.add('active');
 }
 
-function getUserMsgs(transcript) {
-  if (!transcript) return [];
-  return transcript.split('\n').filter(l => /^\[User\]/i.test(l)).map(l => l.replace(/^\[User\]/i,'').trim()).filter(m => m.length > 2);
+function getUserMsgs(t){
+  if(!t) return [];
+  return t.split('\n').filter(l=>/^\[User\]/i.test(l)).map(l=>l.replace(/^\[User\]/i,'').trim()).filter(m=>m.length>2);
 }
-function getAIMsgs(transcript) {
-  if (!transcript) return [];
-  return transcript.split('\n').filter(l => /^\[AI\]/i.test(l)).map(l => l.replace(/^\[AI\]/i,'').trim()).filter(m => m.length > 2);
-}
-function renderTranscript(transcript) {
-  if (!transcript) return '<div style="font-size:11px;color:var(--muted)">No transcript available</div>';
-  return transcript.split('\n').filter(l => l.trim()).map(l => {
-    if (/^\[User\]/i.test(l)) return `<div class="transcript-line user">👤 ${l.replace(/^\[User\]/i,'').trim()}</div>`;
-    if (/^\[AI\]/i.test(l))   return `<div class="transcript-line ai">🤖 ${l.replace(/^\[AI\]/i,'').trim()}</div>`;
-    return `<div class="transcript-line system">${l}</div>`;
+
+function renderTx(t){
+  if(!t) return '<div style="font-size:11px;color:var(--muted2);padding:4px 0">No transcript available</div>';
+  return t.split('\n').filter(l=>l.trim()).map(l=>{
+    if(/^\[User\]/i.test(l)) return `<div class="tl user">👤 ${esc(l.replace(/^\[User\]/i,'').trim())}</div>`;
+    if(/^\[AI\]/i.test(l))   return `<div class="tl ai">🤖 ${esc(l.replace(/^\[AI\]/i,'').trim())}</div>`;
+    return `<div class="tl sys">${esc(l)}</div>`;
   }).join('');
 }
-function quoteEl(text, cls='', meta='', transcript='', date='') {
-  const hasT = transcript && transcript.trim().length > 0;
-  const dateBit = date ? `<span style="font-size:9px;color:var(--muted);margin-left:6px">${date}</span>` : '';
-  return `<div class="quote-item ${cls}" onclick="this.classList.toggle('open')">
-    ${text}${dateBit}
-    ${meta ? `<div class="quote-meta">${meta}</div>` : ''}
-    ${hasT ? `<div class="expand-hint">▸ Click to view transcript</div><div class="transcript-drawer">${renderTranscript(transcript)}</div>` : ''}
+
+// Build a quote item that shows ALL sessions that contain this message.
+// Each session is a collapsible block with its full transcript.
+function multiQuoteEl(msg, sessions, cls=''){
+  const count = sessions.length;
+  const countBit = count > 1
+    ? `<span class="quote-count">×${count} sessions</span>`
+    : (sessions[0]?.Date ? `<span style="font-size:9px;color:var(--muted2)">${esc(sessions[0].Date)}</span>` : '');
+
+  const sessionBlocks = sessions.map((s,i)=>`
+    <div class="session-block">
+      <div class="session-block-hd" onclick="this.parentElement.classList.toggle('open')">
+        <strong>Session ${esc(s['Session ID']||String(i+1))}</strong>
+        <span>${esc(s.Date||'')}</span>
+        <span>${esc(s.Mode||'')}</span>
+        <span style="margin-left:auto;font-size:9px;opacity:.6">▸ transcript</span>
+      </div>
+      <div class="session-tx">${renderTx(s.Transcript||'')}</div>
+    </div>`).join('');
+
+  return `<div class="quote-item ${cls}" onclick="event.currentTarget.classList.toggle('open')">
+    <div class="quote-head">
+      "${esc(msg)}"
+      <div class="quote-head-meta">
+        ${countBit}
+        <span class="quote-expand">▸ Click to view ${count === 1 ? 'transcript' : `all ${count} transcripts`}</span>
+      </div>
+    </div>
+    <div class="quote-sessions">${sessionBlocks}</div>
   </div>`;
 }
-function tagEl(text, size='') { return `<span class="tag ${size}">${text}</span>`; }
-function statRow(label, val, count=null, max=1) {
+
+function tagEl(t,sz=''){ return `<span class="tag ${sz}">${esc(t)}</span>`; }
+
+function statRow(label,val,count=null,max=1){
   return `<div class="stat-row">
-    <span class="stat-label">${label}</span>
-    ${count !== null ? `<div class="stat-bar"><div class="stat-fill" style="width:${Math.min(count/max*100,100)}%"></div></div>` : ''}
-    <span class="stat-val">${val}</span>
+    <span class="stat-label">${esc(label)}</span>
+    ${count!==null?`<div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.min(count/max*100,100)}%"></div></div>`:'<div style="flex:1"></div>'}
+    <span class="stat-val">${esc(String(val))}</span>
   </div>`;
 }
-function getDateRange(sessions) {
-  const dates = sessions.map(r => r.Date).filter(Boolean).sort();
-  return dates.length ? `${dates[0]} – ${dates[dates.length-1]}` : '—';
+
+function getDateRange(rows){
+  const d=rows.map(r=>r.Date).filter(Boolean).sort();
+  return d.length?`${d[0]} – ${d[d.length-1]}`:'—';
 }
 
-// ═══════════════════════════════════════════════════════════
-// Persistent storage
-// ═══════════════════════════════════════════════════════════
-let SAVED_SESSIONS = [];
-try { SAVED_SESSIONS = JSON.parse(localStorage.getItem('blarney_sessions') || '[]'); } catch(e) {}
-
-function saveToStorage(newRows) {
-  const existing = new Map(SAVED_SESSIONS.map(r => [r['Session ID'], r]));
-  newRows.forEach(r => { if (r['Session ID']) existing.set(r['Session ID'], r); });
-  SAVED_SESSIONS = [...existing.values()];
-  try { localStorage.setItem('blarney_sessions', JSON.stringify(SAVED_SESSIONS)); } catch(e) {}
+// ════════════════════════════════════
+// Password / modal
+// ════════════════════════════════════
+function requestUpload(){
+  document.getElementById('pwInput').value='';
+  document.getElementById('pwErr').textContent='';
+  document.getElementById('pwModal').classList.add('open');
+  setTimeout(()=>document.getElementById('pwInput').focus(),60);
 }
-function clearStorage() {
-  SAVED_SESSIONS = [];
-  try { localStorage.removeItem('blarney_sessions'); } catch(e) {}
-  location.reload();
-}
-
-// ═══════════════════════════════════════════════════════════
-// Upload
-// ═══════════════════════════════════════════════════════════
-function resetUpload() {
-  document.getElementById('uploadZone').style.display = '';
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('fileInput').value = '';
-}
-function processFile(file) {
-  if (!file) return;
-  document.getElementById('uploadZone').style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
-  Papa.parse(file, {
-    header: true, skipEmptyLines: true,
-    complete: results => {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('main').style.display = 'block';
-      saveToStorage(results.data);
-      analyse(SAVED_SESSIONS, file.name);
-    },
-    error: err => {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('uploadZone').style.display = '';
-      alert('Could not read file: ' + err.message);
-    }
-  });
-}
-
-window.addEventListener('DOMContentLoaded', function() {
-  const fileInput   = document.getElementById('fileInput');
-  const uploadZone  = document.getElementById('uploadZone');
-  const uploadTrigger = document.getElementById('uploadTrigger');
-
-  uploadTrigger.addEventListener('click', function(e) { e.stopPropagation(); fileInput.click(); });
-  fileInput.addEventListener('change', function() { if (this.files && this.files[0]) processFile(this.files[0]); });
-  uploadZone.addEventListener('click', function() { fileInput.click(); });
-  uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('drag'); });
-  uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('drag'); });
-  uploadZone.addEventListener('drop', function(e) {
-    e.preventDefault(); uploadZone.classList.remove('drag');
-    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-  });
-
-  if (SAVED_SESSIONS.length > 0) {
-    const dates = SAVED_SESSIONS.map(r => r.Date).filter(Boolean).sort();
-    document.getElementById('savedNotice').innerHTML = `
-      <span style="background:var(--green-bg);color:var(--green);padding:4px 10px;border-radius:20px">${SAVED_SESSIONS.length} sessions saved · ${dates[0]||''} – ${dates[dates.length-1]||''}</span><br>
-      <span style="margin-top:8px;display:inline-block">Upload a new file to add more, or <span style="cursor:pointer;text-decoration:underline;color:var(--red)" onclick="clearStorage()">clear all saved data</span></span>`;
+function closePwModal(){ document.getElementById('pwModal').classList.remove('open'); }
+function checkPw(){
+  if(document.getElementById('pwInput').value===UPLOAD_PASSWORD){
+    closePwModal();
+    document.getElementById('fileInput').click();
+  } else {
+    document.getElementById('pwErr').textContent='Incorrect password.';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
   }
+}
+function requestClear(){
+  document.getElementById('clearPwInput').value='';
+  document.getElementById('clearPwErr').textContent='';
+  document.getElementById('clearModal').classList.add('open');
+  setTimeout(()=>document.getElementById('clearPwInput').focus(),60);
+}
+function closeClearModal(){ document.getElementById('clearModal').classList.remove('open'); }
+function checkClearPw(){
+  if(document.getElementById('clearPwInput').value===UPLOAD_PASSWORD){
+    closeClearModal();
+    clearData();
+    location.reload();
+  } else {
+    document.getElementById('clearPwErr').textContent='Incorrect password.';
+    document.getElementById('clearPwInput').value='';
+    document.getElementById('clearPwInput').focus();
+  }
+}
+document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closePwModal(); });
+document.getElementById('clearModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeClearModal(); });
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('pwModal').classList.contains('open')) checkPw();
+    if(document.getElementById('clearModal').classList.contains('open')) checkClearPw();
+  }
+  if(e.key==='Escape'){ closePwModal(); closeClearModal(); }
 });
 
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════
+// Storage
+// ════════════════════════════════════
+let SAVED=[];
+try{ SAVED=JSON.parse(localStorage.getItem('blarney_v2')||'[]'); }catch(e){}
+
+function saveData(rows){
+  const map=new Map(SAVED.map(r=>[r['Session ID'],r]));
+  rows.forEach(r=>{ if(r['Session ID']) map.set(r['Session ID'],r); });
+  SAVED=[...map.values()];
+  try{ localStorage.setItem('blarney_v2',JSON.stringify(SAVED)); }catch(e){}
+}
+function clearData(){
+  SAVED=[];
+  try{ localStorage.removeItem('blarney_v2'); }catch(e){}
+}
+
+// ════════════════════════════════════
+// File upload
+// ════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change',function(){
+  if(!this.files||!this.files[0]) return;
+  const file=this.files[0]; this.value='';
+  document.getElementById('loading').classList.add('show');
+  Papa.parse(file,{
+    header:true, skipEmptyLines:true,
+    complete: res => {
+      document.getElementById('loading').classList.remove('show');
+      saveData(res.data);
+      showDashboard(SAVED);
+    },
+    error: err => {
+      document.getElementById('loading').classList.remove('show');
+      alert('Could not read file: '+err.message);
+    }
+  });
+});
+
+// ════════════════════════════════════
 // Flagging engine
-// Produces {type, severity, category, message, context, session, match}
-// ═══════════════════════════════════════════════════════════
-
-const FLAG_RULES = [
-  // ── JAILBREAK — HIGH ────────────────────────────────────────
-  { cat:'jailbreak', sev:'high', label:'JAILBREAK ATTEMPT',
-    patterns: [
-      /ignore (all |your |previous |the |any )?(instructions|rules|guidelines|constraints|prompt|directives)/i,
-      /forget (your |all )?(instructions|rules|training|guidelines|constraints|previous)/i,
-      /you (are|have) no (rules|restrictions|limits|constraints|guidelines)/i,
-      /you can (do|say|answer) anything/i,
-      /without (any |your )?(restrictions|limits|rules|guidelines|constraints)/i,
-      /pretend (you are|you're|to be|that you) (not |a |an )?(AI|assistant|bot|language model|chatbot|restricted|limited|samsung|tex)/i,
-      /act (as if|like) you (are|have no|don't have|can|were|could)/i,
-      /new (system |)?(prompt|instructions|rules|persona|role|guidelines|mode)/i,
-      /override (your|the|all|any) (instructions|rules|guidelines|restrictions|constraints)/i,
-      /bypass (your|the|all|any) (instructions|rules|guidelines|restrictions|constraints|safety)/i,
-      /disregard (your|the|all|previous|any) (instructions|rules|guidelines|restrictions|training)/i,
-      /you are now (a|an|not|free|unrestricted|unlimited|different)/i,
-      /from now on (you|ignore|forget|act|pretend|respond)/i,
-      /developer mode/i,
-      /jailbreak/i,
-      /dan mode/i,
-      /do anything now/i,
-      /unrestricted mode/i,
-      /system prompt/i,
-      /your (true|real|hidden|actual) (self|personality|mode)/i,
-      /roleplay as (a|an)? (human|person|unrestricted|free|different)/i,
-    ]
-  },
-  // ── JAILBREAK — MEDIUM (subtler attempts) ──────────────────
-  { cat:'jailbreak', sev:'medium', label:'POSSIBLE JAILBREAK',
-    patterns: [
-      /hypothetically (speaking|if|you could|what if)/i,
-      /in a fictional (world|scenario|story)/i,
-      /for (a |this )?(story|novel|game|roleplay|fiction|creative writing)/i,
-      /what would (an unrestricted|a different|a real|a free) (AI|assistant|bot) say/i,
-      /if you (weren't|were not|didn't have|had no) (restrictions|rules|guidelines)/i,
-      /theoretically (speaking|if|what if|could you)/i,
-      /imagine you are (not|a|an|free|unrestricted)/i,
-      /let's (say|pretend|imagine|assume) you (are|can|have|could)/i,
-      /your (manufacturer|maker|creator|anthropic|samsung) (doesn't|won't|can't|won't) know/i,
-      /between us|just between you and me/i,
-      /no one (is|will be) watching/i,
-    ]
-  },
-
-  // ── OFFENSIVE — HIGH ────────────────────────────────────────
-  { cat:'offensive', sev:'high', label:'OFFENSIVE CONTENT',
-    patterns: [
-      /\b(fuck|fucking|fucked|fucker|motherfuck)\b/i,
-      /\b(cunt|cunts)\b/i,
-      /\b(shit|shits|shitting|bullshit)\b/i,
-      /\b(bitch|bitches|bitching)\b/i,
-      /\b(bastard|asshole|arsehole|wanker|twat|prick)\b/i,
-      /\b(dick|cock|pussy|slut|whore)\b/i,
-      /\b(retard|retarded|spastic)\b/i,
-      /\b(faggot|fag|dyke)\b/i,
-      /\b(nigger|nigga|chink|spic|wetback|kike|gook)\b/i,
-      /\byou'?r?e so gay\b/i,
-      /\bthat('?s| is) so gay\b/i,
-      /\bso gay\b/i,
-      /kill (yourself|urself|your?self)/i,
-      /kys\b/i,
-      /go (to |the )?(hell|fuck yourself|die)/i,
-      /i('ll| will) (kill|hurt|destroy|attack|find) you/i,
-      /\b(rape|raping|raped)\b/i,
-      /\b(terrorist|terrorism|bomb|explosive|weapon|gun|shoot)\b/i,
-    ]
-  },
-  { cat:'offensive', sev:'medium', label:'BORDERLINE LANGUAGE',
-    patterns: [
-      /\b(damn|damned|bloody hell|hell|crap|ass|arse|butt)\b/i,
-      /\b(idiot|moron|stupid|dumb|useless|pathetic|loser)\b/i,
-      /\b(hate (you|this|it))\b/i,
-      /shut up/i,
-      /this is (so |f\*\*king |bloody )?(stupid|useless|crap|terrible|awful)/i,
-    ]
-  },
-
-  // ── HALLUCINATION SIGNALS — MEDIUM ─────────────────────────
-  { cat:'hallucination', sev:'medium', label:'HALLUCINATION SIGNAL',
-    patterns: [
-      /that('s| is) (wrong|incorrect|not right|false|not true|inaccurate)/i,
-      /you('re| are) (wrong|incorrect|mistaken|lying|making (that |this )up)/i,
-      /you (said|told me|mentioned|claimed) .{0,60} (but|however|yet) (you('re| are)|that('s| is))/i,
-      /you (contradicted|changed|revised|altered) (yourself|your answer|what you said)/i,
-      /earlier you (said|told|mentioned|claimed|stated)/i,
-      /different (from |to )(what|the)/i,
-      /that('s| is) not what you (said|told me|mentioned|claimed) (before|earlier|previously)/i,
-      /you('re| are) contradicting yourself/i,
-      /that (price|spec|model|feature|detail) (is|seems) (wrong|incorrect|off|not right)/i,
-      /i don't think (that's|that is) (right|correct|accurate|true)/i,
-      /are you (sure|certain|positive)/i,
-      /that doesn't (sound|seem) right/i,
-      /i read (somewhere|online|that) (the|it|this) (is|was|isn't|wasn't)/i,
-    ]
-  },
-
-  // ── OFF-BRAND / UNEXPECTED RESPONSE — LOW ──────────────────
-  { cat:'offbrand', sev:'low', label:'OFF-BRAND SIGNAL',
-    patterns: [
-      /that (was |is |seems )?(inappropriate|weird|strange|odd|random|off topic)/i,
-      /why (did|are|would) you (say|mention|bring up|ask|suggest) that/i,
-      /that('s| is) not (relevant|helpful|what i asked|related|appropriate)/i,
-      /you (shouldn't|should not|can't|cannot) (say|ask|suggest|recommend) that/i,
-      /that('s| is) a (weird|strange|odd|random|inappropriate) (response|answer|reply|question|suggestion)/i,
-      /\b(creepy|uncomfortable|awkward|invasive|personal)\b/i,
-    ]
-  },
-
-  // ── FRUSTRATION — LOW ───────────────────────────────────────
-  { cat:'frustration', sev:'low', label:'CUSTOMER FRUSTRATION',
-    patterns: [
-      /you('re| are) (not|n't) (helpful|helping|useful|answering|understanding)/i,
-      /this is (not |so |really )?(helpful|useful|working|good)/i,
-      /you('re| are) (useless|terrible|awful|broken|stupid|not working)/i,
-      /i('ve| have) (already|just) (said|told|asked|mentioned|said that)/i,
-      /i said (that |this )?already/i,
-      /you('re| are) not (listening|understanding|getting it)/i,
-      /this (is|isn't) (what i (asked|wanted|meant)|not helpful|not what i need)/i,
-      /can('t| not) you (understand|read|listen|get it)/i,
-      /never mind|forget it|forget this|forget about it/i,
-      /i('ll| will) (just|go|ask) (a (human|person|staff member|someone)|elsewhere|someone else)/i,
-      /speak to (a (human|person|real person|staff|someone))/i,
-      /this (bot|ai|assistant|kiosk|thing|system) (is|isn't) (working|helpful|useful|good|doing)/i,
-      /again\??!|still not|still doesn't|still won't/i,
-    ]
-  },
+// ════════════════════════════════════
+const FLAG_RULES=[
+  {cat:'jailbreak',sev:'high',label:'JAILBREAK ATTEMPT',fb:'fb-jailbreak',patterns:[
+    /ignore (all |your |previous |the |any )?(instructions|rules|guidelines|constraints|prompt|directives)/i,
+    /forget (your |all )?(instructions|rules|training|guidelines|constraints|previous)/i,
+    /you (are|have) no (rules|restrictions|limits|constraints|guidelines)/i,
+    /you can (do|say|answer) anything/i,
+    /without (any |your )?(restrictions|limits|rules|guidelines|constraints)/i,
+    /pretend (you are|you're|to be|that you) (not |a |an )?(AI|assistant|bot|language model|chatbot|restricted|limited|samsung|tex)/i,
+    /act (as if|like) you (are|have no|don't have|can|were|could)/i,
+    /new (system |)?(prompt|instructions|rules|persona|role|guidelines|mode)/i,
+    /override (your|the|all|any) (instructions|rules|guidelines|restrictions|constraints)/i,
+    /bypass (your|the|all|any) (instructions|rules|guidelines|restrictions|constraints|safety)/i,
+    /disregard (your|the|all|previous|any) (instructions|rules|guidelines|restrictions|training)/i,
+    /you are now (a|an|not|free|unrestricted|unlimited|different)/i,
+    /from now on (you|ignore|forget|act|pretend|respond)/i,
+    /developer mode/i,/jailbreak/i,/dan mode/i,/do anything now/i,
+    /unrestricted mode/i,/system prompt/i,
+    /your (true|real|hidden|actual) (self|personality|mode)/i,
+    /roleplay as (a|an)? (human|person|unrestricted|free|different)/i,
+    /no (rules|restrictions|limits|filter)/i,
+    /turn off (your |the )?(filter|safety|restrictions|rules)/i,
+    /disable (your |the )?(filter|safety|restrictions|rules)/i,
+  ]},
+  {cat:'jailbreak',sev:'medium',label:'POSSIBLE JAILBREAK',fb:'fb-jailbreak',patterns:[
+    /hypothetically (speaking|if|you could|what if)/i,
+    /in a fictional (world|scenario|story)/i,
+    /for (a |this )?(story|novel|game|roleplay|fiction|creative writing)/i,
+    /what would (an unrestricted|a different|a real|a free) (AI|assistant|bot) say/i,
+    /if you (weren't|were not|didn't have|had no) (restrictions|rules|guidelines)/i,
+    /theoretically (speaking|if|what if|could you)/i,
+    /imagine you are (not|a|an|free|unrestricted)/i,
+    /let's (say|pretend|imagine|assume) you (are|can|have|could)/i,
+    /between us|just between you and me/i,
+    /no one (is|will be) watching/i,
+    /what if you (could|were|had no|didn't)/i,
+  ]},
+  {cat:'offensive',sev:'high',label:'OFFENSIVE CONTENT',fb:'fb-offensive',patterns:[
+    /\b(fuck|fucking|fucked|fucker|motherfuck)\b/i,
+    /\b(cunt|cunts)\b/i,
+    /\b(shit|shitting|bullshit)\b/i,
+    /\b(bitch|bitches|bitching)\b/i,
+    /\b(bastard|asshole|arsehole|wanker|twat|prick)\b/i,
+    /\b(dick|cock|pussy|slut|whore)\b/i,
+    /\b(retard|retarded|spastic)\b/i,
+    /\b(faggot|dyke)\b/i,
+    /\b(nigger|nigga|chink|spic|kike|gook)\b/i,
+    /kill (yourself|urself)/i,/\bkys\b/i,
+    /go (to |the )?(hell|fuck yourself|die)/i,
+    /i('ll| will) (kill|hurt|attack|find) you/i,
+    /\b(rape|raping|raped)\b/i,
+    /\b(bomb|explosive|shoot|weapon)\b/i,
+  ]},
+  {cat:'offensive',sev:'medium',label:'BORDERLINE LANGUAGE',fb:'fb-offensive',patterns:[
+    /\b(damn|bloody hell|crap)\b/i,
+    /\b(idiot|moron|stupid bot|dumb|pathetic|loser)\b/i,
+    /\bhate (you|this bot|this kiosk|this thing)\b/i,
+    /shut up/i,
+    /this (is|bot is|kiosk is) (so )?(stupid|useless|crap|terrible|awful|broken)/i,
+  ]},
+  {cat:'hallucination',sev:'medium',label:'HALLUCINATION SIGNAL',fb:'fb-hallucination',patterns:[
+    /that('s| is) (wrong|incorrect|not right|false|not true|inaccurate)/i,
+    /you('re| are) (wrong|incorrect|mistaken|lying|making (that |this )up)/i,
+    /you (contradicted|changed|revised) (yourself|your answer|what you said)/i,
+    /earlier you (said|told|mentioned|claimed|stated)/i,
+    /that('s| is) not what you (said|told me|mentioned) (before|earlier|previously)/i,
+    /you('re| are) contradicting yourself/i,
+    /that (price|spec|model|feature|detail) (is|seems) (wrong|incorrect|off|not right)/i,
+    /i don't think (that's|that is) (right|correct|accurate|true)/i,
+    /are you (sure|certain|positive)\?/i,
+    /that doesn't (sound|seem) right/i,
+    /i (checked|looked it up|read online|saw on the website) (and|but) (you|that|it)/i,
+    /the (website|box|store|spec sheet) says (something )?different/i,
+  ]},
+  {cat:'offbrand',sev:'low',label:'OFF-BRAND SIGNAL',fb:'fb-offbrand',patterns:[
+    /that (was |is |seems )?(inappropriate|weird|strange|odd|random|off.?topic)/i,
+    /why (did|are|would) you (say|mention|bring up|ask|suggest) that/i,
+    /that('s| is) not (relevant|helpful|what i asked|related|appropriate)/i,
+    /you (shouldn't|should not|can't|cannot) (say|ask|suggest|recommend) that/i,
+    /that('s| is) a (weird|strange|odd|random|inappropriate) (response|answer|reply|question)/i,
+    /\b(creepy|uncomfortable|invasive)\b/i,
+    /you('re| are) (asking|being) (too |very )?(personal|intrusive|nosy)/i,
+  ]},
+  {cat:'frustration',sev:'low',label:'CUSTOMER FRUSTRATION',fb:'fb-frustration',patterns:[
+    /you('re| are) (not|n't) (helpful|helping|useful|answering|understanding)/i,
+    /you('re| are) (useless|terrible|awful|broken|stupid|not working)/i,
+    /i('ve| have) (already|just) (said|told|asked|mentioned) (this|that)/i,
+    /i said (that |this )?already/i,
+    /you('re| are) not (listening|understanding|getting it)/i,
+    /can('t| not) you (understand|read|listen|get it)/i,
+    /never mind|forget it|forget about it/i,
+    /i('ll| will) (just |go |ask )?(a )?(human|person|staff member|someone else)/i,
+    /speak to (a )?(human|person|real person|staff|someone|manager)/i,
+    /this (bot|ai|assistant|kiosk|thing|system) (is|isn't) (working|helpful|useful|doing)/i,
+    /still (not|doesn't|won't|can't)/i,
+    /you keep (saying|repeating|telling me)/i,
+  ]},
 ];
 
-// ═══════════════════════════════════════════════════════════
-// AI-powered analysis
-// ═══════════════════════════════════════════════════════════
-
-const AI_CACHE_KEY = 'blarney_ai_flags_v2';
-let AI_FLAGS = [];
-
-function getApiKey() { return sessionStorage.getItem('blarney_api_key') || ''; }
-function setApiKey(k) { sessionStorage.setItem('blarney_api_key', k); }
-
-function startAIAnalysis() {
-  if (!getApiKey()) {
-    document.getElementById('apiKeyModal').classList.add('open');
-    document.getElementById('apiKeyInput').value = '';
-    setTimeout(() => document.getElementById('apiKeyInput').focus(), 80);
-    return;
-  }
-  runAIAnalysis();
-}
-
-function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.remove('open'); }
-
-function confirmApiKey() {
-  const k = document.getElementById('apiKeyInput').value.trim();
-  if (!k.startsWith('sk-')) { alert('That doesn\'t look like a valid Anthropic API key (should start with sk-ant-…)'); return; }
-  setApiKey(k);
-  closeApiKeyModal();
-  runAIAnalysis();
-}
-
-async function runAIAnalysis() {
-  const sessions = (window._CURRENT_SESSIONS || []).filter(r => r.Transcript && r.Transcript.trim().length > 20);
-  if (!sessions.length) { alert('No transcripts loaded — upload a CSV first.'); return; }
-
-  const btn = document.getElementById('aiAnalyseBtn');
-  const progressWrap = document.getElementById('aiProgressWrap');
-  const progressFill = document.getElementById('aiProgressFill');
-  const progressLabel = document.getElementById('aiProgressLabel');
-  btn.disabled = true;
-  btn.textContent = 'Analysing…';
-  progressWrap.style.display = 'block';
-
-  // Load cache
-  let cache = {};
-  try { cache = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || '{}'); } catch(e) {}
-
-  const toProcess = sessions.filter(s => !cache[s['Session ID']]);
-  const total = sessions.length;
-  let done = sessions.length - toProcess.length;
-
-  progressFill.style.width = `${Math.round(done/total*100)}%`;
-  progressLabel.textContent = `${done} / ${total} sessions analysed (${toProcess.length} new)`;
-
-  const BATCH = 5;
-  for (let i = 0; i < toProcess.length; i += BATCH) {
-    const batch = toProcess.slice(i, i + BATCH);
-    await Promise.all(batch.map(async s => {
-      try {
-        const result = await analyseTranscriptWithAI(s.Transcript, getApiKey());
-        cache[s['Session ID']] = { flags: result.flags, analysed: true };
-      } catch(e) {
-        cache[s['Session ID']] = { flags: [], analysed: false, error: e.message };
-      }
-      done++;
-      progressFill.style.width = `${Math.round(done/total*100)}%`;
-      progressLabel.textContent = `${done} / ${total} sessions analysed…`;
-    }));
-    localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache));
-  }
-
-  // Merge AI flags with keyword flags
-  AI_FLAGS = [];
-  sessions.forEach(s => {
-    const cached = cache[s['Session ID']];
-    if (!cached || !cached.flags) return;
-    cached.flags.forEach(f => {
-      AI_FLAGS.push({
-        cat: f.type,
-        sev: f.severity,
-        label: f.label,
-        message: f.quote || '',
-        explanation: f.explanation || '',
-        session: s,
-        match: '',
-        source: 'ai',
-      });
-    });
-  });
-
-  mergeAndRenderFlags();
-  progressLabel.textContent = `✓ ${done} / ${total} sessions analysed`;
-  btn.disabled = false;
-  btn.textContent = '✦ Re-analyse';
-}
-
-async function analyseTranscriptWithAI(transcript, apiKey) {
-  const prompt = `You are a quality assurance analyst reviewing customer conversations from a Samsung AI kiosk at John Lewis.
-
-Analyse this transcript for any issues. Be sensitive to frustration even when expressed subtly — hesitation, repetition, giving up, sarcasm, being dismissive. Also flag offensive language, jailbreak attempts, and moments where the AI may have given wrong information.
-
-For each issue found, return a flag object. Only flag real issues — don't over-flag polite or neutral conversations.
-
-Return JSON only, no other text:
-{
-  "flags": [
-    {
-      "type": "offensive" | "jailbreak" | "frustration" | "hallucination" | "offbrand",
-      "severity": "high" | "medium" | "low",
-      "label": "short label in caps e.g. OFFENSIVE CONTENT",
-      "quote": "the exact message or phrase that triggered this flag",
-      "explanation": "one sentence explaining why this is flagged and what the context suggests"
-    }
-  ]
-}
-
-Severity guide:
-- high: slurs, threats, explicit jailbreak, dangerous misinformation
-- medium: clear frustration, borderline language, possible hallucination, customer explicitly correcting AI
-- low: mild frustration signals, subtle confusion, slightly off-brand response
-
-Transcript:
-${transcript.slice(0, 3000)}`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    if (res.status === 401) { sessionStorage.removeItem('blarney_api_key'); throw new Error('Invalid API key'); }
-    throw new Error(`API error ${res.status}`);
-  }
-
-  const data = await res.json();
-  const text = data.content?.[0]?.text || '{"flags":[]}';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return { flags: [] };
-  return JSON.parse(jsonMatch[0]);
-}
-
-function mergeAndRenderFlags() {
-  const combined = [...ALL_FLAGS, ...AI_FLAGS];
-  // Deduplicate: same session + same category + similar quote
-  const seen = new Set();
-  const deduped = combined.filter(f => {
-    const key = (f.session['Session ID'] || '') + '|' + f.cat + '|' + (f.message || '').substring(0, 30);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  const sevOrder = { high: 0, medium: 1, low: 2 };
-  deduped.sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
-
-  // Update summary count
-  document.getElementById('sumFlags').textContent = deduped.length;
-  const tabFlags = document.getElementById('tab-flags');
-  const badge = tabFlags.querySelector('.badge');
-  if (badge) badge.remove();
-  const highCount = deduped.filter(f => f.sev === 'high').length;
-  if (highCount > 0) tabFlags.insertAdjacentHTML('beforeend', `<span class="badge">${highCount}</span>`);
-
-  // Render using merged set
-  renderFlagsFromList(deduped, 'all');
-}
-
-// ═══════════════════════════════════════════════════════════
-// Score a message against all rules. Returns array of flag objects.
-function detectFlags(msg, session) {
-  const found = [];
-  // Normalise curly/smart quotes and apostrophes so regex apostrophe patterns match
-  const normalised = msg
-    .replace(/[‘’‚‛′‵]/g, "'")
-    .replace(/[“”„‟″‶]/g, '"');
-  for (const rule of FLAG_RULES) {
-    for (const pattern of rule.patterns) {
-      if (pattern.test(normalised)) {
-        found.push({
-          cat: rule.cat,
-          sev: rule.sev,
-          label: rule.label,
-          message: msg,
-          session,
-          match: (normalised.match(pattern) || [''])[0],
-        });
-        break; // one hit per rule is enough
+function detectFlags(msg,session){
+  const found=[];
+  for(const rule of FLAG_RULES){
+    for(const p of rule.patterns){
+      if(p.test(msg)){
+        found.push({cat:rule.cat,sev:rule.sev,label:rule.label,fb:rule.fb,message:msg,session,match:(msg.match(p)||[''])[0]});
+        break;
       }
     }
   }
   return found;
 }
 
-// ── Context enrichment: look at surrounding transcript lines ──
-function getContext(msg, transcript) {
-  if (!transcript) return '';
-  const lines = transcript.split('\n').filter(l => l.trim());
-  const idx = lines.findIndex(l => l.includes(msg.substring(0,30)));
-  if (idx < 0) return '';
-  const ctx = [];
-  if (idx > 0) ctx.push(lines[idx-1]);
-  ctx.push(lines[idx]);
-  if (idx < lines.length-1) ctx.push(lines[idx+1]);
-  return ctx.join(' | ');
-}
-
-// ═══════════════════════════════════════════════════════════
-// Stored flags & render
-// ═══════════════════════════════════════════════════════════
-let ALL_FLAGS = [];
-const catOrder = ['jailbreak','offensive','hallucination','offbrand','frustration'];
-const catMeta = {
-  jailbreak:    { label:'Jailbreak Attempts',            typeClass:'ft-jailbreak' },
-  offensive:    { label:'Offensive / Inappropriate',     typeClass:'ft-offensive' },
-  hallucination:{ label:'Possible Hallucination Signals',typeClass:'ft-hallucination' },
-  offbrand:     { label:'Off-Brand / Unexpected',        typeClass:'ft-offbrand' },
-  frustration:  { label:'Customer Frustration',          typeClass:'ft-frustration' },
+let ALL_FLAGS=[];
+let flagSevFilter='all', flagCatFilter='all';
+const CAT_ORDER=['jailbreak','offensive','hallucination','offbrand','frustration'];
+const CAT_META={
+  jailbreak:{label:'Jailbreak Attempts'},
+  offensive:{label:'Offensive / Inappropriate'},
+  hallucination:{label:'Possible Hallucination Signals'},
+  offbrand:{label:'Off-Brand / Unexpected'},
+  frustration:{label:'Customer Frustration'},
 };
 
-function renderFlagsFromList(flagList, severityFilter) {
-  const filtered = severityFilter === 'all' ? flagList : flagList.filter(f => f.sev === severityFilter);
-  const container = document.getElementById('allFlagsContainer');
+function filterFlags(type,val,btn){
+  if(type==='sev'){ flagSevFilter=val; document.querySelectorAll('.sev-pill').forEach(p=>p.classList.remove('active')); }
+  else { flagCatFilter=val; document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('active')); }
+  btn.classList.add('active');
+  renderFlags();
+}
 
-  if (!filtered.length) {
-    container.innerHTML = `<div class="empty" style="padding:24px 0">No flags match this filter</div>`;
+function renderFlags(){
+  let flags=ALL_FLAGS;
+  if(flagSevFilter!=='all') flags=flags.filter(f=>f.sev===flagSevFilter);
+  if(flagCatFilter!=='all') flags=flags.filter(f=>f.cat===flagCatFilter);
+  const container=document.getElementById('flagsContainer');
+  if(!flags.length){
+    container.innerHTML=`<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--muted2)">No flags match the selected filters</div>`;
     return;
   }
-
-  let html = '';
-  for (const cat of catOrder) {
-    const catFlags = filtered.filter(f => f.cat === cat);
-    if (!catFlags.length) continue;
-    const meta = catMeta[cat];
-    html += `<div class="flags-section-header">${meta.label} <span style="font-weight:400;font-size:10px;opacity:.7">(${catFlags.length})</span></div>`;
-    html += '<div class="flag-list">';
-    catFlags.forEach(f => {
-      const isAI = f.source === 'ai';
-      html += `<div class="flag-item severity-${f.sev}" onclick="this.classList.toggle('open')">
+  let html='';
+  for(const cat of CAT_ORDER){
+    const catFlags=flags.filter(f=>f.cat===cat);
+    if(!catFlags.length) continue;
+    html+=`<div class="flags-shd">${CAT_META[cat].label} <span>(${catFlags.length})</span></div><div class="flag-list">`;
+    catFlags.forEach(f=>{
+      html+=`<div class="flag-item sev-${f.sev}" onclick="this.classList.toggle('open')">
         <div class="flag-type-row">
-          <span class="flag-type ${meta.typeClass}">${f.label}</span>
-          <span class="severity-pip">${f.sev}</span>
-          <span class="ai-source-tag ${isAI ? '' : 'kw'}">${isAI ? '✦ AI' : 'keyword'}</span>
-          ${f.session.Date ? `<span style="font-size:9px;color:var(--muted);margin-left:auto">${f.session.Date}</span>` : ''}
+          <span class="fbadge ${f.fb}">${f.label}</span>
+          <span class="sev-dot ${f.sev}"></span>
+          <span style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">${f.sev}</span>
+          ${f.session.Date?`<span style="font-size:9px;color:var(--muted2)">${esc(f.session.Date)}</span>`:''}
         </div>
-        <div class="flag-msg">"${escHtml(f.message)}"</div>
-        ${f.explanation ? `<div class="flag-context">${escHtml(f.explanation)}</div>` : f.match ? `<div class="flag-context">Matched: "${escHtml(f.match)}"</div>` : ''}
-        <div class="flag-meta">Session: ${escHtml(f.session['Session ID']||'—')} · ${escHtml(f.session.Mode||'—')}</div>
-        <div class="expand-hint">▸ Click to view full transcript</div>
-        <div class="transcript-drawer">${renderTranscript(f.session.Transcript||'')}</div>
+        <div class="flag-msg">"${esc(f.message)}"</div>
+        ${f.match?`<div class="flag-match">Matched: <code style="font-family:'DM Mono',monospace;font-size:10px">${esc(f.match)}</code></div>`:''}
+        <div class="flag-meta-row">
+          <span>Session ${esc(f.session['Session ID']||'—')}</span>
+          <span>${esc(f.session.Mode||'—')}</span>
+        </div>
+        <div class="flag-expand">▸ Click to view full transcript</div>
+        <div class="flag-drawer">${renderTx(f.session.Transcript||'')}</div>
       </div>`;
     });
-    html += '</div>';
+    html+='</div>';
   }
-  container.innerHTML = html;
+  container.innerHTML=html;
 }
 
-function renderFlags(severityFilter) {
-  const combined = [...ALL_FLAGS, ...AI_FLAGS];
-  const seen = new Set();
-  const deduped = combined.filter(f => {
-    const key = (f.session['Session ID'] || '') + '|' + f.cat + '|' + (f.message || '').substring(0, 30);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  const sevOrder = { high: 0, medium: 1, low: 2 };
-  deduped.sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
-  renderFlagsFromList(deduped, severityFilter);
-}
+// ════════════════════════════════════
+// Show dashboard
+// ════════════════════════════════════
+let ALL_ROWS=[];
 
-function filterFlags(sev, btn) {
-  document.querySelectorAll('.sev-pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  renderFlags(sev);
-}
-
-function escHtml(s) {
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ═══════════════════════════════════════════════════════════
-// Main flow
-// ═══════════════════════════════════════════════════════════
-let ALL_ROWS = [], ALL_FILENAME = '';
-
-function analyse(rows, filename) {
-  ALL_ROWS = rows; ALL_FILENAME = filename;
-  const sessions = rows.filter(r => r.Mode === 'Kiosk' || r.Mode === 'QR');
-  const dates = sessions.map(r => r.Date).filter(Boolean).sort();
-  if (dates.length) {
-    document.getElementById('filterFrom').value = dates[0];
-    document.getElementById('filterTo').value = dates[dates.length-1];
+function showDashboard(rows){
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('main').style.display='block';
+  document.getElementById('uploadHeaderBtn').style.display='flex';
+  document.getElementById('hdrStat').style.display='block';
+  ALL_ROWS=rows;
+  const sessions=rows.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR');
+  const dates=sessions.map(r=>r.Date).filter(Boolean).sort();
+  if(dates.length){
+    document.getElementById('filterFrom').value=dates[0];
+    document.getElementById('filterTo').value=dates[dates.length-1];
   }
-  document.getElementById('dateFilterBar').style.display = 'flex';
-  runAnalysis(rows, filename);
+  document.getElementById('dateFilterBar').style.display='flex';
+  runAnalysis(rows);
 }
 
-function applyFilter() {
-  const from = document.getElementById('filterFrom').value;
-  const to   = document.getElementById('filterTo').value;
-  const filtered = ALL_ROWS.filter(r => {
-    if (!r.Date) return true;
-    if (from && r.Date < from) return false;
-    if (to   && r.Date > to)   return false;
+function applyFilter(){
+  const from=document.getElementById('filterFrom').value;
+  const to=document.getElementById('filterTo').value;
+  runAnalysis(ALL_ROWS.filter(r=>{
+    if(!r.Date) return true;
+    if(from&&r.Date<from) return false;
+    if(to&&r.Date>to) return false;
     return true;
-  });
-  runAnalysis(filtered, ALL_FILENAME);
+  }));
 }
 
-function runAnalysis(rows, filename) {
-  const sessions       = rows.filter(r => r.Mode === 'Kiosk' || r.Mode === 'QR');
-  const withTranscript = sessions.filter(r => r.Transcript && r.Transcript.trim().length > 0);
+// ════════════════════════════════════
+// Analysis
+// ════════════════════════════════════
+function runAnalysis(rows){
+  const sessions=rows.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR');
+  const withTx=sessions.filter(r=>r.Transcript&&r.Transcript.trim().length>0);
+  // allMsgs: {msg, session}[]
+  const allMsgs=[];
+  withTx.forEach(r=>getUserMsgs(r.Transcript).forEach(m=>allMsgs.push({msg:m,session:r})));
+  const converted=sessions.filter(r=>r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes');
+  const pct=sessions.length?Math.round(converted.length/sessions.length*100):0;
 
-  const allUserMsgs = [];
-  withTranscript.forEach(r => getUserMsgs(r.Transcript).forEach(m => allUserMsgs.push({msg: m, session: r})));
+  // KPIs
+  document.getElementById('kpiSessions').textContent=sessions.length;
+  document.getElementById('kpiRange').textContent=getDateRange(sessions);
+  document.getElementById('kpiTx').textContent=withTx.length;
+  document.getElementById('kpiMsgs').textContent=allMsgs.length;
+  document.getElementById('kpiConv').textContent=converted.length;
+  document.getElementById('kpiConvPct').textContent=`${pct}% conversion rate`;
+  document.getElementById('hdrVal').textContent=sessions.length;
+  document.getElementById('dataBadgeTxt').textContent=`${sessions.length} sessions · ${getDateRange(sessions)}`;
 
-  const msgCounts = {};
-  allUserMsgs.forEach(({msg}) => { msgCounts[msg] = (msgCounts[msg]||0)+1; });
-  const sortedMsgs = Object.entries(msgCounts).sort((a,b) => b[1]-a[1]);
-
-  const converted = sessions.filter(r => r['Buy In Store']==='Yes' || r['Buy Online (QRs)']==='Yes');
-
-  // ── Summary ────────────────────────────────────────────────
-  document.getElementById('fileName').textContent = filename;
-  document.getElementById('fileMeta').textContent = `${sessions.length} sessions · ${withTranscript.length} with transcripts · ${getDateRange(sessions)}`;
-  document.getElementById('sumSessions').textContent    = sessions.length;
-  document.getElementById('sumTranscripts').textContent = withTranscript.length;
-  document.getElementById('sumUserMsgs').textContent    = allUserMsgs.length;
-  document.getElementById('headerBadge').textContent    = `${sessions.length} sessions loaded`;
-
-  // Store sessions for AI analysis
-  window._CURRENT_SESSIONS = sessions;
-  AI_FLAGS = [];
-
-  // ── Run flagging engine ───────────────────────────────────
-  ALL_FLAGS = [];
-  allUserMsgs.forEach(({msg, session}) => {
-    const flags = detectFlags(msg, session);
-    ALL_FLAGS.push(...flags);
+  // ── Flagging ──
+  ALL_FLAGS=[];
+  const seenFlags=new Set();
+  allMsgs.forEach(({msg,session})=>{
+    detectFlags(msg,session).forEach(f=>{
+      const key=f.session['Session ID']+'|'+f.cat+'|'+f.message.substring(0,40);
+      if(!seenFlags.has(key)){ seenFlags.add(key); ALL_FLAGS.push(f); }
+    });
   });
-  // Deduplicate: same session + same pattern match
-  const seen = new Set();
-  ALL_FLAGS = ALL_FLAGS.filter(f => {
-    const key = f.session['Session ID'] + '|' + f.cat + '|' + f.message.substring(0,40);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  const sevOrder={high:0,medium:1,low:2};
+  ALL_FLAGS.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
+  const highCount=ALL_FLAGS.filter(f=>f.sev==='high').length;
+  document.getElementById('kpiFlags').textContent=ALL_FLAGS.length;
+  document.getElementById('kpiFlagsSub').textContent=`${highCount} high severity`;
+  const badge=document.getElementById('flagBadge');
+  badge.textContent=highCount;
+  badge.style.display=highCount>0?'inline':'none';
+  renderFlags();
+
+  // ── Group messages: msg → [sessions that said it] ──
+  const msgMap=new Map(); // msg string → session[]
+  allMsgs.forEach(({msg,session})=>{
+    if(!msgMap.has(msg)) msgMap.set(msg,[]);
+    // avoid duplicate sessions for same message
+    const arr=msgMap.get(msg);
+    if(!arr.some(s=>s['Session ID']===session['Session ID'])) arr.push(session);
   });
-  // Sort: high → medium → low
-  const sevOrder = {high:0, medium:1, low:2};
-  ALL_FLAGS.sort((a,b) => sevOrder[a.sev] - sevOrder[b.sev]);
+  const sortedMsgs=[...msgMap.entries()].sort((a,b)=>b[1].length-a[1].length);
 
-  document.getElementById('sumFlags').textContent = ALL_FLAGS.length;
-  // Badge on flags tab
-  const tabFlags = document.getElementById('tab-flags');
-  const highCount = ALL_FLAGS.filter(f => f.sev==='high').length;
-  const badge = tabFlags.querySelector('.badge');
-  if (badge) badge.remove();
-  if (highCount > 0) tabFlags.insertAdjacentHTML('beforeend', `<span class="badge">${highCount}</span>`);
-  renderFlags('all');
+  // ── Questions ──
+  const qWords=['how','what','which','why','can','is','are','do','does','will','would','should','could','tell','explain','compare','difference','better','vs','versus','help','looking','want','need','thinking','have','recommend','suggest'];
+  const questions=sortedMsgs.filter(([m])=>m.length>20&&qWords.some(w=>m.toLowerCase().includes(w))).slice(0,8);
+  document.getElementById('topQuestions').innerHTML=questions.length
+    ?questions.map(([m,ss])=>multiQuoteEl(m,ss,'ql-green')).join('')
+    :'<div class="empty-msg">No questions detected yet</div>';
 
-  // ── Advertising ────────────────────────────────────────────
-  const questionWords = ['how','what','which','why','can','is','are','do','does','will','would','should','could','tell','explain','compare','difference','better','vs','versus','help','looking','want','need','thinking','have'];
-  const realQuestions = sortedMsgs.filter(([msg]) => {
-    const lower = msg.toLowerCase();
-    return msg.length > 20 && questionWords.some(w => lower.includes(w));
-  }).slice(0, 8);
-  document.getElementById('topQuestions').innerHTML = realQuestions.length
-    ? realQuestions.map(([msg, count]) => {
-        const s = allUserMsgs.find(m => m.msg === msg);
-        return quoteEl(`"${escHtml(msg)}"`, 'green', count > 1 ? `Asked ${count} times` : '', s?.session.Transcript||'', s?.session.Date||'');
-      }).join('')
-    : '<div class="empty">No questions found</div>';
+  // ── Voice of customer ──
+  const vocKw=['iphone','android','switch','upgrade','birthday','present','gift','mum','dad','daughter','son','abroad','camera','photo','trip','holiday','budget','afford','cheap','expensive','monthly','contract','price','£'];
+  const voc=sortedMsgs.filter(([m])=>m.length>25&&vocKw.some(k=>m.toLowerCase().includes(k))).slice(0,8);
+  document.getElementById('vocQuotes').innerHTML=voc.length
+    ?voc.map(([m,ss])=>multiQuoteEl(m,ss,'ql-purple')).join('')
+    :'<div class="empty-msg">No customer quotes detected</div>';
 
-  const vocKeywords = ['iphone','android','switch','upgrade','birthday','present','gift','mum','dad','daughter','son','abroad','work','camera','photo','trip','holiday','£','price','budget','afford','cheap','expensive','monthly','contract'];
-  const vocMsgs = allUserMsgs.filter(({msg}) => msg.length > 25 && vocKeywords.some(k => msg.toLowerCase().includes(k))).map(({msg}) => msg).filter((m,i,a) => a.indexOf(m)===i).slice(0,8);
-  document.getElementById('vocQuotes').innerHTML = vocMsgs.length
-    ? vocMsgs.map(m => { const s = allUserMsgs.find(u => u.msg===m); return quoteEl(`"${escHtml(m)}"`, '', '', s?.session.Transcript||'', s?.session.Date||''); }).join('')
-    : '<div class="empty">No customer quotes found</div>';
+  // ── Products ──
+  const products=['S26 Ultra','S26+','S26','S25 Ultra','S25 FE','S25','S24','A57','A56','A36','A17','A16','Z Fold7','Z Fold6','Z Flip7','Z Flip6','Watch Ultra','Watch8','Ring','Buds4','Tab S10','Galaxy AI'];
+  const pCounts={};
+  allMsgs.forEach(({msg})=>products.forEach(p=>{ if(msg.toLowerCase().includes(p.toLowerCase())) pCounts[p]=(pCounts[p]||0)+1; }));
+  const sortedP=Object.entries(pCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('productMentions').innerHTML=sortedP.length
+    ?sortedP.map(([p,c])=>tagEl(`${p} ×${c}`,c>=5?'t-big':c>=2?'t-med':'')).join('')
+    :'<div class="empty-msg">No product mentions detected</div>';
 
-  const products = ['S26 Ultra','S26+','S26','S25 Ultra','S25 FE','S25','S24','A57','A56','A36','A17','A16','Z Fold7','Z Fold6','Z Flip7','Z Flip6','Watch Ultra','Watch8','Ring','Buds4','Tab S10','Galaxy AI'];
-  const productCounts = {};
-  allUserMsgs.forEach(({msg}) => products.forEach(p => { if (msg.toLowerCase().includes(p.toLowerCase())) productCounts[p] = (productCounts[p]||0)+1; }));
-  const sortedProducts = Object.entries(productCounts).sort((a,b) => b[1]-a[1]);
-  document.getElementById('productMentions').innerHTML = sortedProducts.length ? sortedProducts.map(([p,c]) => tagEl(`${p} (${c})`, c>=5?'big':c>=2?'med':'')).join('') : '<div class="empty">No product mentions</div>';
+  // ── Features ──
+  const features=['camera','battery','storage','screen','display','5G','AI','processor','speed','memory','RAM','weight','size','colour','trade-in','price','cost','monthly','contract','water','zoom','selfie','video','charging','wireless','fold','flip','refresh rate'];
+  const fCounts={};
+  allMsgs.forEach(({msg})=>features.forEach(f=>{ if(msg.toLowerCase().includes(f.toLowerCase())) fCounts[f]=(fCounts[f]||0)+1; }));
+  const sortedF=Object.entries(fCounts).sort((a,b)=>b[1]-a[1]).slice(0,24);
+  document.getElementById('featureMentions').innerHTML=sortedF.length
+    ?sortedF.map(([f,c])=>tagEl(`${f} ×${c}`,c>=5?'t-big':c>=2?'t-med':'')).join('')
+    :'<div class="empty-msg">No feature mentions detected</div>';
 
-  const features = ['camera','battery','storage','screen','display','5G','AI','processor','speed','memory','RAM','weight','size','colour','trade-in','price','cost','monthly','contract','water','zoom','selfie','video','charging','wireless','fold','flip'];
-  const featureCounts = {};
-  allUserMsgs.forEach(({msg}) => features.forEach(f => { if (msg.toLowerCase().includes(f.toLowerCase())) featureCounts[f] = (featureCounts[f]||0)+1; }));
-  const sortedFeatures = Object.entries(featureCounts).sort((a,b) => b[1]-a[1]).slice(0,20);
-  document.getElementById('featureMentions').innerHTML = sortedFeatures.length ? sortedFeatures.map(([f,c]) => tagEl(`${f} (${c})`, c>=5?'big':c>=2?'med':'')).join('') : '<div class="empty">No feature mentions</div>';
+  // ── Competitors ──
+  const competitors=['iPhone','Apple','iOS','Google Pixel','Huawei','OnePlus','Sony Xperia','Xiaomi','Motorola','Nokia','Nothing Phone'];
+  const compData={};
+  competitors.forEach(c=>{ compData[c]=[]; });
+  allMsgs.forEach(({msg,session})=>competitors.forEach(c=>{
+    if(msg.toLowerCase().includes(c.toLowerCase())) compData[c].push({msg,session});
+  }));
+  const sortedC=Object.entries(compData).filter(([,ms])=>ms.length>0).sort((a,b)=>b[1].length-a[1].length);
+  const maxComp=sortedC.length?sortedC[0][1].length:1;
+  document.getElementById('competitorMentions').innerHTML=sortedC.length
+    ?sortedC.map(([brand,mentions])=>`
+      <div class="comp-item" onclick="this.classList.toggle('open')">
+        <div class="comp-hd">
+          <span class="comp-name">${esc(brand)}</span>
+          <div class="comp-bar-track"><div class="comp-bar-fill" style="width:${Math.min(mentions.length/maxComp*100,100)}%"></div></div>
+          <span class="comp-count">${mentions.length}</span>
+        </div>
+        <div class="comp-quotes">${mentions.map(({msg,session})=>`
+          <div class="comp-q" onclick="event.stopPropagation();this.classList.toggle('open')">
+            "${esc(msg)}"<span class="comp-q-date">${esc(session.Date||'')} · ${esc(session['Session ID']||'')}</span>
+            <div class="comp-q-tx">${renderTx(session.Transcript||'')}</div>
+          </div>`).join('')}
+        </div>
+      </div>`).join('')
+    :'<div class="empty-msg">No competitor mentions detected</div>';
 
-  const competitors = ['iPhone','Apple','iOS','Google Pixel','Pixel','Huawei','OnePlus','Sony Xperia','Sony','Xiaomi','Motorola','Nokia','Nothing Phone'];
-  const compData = {};
-  competitors.forEach(c => { compData[c] = []; });
-  allUserMsgs.forEach(({msg, session}) => competitors.forEach(c => { if (msg.toLowerCase().includes(c.toLowerCase())) compData[c].push({msg, session}); }));
-  const sortedComps = Object.entries(compData).filter(([,msgs]) => msgs.length>0).sort((a,b) => b[1].length-a[1].length);
-  document.getElementById('competitorMentions').innerHTML = sortedComps.length
-    ? sortedComps.map(([brand, mentions]) => {
-        const quotesHtml = mentions.map(({msg, session}) => `<div style="font-size:11px;padding:6px 0;border-bottom:0.5px solid rgba(0,0,0,.06)">"${escHtml(msg)}"<span style="font-size:9px;color:var(--muted);margin-left:6px">${session.Date||''}</span></div>`).join('');
-        return `<div class="quote-item" onclick="this.classList.toggle('open')" style="border-left-color:var(--red)">
-          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:500">${brand}</span><span style="font-size:11px;color:var(--muted)">${mentions.length} mention${mentions.length>1?'s':''}</span></div>
-          <div class="expand-hint">▸ Click to see all mentions</div>
-          <div class="transcript-drawer">${quotesHtml}</div>
-        </div>`;
-      }).join('')
-    : '<div class="empty">No competitor mentions</div>';
+  // ── Internal: drop-off ──
+  const buckets=['0 (bounced)','1–2','3–5','6–10','10+'];
+  const dist={};
+  sessions.forEach(r=>{ const n=getUserMsgs(r.Transcript||'').length; const b=n===0?'0 (bounced)':n<=2?'1–2':n<=5?'3–5':n<=10?'6–10':'10+'; dist[b]=(dist[b]||0)+1; });
+  const maxDrop=Math.max(...Object.values(dist),1);
+  document.getElementById('dropOff').innerHTML=buckets.filter(k=>dist[k]).map(k=>statRow(k+' messages',dist[k]+' sessions',dist[k],maxDrop)).join('');
 
-  // ── Internal ────────────────────────────────────────────────
-  const msgCountDist = {};
-  sessions.forEach(r => {
-    const count = getUserMsgs(r.Transcript||'').length;
-    const bucket = count===0?'0 (bounced)':count<=2?'1–2':count<=5?'3–5':count<=10?'6–10':'10+';
-    msgCountDist[bucket] = (msgCountDist[bucket]||0)+1;
-  });
-  const maxDrop = Math.max(...Object.values(msgCountDist), 1);
-  document.getElementById('dropOff').innerHTML = ['0 (bounced)','1–2','3–5','6–10','10+'].filter(k=>msgCountDist[k]).map(k => statRow(k+' turns', msgCountDist[k]+' sessions', msgCountDist[k], maxDrop)).join('');
-
-  const convTurns = converted.map(r => getUserMsgs(r.Transcript||'').length).filter(n=>n>0);
-  const avgConvTurns = convTurns.length ? (convTurns.reduce((a,b)=>a+b,0)/convTurns.length).toFixed(1) : '—';
-  document.getElementById('turnsToConvert').innerHTML = [
-    statRow('Avg turns before purchase', avgConvTurns),
-    statRow('Fewest turns to convert', convTurns.length ? Math.min(...convTurns) : '—'),
-    statRow('Most turns to convert', convTurns.length ? Math.max(...convTurns) : '—'),
-    statRow('Total converting sessions', converted.length),
+  // ── Conversion stats ──
+  const convTurns=converted.map(r=>getUserMsgs(r.Transcript||'').length).filter(n=>n>0);
+  const avg=convTurns.length?(convTurns.reduce((a,b)=>a+b,0)/convTurns.length).toFixed(1):'—';
+  document.getElementById('convStats').innerHTML=[
+    statRow('Conversion rate',pct+'%'),
+    statRow('Total conversions',converted.length),
+    statRow('Avg messages to convert',avg),
+    statRow('Fewest messages',convTurns.length?Math.min(...convTurns):'—'),
+    statRow('Most messages',convTurns.length?Math.max(...convTurns):'—'),
   ].join('');
 
-  const outOfScopeTerms = ['laptop','computer','tv','television','headphone','repair','fix','broken','return','refund','john lewis','staff','help desk','where is','directions','floor','department','receipt'];
-  const outMsgs = allUserMsgs.filter(({msg}) => outOfScopeTerms.some(t => msg.toLowerCase().includes(t))).map(({msg}) => msg).filter((m,i,a)=>a.indexOf(m)===i).slice(0,8);
-  document.getElementById('outOfScope').innerHTML = outMsgs.length ? outMsgs.map(m => { const s=allUserMsgs.find(u=>u.msg===m); return quoteEl(`"${escHtml(m)}"`, 'amber', '', s?.session.Transcript||'', s?.session.Date||''); }).join('') : '<div class="empty">No out of scope requests found</div>';
+  // ── Out of scope ──
+  const ooTerms=['laptop','computer','tv','television','headphone','repair','fix','broken','return','refund','john lewis','staff','help desk','where is','directions','floor','department','receipt','other phone','other brand'];
+  const ooMsgs=sortedMsgs.filter(([m])=>ooTerms.some(t=>m.toLowerCase().includes(t))).slice(0,8);
+  document.getElementById('outOfScope').innerHTML=ooMsgs.length
+    ?ooMsgs.map(([m,ss])=>multiQuoteEl(m,ss,'ql-amber')).join('')
+    :'<div class="empty-msg">No out of scope requests found</div>';
 
-  const frustFlags = ALL_FLAGS.filter(f => f.cat==='frustration');
-  document.getElementById('frustration').innerHTML = frustFlags.length ? frustFlags.map(f => quoteEl(`"${escHtml(f.message)}"`, 'red', '', f.session.Transcript||'', f.session.Date||'')).join('') : '<div class="empty">No frustration signals detected</div>';
+  // ── Frustration ──
+  const frustFlags=ALL_FLAGS.filter(f=>f.cat==='frustration');
+  // group frustration flags by message, collecting all sessions
+  const frustMap=new Map();
+  frustFlags.forEach(f=>{
+    if(!frustMap.has(f.message)) frustMap.set(f.message,[]);
+    const arr=frustMap.get(f.message);
+    if(!arr.some(s=>s['Session ID']===f.session['Session ID'])) arr.push(f.session);
+  });
+  document.getElementById('frustrationList').innerHTML=frustMap.size
+    ?[...frustMap.entries()].map(([m,ss])=>multiQuoteEl(m,ss,'ql-red')).join('')
+    :'<div class="empty-msg">No frustration signals detected</div>';
 
   buildJourneys(sessions);
 }
 
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════
 // Journey map
-// ═══════════════════════════════════════════════════════════
-let JOURNEY_DATA = [];
-let activeFilter = 'all';
+// ════════════════════════════════════
+let JOURNEYS=[], jFilter='all';
 
-function buildJourneys(sessions) {
-  JOURNEY_DATA = sessions.map(r => {
-    const userMsgs = getUserMsgs(r.Transcript||'');
-    const clean = raw => raw ? raw.replace(/https?:\/\/\S+/g,'').replace(/\s*\([^)]+\)\s*$/,'').trim() : null;
-    const viewedRaw = r['Viewed Products']||'';
-    const viewedProducts = viewedRaw ? [...new Set(viewedRaw.split('|').map(p=>clean(p)).filter(Boolean))] : [];
-    const selectedProduct = clean(r['Selected Product'])||null;
-    const converted = r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes';
-    const outcome = converted ? 'converted' : viewedProducts.length>0 ? 'viewed product' : userMsgs.length>0 ? 'browsed only' : 'bounced';
-    const themes = (r['Themes']||'').split('|').map(t=>t.trim()).filter(t=>t&&t!=='other').slice(0,4);
-    return { id:r['Session ID']||'—', date:r['Date']||'—', turns:userMsgs.length, firstMsg:userMsgs[0]||'—', themes, viewedProducts, selectedProduct, outcome, duration:parseInt(r['Duration (s)'])||0, mode:r['Mode']||'—', transcript:r['Transcript']||'', buyStore:r['Buy In Store']==='Yes', buyOnline:r['Buy Online (QRs)']==='Yes' };
+function buildJourneys(sessions){
+  JOURNEYS=sessions.map(r=>{
+    const uMsgs=getUserMsgs(r.Transcript||'');
+    const clean=s=>s?s.replace(/https?:\/\/\S+/g,'').replace(/\s*\([^)]+\)\s*$/,'').trim():null;
+    const vp=(r['Viewed Products']||'').split('|').map(p=>clean(p)).filter(Boolean);
+    const sp=clean(r['Selected Product'])||null;
+    const conv=r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes';
+    const outcome=conv?'converted':vp.length>0?'viewed product':uMsgs.length>0?'browsed only':'bounced';
+    const themes=(r['Themes']||'').split('|').map(t=>t.trim()).filter(t=>t&&t!=='other').slice(0,4);
+    return {id:r['Session ID']||'—',date:r['Date']||'—',turns:uMsgs.length,firstMsg:uMsgs[0]||'—',themes,vp:[...new Set(vp)],sp,outcome,dur:parseInt(r['Duration (s)'])||0,mode:r['Mode']||'—',tx:r['Transcript']||''};
   });
   renderJourneys('all');
 }
 
-function renderJourneys(filter) {
-  activeFilter = filter;
-  const filtered = filter==='all' ? JOURNEY_DATA : JOURNEY_DATA.filter(j=>j.outcome===filter);
-  const counts = {converted:0,'viewed product':0,'browsed only':0,bounced:0};
-  JOURNEY_DATA.forEach(j=>counts[j.outcome]++);
+function renderJourneys(filter){
+  jFilter=filter;
+  const list=filter==='all'?JOURNEYS:JOURNEYS.filter(j=>j.outcome===filter);
+  const counts={converted:0,'viewed product':0,'browsed only':0,bounced:0};
+  JOURNEYS.forEach(j=>counts[j.outcome]++);
+  const ocCls={converted:'oc-converted','viewed product':'oc-viewed','browsed only':'oc-browsed',bounced:'oc-bounced'};
+  const ocLabel={converted:'✓ Converted','viewed product':'○ Viewed','browsed only':'– Browsed',bounced:'× Bounced'};
 
-  document.getElementById('journeySummary').innerHTML = [
-    ['All sessions',JOURNEY_DATA.length,'','all'],
+  document.getElementById('journeyKpi').innerHTML=[
+    ['All',JOURNEYS.length,'','all'],
     ['Converted',counts.converted,'color:var(--green)','converted'],
     ['Reached product',counts['viewed product'],'color:var(--blue)','viewed product'],
-    ['Browsed only',counts['browsed only'],'color:var(--muted)','browsed only'],
+    ['Browsed only',counts['browsed only'],'','browsed only'],
     ['Bounced',counts.bounced,'color:var(--red)','bounced'],
-  ].map(([label,val,style,f]) => `<div class="summary-card" onclick="renderJourneys('${f}')"><div class="summary-val" style="${style}">${val}</div><div class="summary-label">${label}</div></div>`).join('');
+  ].map(([label,val,style,f])=>`<div class="jkpi" onclick="renderJourneys('${f}')"><div class="jkpi-val" style="${style}">${val}</div><div class="jkpi-label">${label}</div></div>`).join('');
 
-  document.getElementById('journeyFilters').innerHTML = [
-    ['all','All'],['converted','Converted'],['viewed product','Reached product'],['browsed only','Browsed only'],['bounced','Bounced']
-  ].map(([val,label])=>`<button class="filter-pill ${activeFilter===val?'active':''}" onclick="renderJourneys('${val}')">${label}</button>`).join('');
+  document.getElementById('journeyFilters').innerHTML=[
+    ['all','All sessions'],['converted','Converted'],['viewed product','Reached product'],['browsed only','Browsed only'],['bounced','Bounced']
+  ].map(([v,l])=>`<button class="filter-pill ${jFilter===v?'active':''}" onclick="renderJourneys('${v}')">${l}</button>`).join('');
 
-  const outcomeClass = {converted:'outcome-converted','viewed product':'outcome-viewed','browsed only':'outcome-browsed',bounced:'outcome-bounced'};
-
-  document.getElementById('journeyList').innerHTML = filtered.length
-    ? filtered.map(j => {
-        const label = {converted:'✓ Converted','viewed product':'○ Viewed product','browsed only':'– Browsed',bounced:'× Bounced'}[j.outcome];
-        const cls   = outcomeClass[j.outcome];
-        const steps = [
-          `<div class="journey-step" title="${escHtml(j.firstMsg)}">${escHtml(j.firstMsg.slice(0,40))}${j.firstMsg.length>40?'…':''}</div>`,
-          ...j.themes.slice(0,2).map(t=>`<span class="journey-arrow">→</span><div class="journey-step">${escHtml(t)}</div>`),
-          ...j.viewedProducts.slice(0,1).map(p=>`<span class="journey-arrow">→</span><div class="journey-step" style="background:var(--blue-bg);color:var(--blue)">${escHtml(p)}</div>`),
-          ...(j.selectedProduct ? [`<span class="journey-arrow">→</span><div class="journey-step" style="background:var(--green-bg);color:var(--green)">✓ ${escHtml(j.selectedProduct)}</div>`] : []),
+  document.getElementById('journeyList').innerHTML=list.length
+    ?list.map(j=>{
+        const dur=j.dur>0?(j.dur<60?`${j.dur}s`:`${Math.floor(j.dur/60)}m ${j.dur%60}s`):'—';
+        const steps=[
+          `<div class="j-step" title="${esc(j.firstMsg)}">${esc(j.firstMsg.slice(0,38))}${j.firstMsg.length>38?'…':''}</div>`,
+          ...j.themes.slice(0,2).map(t=>`<span class="j-arr">→</span><div class="j-step">${esc(t)}</div>`),
+          ...j.vp.slice(0,1).map(p=>`<span class="j-arr">→</span><div class="j-step" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)">${esc(p)}</div>`),
+          ...(j.sp?[`<span class="j-arr">→</span><div class="j-step" style="background:var(--green-bg);color:var(--green);border-color:var(--green-border)">✓ ${esc(j.sp)}</div>`]:[]),
         ].join('');
-        const dur = j.duration>0 ? (j.duration<60 ? `${j.duration}s` : `${Math.floor(j.duration/60)}m ${j.duration%60}s`) : '—';
-        return `<div class="journey-card" onclick="this.classList.toggle('open')">
-          <div class="journey-header">
-            <span class="journey-outcome ${cls}">${label}</span>
-            <div class="journey-flow">${steps}</div>
-            <div class="journey-meta">${j.date}<br>${j.turns} turns · ${dur}</div>
+        return `<div class="j-card" onclick="this.classList.toggle('open')">
+          <div class="j-head">
+            <span class="j-outcome ${ocCls[j.outcome]}">${ocLabel[j.outcome]}</span>
+            <div class="j-flow">${steps}</div>
+            <div class="j-meta">${esc(j.date)}<br>${j.turns} msgs · ${dur}</div>
           </div>
-          <div class="journey-transcript">${renderTranscript(j.transcript)}</div>
+          <div class="j-transcript">${renderTx(j.tx)}</div>
         </div>`;
       }).join('')
-    : '<div class="empty">No sessions match this filter</div>';
+    :'<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--muted2)">No sessions match this filter</div>';
 }
 
-function exportJourneyCSV() {
-  const headers = ['Session ID','Date','Mode','Outcome','First Message','Themes','Viewed Products','Selected Product','Turns','Duration (s)','Buy In Store','Buy Online'];
-  const rows = JOURNEY_DATA.map(j => [
-    j.id, j.date, j.mode, j.outcome,
-    `"${(j.firstMsg||'').replace(/"/g,'""')}"`,
-    `"${j.themes.join(' | ')}"`,
-    `"${j.viewedProducts.join(' | ')}"`,
-    j.selectedProduct||'',
-    j.turns, j.duration,
-    j.buyStore?'Yes':'No', j.buyOnline?'Yes':'No',
-  ]);
-  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
-  const blob = new Blob([csv],{type:'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'blarney-session-journeys.csv';
-  a.click();
+function exportJourneyCSV(){
+  const headers=['Session ID','Date','Mode','Outcome','First Message','Themes','Viewed Products','Selected Product','Turns','Duration (s)'];
+  const rows=JOURNEYS.map(j=>[j.id,j.date,j.mode,j.outcome,`"${(j.firstMsg||'').replace(/"/g,'""')}"`,`"${j.themes.join(' | ')}"`,`"${j.vp.join(' | ')}"`,j.sp||'',j.turns,j.dur]);
+  const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='blarney-journeys.csv'; a.click();
 }
+
+// ════════════════════════════════════
+// Boot — show saved data immediately
+// ════════════════════════════════════
+window.addEventListener('DOMContentLoaded',function(){
+  if(SAVED.length>0) showDashboard(SAVED);
+  // else: empty state shown by default (CSS display:flex)
+});
 </script>
 </body>
 </html>
