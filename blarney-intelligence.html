@@ -849,15 +849,15 @@ async function runAIFlagging(){
   for(let i=0;i<sessions.length;i+=BATCH) batches.push(sessions.slice(i,i+BATCH));
 
   btn.style.display='none';
-  let totalFound=0, errors=0;
+  let done=0, totalFound=0, errors=0;
+  status.textContent=`✦ AI scanning 0 of ${batches.length} batches…`;
 
-  for(let i=0;i<batches.length;i++){
-    status.textContent=`✦ AI scanning batch ${i+1} of ${batches.length} (${Math.round((i/batches.length)*100)}%)…`;
+  await Promise.all(batches.map(async (batch, i) => {
     try {
       const res = await fetch(`${RAILWAY_URL}/ai-flag`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({transcripts: batches[i]})
+        body: JSON.stringify({transcripts: batch})
       });
       if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
       let aiFlags;
@@ -868,13 +868,15 @@ async function runAIFlagging(){
       console.error(`Batch ${i+1} failed:`, err);
       errors++;
     }
-  }
+    done++;
+    status.textContent=`✦ AI scanning ${done} of ${batches.length} batches…`;
+  }));
 
   if(errors===batches.length){
     status.textContent='AI analysis failed — check console';
     btn.style.display='flex'; btn.disabled=false; btn.style.opacity='1';
   } else {
-    status.textContent=`✦ AI complete · ${totalFound} flag${totalFound!==1?'s':''} found${errors?` (${errors} batch${errors>1?'es':''} failed)`:''}`;
+    status.textContent=`✦ AI complete · ${totalFound} flag${totalFound!==1?'s':''} found${errors?` (${errors} failed)`:''}`;
   }
 }
 
