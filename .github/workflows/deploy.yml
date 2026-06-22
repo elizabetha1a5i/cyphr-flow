@@ -1,28 +1,9 @@
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
+# This workflow is disabled — Gemini key is now proxied through Railway backend.
+# GitHub Pages serves directly from the main branch.
+# No secret injection needed.
+on: workflow_dispatch
 jobs:
-  deploy:
+  noop:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Inject secrets
-        run: |
-          sed -i "s|__GEMINI_KEY__|${{ secrets.GEMINI_KEY }}|g" blarney-intelligence.html
-
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          publish_branch: gh-pages
-          exclude_assets: '.github'
+      - run: echo "Nothing to do"
