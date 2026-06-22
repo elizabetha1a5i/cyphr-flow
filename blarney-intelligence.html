@@ -468,6 +468,9 @@ const FLAG_RULES = [
       /\b(retard|retarded|spastic)\b/i,
       /\b(faggot|fag|dyke)\b/i,
       /\b(nigger|nigga|chink|spic|wetback|kike|gook)\b/i,
+      /\byou'?r?e so gay\b/i,
+      /\bthat('?s| is) so gay\b/i,
+      /\bso gay\b/i,
       /kill (yourself|urself|your?self)/i,
       /kys\b/i,
       /go (to |the )?(hell|fuck yourself|die)/i,
@@ -540,17 +543,20 @@ const FLAG_RULES = [
 // Score a message against all rules. Returns array of flag objects.
 function detectFlags(msg, session) {
   const found = [];
-  const lower = msg.toLowerCase();
+  // Normalise curly/smart quotes and apostrophes so regex apostrophe patterns match
+  const normalised = msg
+    .replace(/[‘’‚‛′‵]/g, "'")
+    .replace(/[“”„‟″‶]/g, '"');
   for (const rule of FLAG_RULES) {
     for (const pattern of rule.patterns) {
-      if (pattern.test(msg)) {
+      if (pattern.test(normalised)) {
         found.push({
           cat: rule.cat,
           sev: rule.sev,
           label: rule.label,
           message: msg,
           session,
-          match: (msg.match(pattern) || [''])[0],
+          match: (normalised.match(pattern) || [''])[0],
         });
         break; // one hit per rule is enough
       }
