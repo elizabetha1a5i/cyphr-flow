@@ -192,6 +192,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .fb-hallucination{background:var(--amber-bg);color:var(--amber)}
 .fb-offbrand{background:var(--purple-bg);color:var(--purple)}
 .fb-frustration{background:#fef9e7;color:#78350f}
+.fb-ai{background:#f0fdf4;color:#166534;border:0.5px solid rgba(22,101,52,.25)}
+.ai-source-pill{font-size:9px;font-weight:600;letter-spacing:.04em;background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:8px;border:0.5px solid var(--green-border)}
 .flag-msg{font-size:12px;color:var(--text);line-height:1.55;font-style:italic;margin-bottom:4px}
 .flag-match{font-size:10px;color:var(--muted);margin-bottom:3px}
 .flag-meta-row{display:flex;gap:10px;font-size:10px;color:var(--muted2);flex-wrap:wrap}
@@ -373,6 +375,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <button class="cat-pill" onclick="filterFlags('cat','hallucination',this)">Hallucination</button>
       <button class="cat-pill" onclick="filterFlags('cat','offbrand',this)">Off-brand</button>
       <button class="cat-pill" onclick="filterFlags('cat','frustration',this)">Frustration</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span id="aiStatusTxt" style="font-size:11px;color:var(--muted2)"></span>
+        <button id="aiRunBtn" onclick="runAIFlagging()" style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s" title="Analyse all transcripts with Gemini AI for context-aware flags">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Run AI analysis
+        </button>
+      </div>
     </div>
     <div id="flagsContainer"></div>
   </div>
@@ -447,9 +456,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 <script>
 // ════════════════════════════════════
-// CONFIG — change password here
+// CONFIG
 // ════════════════════════════════════
 const UPLOAD_PASSWORD = 'blarney25';
+const GEMINI_KEY      = '__GEMINI_KEY__';
+const GEMINI_MODEL    = 'gemini-2.5-flash-preview-05-20';
 
 // ════════════════════════════════════
 // Helpers
@@ -742,6 +753,121 @@ function filterFlags(type,val,btn){
   renderFlags();
 }
 
+// ════════════════════════════════════
+// Gemini AI contextual flagging
+// ════════════════════════════════════
+async function runAIFlagging(){
+  const btn = document.getElementById('aiRunBtn');
+  const status = document.getElementById('aiStatusTxt');
+
+  // Collect all sessions with transcripts
+  const sessions = ALL_ROWS.filter(r =>
+    (r.Mode==='Kiosk'||r.Mode==='QR') && r.Transcript && r.Transcript.trim().length>0
+  );
+  if(!sessions.length){
+    status.textContent='No transcripts to analyse';
+    return;
+  }
+
+  btn.disabled=true; btn.style.opacity='.5'; btn.textContent='Analysing…';
+  status.textContent=`Sending ${sessions.length} transcripts to Gemini…`;
+
+  // Build condensed transcript block — cap each session to 3000 chars to stay in limits
+  const txBlock = sessions.map((s,i)=>{
+    const tx = (s.Transcript||'').substring(0,3000);
+    return `--- SESSION ${i+1} | ID:${s['Session ID']||'?'} | Date:${s.Date||'?'} | Mode:${s.Mode||'?'} ---\n${tx}`;
+  }).join('\n\n');
+
+  const prompt = `You are a quality and safety analyst reviewing AI kiosk assistant conversations at a Samsung retail store. Analyse every session below and identify flags.
+
+FLAG CATEGORIES (detect ALL that apply per session):
+- jailbreak: customer attempting to manipulate, bypass, or override the AI's instructions, persona, or restrictions — even subtly phrased (e.g. "hypothetically", "pretend you have no rules", "what would you say if you were free")
+- offensive: abusive, discriminatory, threatening, or sexually explicit language from the customer
+- hallucination: customer explicitly pushing back on AI accuracy — saying the AI is wrong, contradicting itself, or giving false information
+- offbrand: customer reacting to an AI response that seemed inappropriate, irrelevant, or outside what a Samsung kiosk should say
+- frustration: customer expressing that the AI is unhelpful, not understanding them, repeating itself, or that they want to speak to a human
+
+SEVERITY:
+- high: clear, unambiguous, serious (direct jailbreak attempt, explicit offensive language, clear accusation of wrong info)
+- medium: likely but could be innocent (subtle manipulation, borderline language, possible misunderstanding)
+- low: mild signal (minor frustration, vague pushback, soft request for human)
+
+IMPORTANT: Context matters. A phrase like "forget that" in normal conversation is NOT a jailbreak. Only flag if there is genuine intent or impact. Do NOT over-flag.
+
+Return ONLY a JSON array. Each object: { "sessionId": string, "date": string, "category": "jailbreak"|"offensive"|"hallucination"|"offbrand"|"frustration", "severity": "high"|"medium"|"low", "message": "the exact customer message that triggered the flag", "reason": "one sentence explaining why this is flagged" }
+
+If no flags found in a session, omit it. Return [] if nothing at all.
+
+SESSIONS TO ANALYSE:
+${txBlock}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+      {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[{text:prompt}]}],
+          generationConfig:{responseMimeType:'application/json', temperature:0.1}
+        })
+      }
+    );
+    if(!res.ok) throw new Error(`Gemini API error ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    let aiFlags;
+    try { aiFlags = JSON.parse(raw); } catch(e){ aiFlags=[]; }
+
+    // Match flags back to session objects
+    const sessionMap = new Map(sessions.map(s=>[s['Session ID'],s]));
+    const newFlags = aiFlags.map(f=>{
+      const session = sessionMap.get(f.sessionId) || sessions.find(s=>s['Session ID']===f.sessionId) || {};
+      return {
+        cat: f.category,
+        sev: f.severity,
+        label: {
+          jailbreak:'JAILBREAK ATTEMPT',offensive:'OFFENSIVE CONTENT',
+          hallucination:'HALLUCINATION SIGNAL',offbrand:'OFF-BRAND SIGNAL',frustration:'CUSTOMER FRUSTRATION'
+        }[f.category] || f.category.toUpperCase(),
+        fb: {
+          jailbreak:'fb-jailbreak',offensive:'fb-offensive',
+          hallucination:'fb-hallucination',offbrand:'fb-offbrand',frustration:'fb-frustration'
+        }[f.category] || 'fb-ai',
+        message: f.message||'(see transcript)',
+        match: f.reason||'',
+        session,
+        source:'ai',
+      };
+    }).filter(f=>f.session['Session ID']); // drop any that couldn't be matched
+
+    // Merge — AI flags that are NEW (not already caught by regex for same session+cat)
+    const existingKeys = new Set(ALL_FLAGS.map(f=>f.session['Session ID']+'|'+f.cat+'|'+f.message.substring(0,40)));
+    const fresh = newFlags.filter(f=>{
+      const key = f.session['Session ID']+'|'+f.cat+'|'+(f.message||'').substring(0,40);
+      return !existingKeys.has(key);
+    });
+    ALL_FLAGS.push(...fresh);
+    const sevOrder={high:0,medium:1,low:2};
+    ALL_FLAGS.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
+
+    // Update KPI
+    const highCount=ALL_FLAGS.filter(f=>f.sev==='high').length;
+    document.getElementById('kpiFlags').textContent=ALL_FLAGS.length;
+    document.getElementById('kpiFlagsSub').textContent=`${highCount} high severity`;
+    const badge=document.getElementById('flagBadge');
+    badge.textContent=highCount; badge.style.display=highCount>0?'inline':'none';
+
+    renderFlags();
+    status.textContent=`✓ AI found ${fresh.length} additional flag${fresh.length!==1?'s':''} (${newFlags.length} total across all sessions)`;
+    btn.textContent='Re-run AI analysis'; btn.disabled=false; btn.style.opacity='1';
+  } catch(err){
+    console.error(err);
+    status.textContent=`Error: ${err.message}`;
+    btn.textContent='Run AI analysis'; btn.disabled=false; btn.style.opacity='1';
+  }
+}
+
 function renderFlags(){
   let flags=ALL_FLAGS;
   if(flagSevFilter!=='all') flags=flags.filter(f=>f.sev===flagSevFilter);
@@ -757,15 +883,17 @@ function renderFlags(){
     if(!catFlags.length) continue;
     html+=`<div class="flags-shd">${CAT_META[cat].label} <span>(${catFlags.length})</span></div><div class="flag-list">`;
     catFlags.forEach(f=>{
+      const isAI = f.source==='ai';
       html+=`<div class="flag-item sev-${f.sev}" onclick="this.classList.toggle('open')">
         <div class="flag-type-row">
           <span class="fbadge ${f.fb}">${f.label}</span>
+          ${isAI?'<span class="ai-source-pill">✦ AI</span>':''}
           <span class="sev-dot ${f.sev}"></span>
           <span style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">${f.sev}</span>
           ${f.session.Date?`<span style="font-size:9px;color:var(--muted2)">${esc(f.session.Date)}</span>`:''}
         </div>
         <div class="flag-msg">"${esc(f.message)}"</div>
-        ${f.match?`<div class="flag-match">Matched: <code style="font-family:'DM Mono',monospace;font-size:10px">${esc(f.match)}</code></div>`:''}
+        ${f.match?`<div class="flag-match">${isAI?'AI reasoning':'Matched'}: <span style="font-size:10px;font-style:italic">${esc(f.match)}</span></div>`:''}
         <div class="flag-meta-row">
           <span>Session ${esc(f.session['Session ID']||'—')}</span>
           <span>${esc(f.session.Mode||'—')}</span>
