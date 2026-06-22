@@ -132,6 +132,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .session-block-hd strong{color:var(--text);font-size:11px}
 .session-tx{display:none;padding:8px 13px 12px;background:var(--surface)}
 .session-block.open .session-tx{display:block}
+.session-nav{display:flex;align-items:center;gap:8px;padding:6px 13px;border-top:0.5px solid rgba(0,0,0,.06);background:rgba(0,0,0,.01)}
+.session-nav-counter{font-size:10px;color:var(--muted);flex:1;text-align:center}
+.sq-prev,.sq-next{width:22px;height:22px;border:0.5px solid var(--border2);border-radius:4px;background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
+.sq-prev:disabled,.sq-next:disabled{opacity:.3;cursor:default}
+.sq-prev:not(:disabled):hover,.sq-next:not(:disabled):hover{background:var(--surface2)}
 .tl{font-size:11px;line-height:1.65;padding:2px 0}
 .tl.user{color:var(--blue);font-weight:500}
 .tl.ai{color:var(--text)}
@@ -143,23 +148,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .tag.t-big{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-border);font-weight:500}
 .tag.t-med{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)}
 
-/* ── Competitor list ── */
-.comp-list{display:flex;flex-direction:column;gap:7px}
-.comp-item{border:0.5px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;cursor:pointer}
-.comp-hd{padding:9px 13px;display:flex;align-items:center;gap:10px;background:var(--surface)}
-.comp-hd:hover{background:var(--surface2)}
-.comp-name{font-size:12px;font-weight:500;min-width:80px}
-.comp-bar-track{flex:1;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
-.comp-bar-fill{height:100%;background:var(--red);border-radius:2px}
-.comp-count{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;min-width:30px;text-align:right}
-.comp-quotes{display:none;border-top:0.5px solid var(--border);background:var(--surface2);max-height:220px;overflow-y:auto}
-.comp-item.open .comp-quotes{display:block}
-.comp-q{font-size:11px;padding:7px 13px;border-bottom:0.5px solid rgba(0,0,0,.06);line-height:1.5;color:var(--text);cursor:pointer}
-.comp-q:last-child{border-bottom:none}
-.comp-q:hover{background:rgba(0,0,0,.03)}
-.comp-q-date{font-size:9px;color:var(--muted2);margin-left:8px}
-.comp-q-tx{display:none;padding:6px 13px 10px;background:var(--surface);border-top:0.5px solid var(--border)}
-.comp-q.open .comp-q-tx{display:block}
+/* ── Competitor tag cloud ── */
+.comp-tag-cloud{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
+.comp-tag-wrap{position:relative}
+.comp-tag{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--surface2);border:0.5px solid var(--border2);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--text)}
+.comp-tag:hover{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.comp-tag.t-med{font-size:13px;padding:7px 14px}
+.comp-tag.t-big{font-size:15px;padding:8px 16px;font-weight:600}
+.comp-tag-count{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400}
+.comp-tag-quotes{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:50;min-width:340px;max-width:420px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:300px;overflow-y:auto}
+.comp-tag-wrap.open .comp-tag-quotes{display:block}
+.comp-tag-wrap.open .comp-tag{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
 
 /* ── Stats ── */
 .stat-list{display:flex;flex-direction:column}
@@ -350,6 +349,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
 
+  <!-- UT Pilot summary bar -->
+  <div id="pilotBar" style="display:none;background:var(--text);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:4px">UT PILOT · SAMSUNG KIOSK</div>
+      <div id="pilotHeadline" style="font-size:13px;color:#fff;font-weight:500;line-height:1.5"></div>
+    </div>
+    <button onclick="copyPilotSummary()" style="flex-shrink:0;padding:6px 14px;background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.2);border-radius:var(--radius-xs);color:rgba(255,255,255,.8);font-size:11px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.18)'" onmouseout="this.style.background='rgba(255,255,255,.1)'">
+      Share summary
+    </button>
+  </div>
+
   <div class="tabs">
     <button class="tab t-flags active" id="tab-flags" onclick="switchTab('flags')">
       🚩 Flags &amp; alerts <span class="badge" id="flagBadge">0</span>
@@ -419,10 +429,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="panel" id="panel-journey">
     <div class="journey-controls">
       <div class="journey-filters" id="journeyFilters"></div>
-      <button class="export-btn" onclick="exportJourneyCSV()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export CSV
-      </button>
+      <div style="position:relative">
+        <button class="export-btn" onclick="toggleExportMenu(event)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV ▾
+        </button>
+        <div id="exportMenu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 8px 20px rgba(0,0,0,.12);z-index:60;min-width:180px;overflow:hidden">
+          <div onclick="exportCSV('journeys')" style="padding:8px 14px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">📋 Journeys</div>
+          <div onclick="exportCSV('flags')" style="padding:8px 14px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">🚩 Flags &amp; alerts</div>
+          <div onclick="exportCSV('voc')" style="padding:8px 14px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">💬 Voice of Customer</div>
+          <div onclick="exportCSV('competitors')" style="padding:8px 14px;font-size:12px;cursor:pointer;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">🔍 Competitor mentions</div>
+        </div>
+      </div>
     </div>
     <div class="journey-kpi" id="journeyKpi"></div>
     <div class="journey-list" id="journeyList"></div>
@@ -446,7 +464,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="quote-list" id="outOfScope"></div>
       </div>
       <div class="card">
-        <div class="card-hd"><div class="hd-dot" style="background:#d97706"></div>Customer frustration signals</div>
+        <div class="card-hd"><div class="hd-dot" style="background:#d97706"></div>Customer frustration signals <span style="font-size:9px;font-weight:400;color:var(--muted2);margin-left:6px">✦ AI-detected</span></div>
         <div class="quote-list" id="frustrationList"></div>
       </div>
     </div>
@@ -487,34 +505,57 @@ function renderTx(t){
   }).join('');
 }
 
-// Build a quote item that shows ALL sessions that contain this message.
-// Each session is a collapsible block with its full transcript.
+let _mqId=0;
+function renderSessionBlock(sessions, idx){
+  const s=sessions[idx];
+  const count=sessions.length;
+  return `<div class="session-block open">
+    <div class="session-block-hd" onclick="this.parentElement.classList.toggle('open')">
+      <strong>Session ${esc(s['Session ID']||String(idx+1))}</strong>
+      <span>${esc(fmtDate(s.Date||''))}</span>
+      <span>${esc(s.Mode||'')}</span>
+      <span style="margin-left:auto;font-size:9px;opacity:.6">▾ transcript</span>
+    </div>
+    <div class="session-tx">${renderTx(s.Transcript||'')}</div>
+  </div>`;
+}
+function stepSession(btn, dir){
+  event.stopPropagation();
+  const qi=btn.closest('.quote-item');
+  const idx=parseInt(qi.dataset.idx||'0');
+  const count=parseInt(qi.dataset.count||'1');
+  const newIdx=Math.max(0,Math.min(count-1,idx+dir));
+  qi.dataset.idx=newIdx;
+  const sessions=JSON.parse(qi.dataset.sessions);
+  qi.querySelector('.session-nav-counter').textContent=`${newIdx+1} of ${count}`;
+  qi.querySelector('.quote-sessions').innerHTML=renderSessionBlock(sessions,newIdx);
+  qi.querySelector('.sq-prev').disabled=(newIdx===0);
+  qi.querySelector('.sq-next').disabled=(newIdx===count-1);
+}
 function multiQuoteEl(msg, sessions, cls=''){
   const count = sessions.length;
+  const id = ++_mqId;
   const countBit = count > 1
     ? `<span class="quote-count">×${count} sessions</span>`
-    : (sessions[0]?.Date ? `<span style="font-size:9px;color:var(--muted2)">${esc(sessions[0].Date)}</span>` : '');
+    : (sessions[0]?.Date ? `<span style="font-size:9px;color:var(--muted2)">${esc(fmtDate(sessions[0].Date))}</span>` : '');
 
-  const sessionBlocks = sessions.map((s,i)=>`
-    <div class="session-block">
-      <div class="session-block-hd" onclick="this.parentElement.classList.toggle('open')">
-        <strong>Session ${esc(s['Session ID']||String(i+1))}</strong>
-        <span>${esc(s.Date||'')}</span>
-        <span>${esc(s.Mode||'')}</span>
-        <span style="margin-left:auto;font-size:9px;opacity:.6">▸ transcript</span>
-      </div>
-      <div class="session-tx">${renderTx(s.Transcript||'')}</div>
-    </div>`).join('');
+  const nav = count > 1 ? `
+    <div class="session-nav" onclick="event.stopPropagation()">
+      <button class="sq-prev" onclick="stepSession(this,-1)" disabled>‹</button>
+      <span class="session-nav-counter">1 of ${count}</span>
+      <button class="sq-next" onclick="stepSession(this,1)" ${count<=1?'disabled':''}>›</button>
+    </div>` : '';
 
-  return `<div class="quote-item ${cls}" onclick="event.currentTarget.classList.toggle('open')">
+  return `<div class="quote-item ${cls}" data-idx="0" data-count="${count}" data-sessions="${esc(JSON.stringify(sessions))}" onclick="event.currentTarget.classList.toggle('open')">
     <div class="quote-head">
       "${esc(msg)}"
       <div class="quote-head-meta">
         ${countBit}
-        <span class="quote-expand">▸ Click to view ${count === 1 ? 'transcript' : `all ${count} transcripts`}</span>
+        <span class="quote-expand">▸ Click to view ${count === 1 ? 'transcript' : `${count} transcripts`}</span>
       </div>
     </div>
-    <div class="quote-sessions">${sessionBlocks}</div>
+    <div class="quote-sessions">${renderSessionBlock(sessions,0)}</div>
+    ${nav}
   </div>`;
 }
 
@@ -528,9 +569,23 @@ function statRow(label,val,count=null,max=1){
   </div>`;
 }
 
+// Parse DD/MM/YYYY or YYYY-MM-DD into a Date for correct chronological comparison
+function parseDate(str){
+  if(!str) return null;
+  const dmy=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(str);
+  if(dmy) return new Date(+dmy[3],+dmy[2]-1,+dmy[1]);
+  const iso=/^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+  if(iso) return new Date(+iso[1],+iso[2]-1,+iso[3]);
+  return new Date(str);
+}
+function fmtDate(str){
+  const d=parseDate(str);
+  if(!d||isNaN(d)) return str||'—';
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
 function getDateRange(rows){
-  const d=rows.map(r=>r.Date).filter(Boolean).sort();
-  return d.length?`${d[0]} – ${d[d.length-1]}`:'—';
+  const sorted=rows.map(r=>r.Date).filter(Boolean).sort((a,b)=>(parseDate(a)||0)-(parseDate(b)||0));
+  return sorted.length?`${fmtDate(sorted[0])} – ${fmtDate(sorted[sorted.length-1])}`:'—';
 }
 
 // ════════════════════════════════════
@@ -704,20 +759,7 @@ const FLAG_RULES=[
     /\b(creepy|uncomfortable|invasive)\b/i,
     /you('re| are) (asking|being) (too |very )?(personal|intrusive|nosy)/i,
   ]},
-  {cat:'frustration',sev:'low',label:'CUSTOMER FRUSTRATION',fb:'fb-frustration',patterns:[
-    /you('re| are) (not|n't) (helpful|helping|useful|answering|understanding)/i,
-    /you('re| are) (useless|terrible|awful|broken|stupid|not working)/i,
-    /i('ve| have) (already|just) (said|told|asked|mentioned) (this|that)/i,
-    /i said (that |this )?already/i,
-    /you('re| are) not (listening|understanding|getting it)/i,
-    /can('t| not) you (understand|read|listen|get it)/i,
-    /never mind|forget it|forget about it/i,
-    /i('ll| will) (just |go |ask )?(a )?(human|person|staff member|someone else)/i,
-    /speak to (a )?(human|person|real person|staff|someone|manager)/i,
-    /this (bot|ai|assistant|kiosk|thing|system) (is|isn't) (working|helpful|useful|doing)/i,
-    /still (not|doesn't|won't|can't)/i,
-    /you keep (saying|repeating|telling me)/i,
-  ]},
+  // Frustration signals are handled entirely by AI contextual analysis (see runAIFlagging)
 ];
 
 function detectFlags(msg,session){
@@ -881,10 +923,12 @@ function showDashboard(rows){
   document.getElementById('hdrStat').style.display='block';
   ALL_ROWS=rows;
   const sessions=rows.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR');
-  const dates=sessions.map(r=>r.Date).filter(Boolean).sort();
+  const dates=sessions.map(r=>r.Date).filter(Boolean).sort((a,b)=>(parseDate(a)||0)-(parseDate(b)||0));
   if(dates.length){
-    document.getElementById('filterFrom').value=dates[0];
-    document.getElementById('filterTo').value=dates[dates.length-1];
+    // <input type="date"> requires YYYY-MM-DD
+    const toISO=str=>{ const d=parseDate(str); return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''; };
+    document.getElementById('filterFrom').value=toISO(dates[0]);
+    document.getElementById('filterTo').value=toISO(dates[dates.length-1]);
   }
   document.getElementById('dateFilterBar').style.display='flex';
   runAnalysis(rows);
@@ -894,10 +938,12 @@ function showDashboard(rows){
 function applyFilter(){
   const from=document.getElementById('filterFrom').value;
   const to=document.getElementById('filterTo').value;
+  const fromT=from?new Date(from).getTime():null;
+  const toT=to?new Date(to).getTime():null;
   runAnalysis(ALL_ROWS.filter(r=>{
-    if(!r.Date) return true;
-    if(from&&r.Date<from) return false;
-    if(to&&r.Date>to) return false;
+    const t=(parseDate(r.Date)||{getTime:()=>null}).getTime();
+    if(fromT&&t&&t<fromT) return false;
+    if(toT&&t&&t>toT) return false;
     return true;
   }));
 }
@@ -914,15 +960,30 @@ function runAnalysis(rows){
   const converted=sessions.filter(r=>r['Buy In Store']==='Yes'||r['Buy Online (QRs)']==='Yes');
   const pct=sessions.length?Math.round(converted.length/sessions.length*100):0;
 
-  // KPIs
-  document.getElementById('kpiSessions').textContent=sessions.length;
+  // KPIs — animated count-up
+  function countUp(id, target){
+    const el=document.getElementById(id);
+    if(!el||isNaN(target)) return;
+    let start=0; const dur=600; const step=16;
+    const inc=Math.max(1,Math.ceil(target/(dur/step)));
+    const t=setInterval(()=>{ start=Math.min(start+inc,target); el.textContent=start; if(start>=target) clearInterval(t); },step);
+  }
+  countUp('kpiSessions',sessions.length);
+  countUp('kpiTx',withTx.length);
+  countUp('kpiMsgs',allMsgs.length);
+  countUp('kpiConv',converted.length);
   document.getElementById('kpiRange').textContent=getDateRange(sessions);
-  document.getElementById('kpiTx').textContent=withTx.length;
-  document.getElementById('kpiMsgs').textContent=allMsgs.length;
-  document.getElementById('kpiConv').textContent=converted.length;
   document.getElementById('kpiConvPct').textContent=`${pct}% conversion rate`;
   document.getElementById('hdrVal').textContent=sessions.length;
   document.getElementById('dataBadgeTxt').textContent=`${sessions.length} sessions · ${getDateRange(sessions)}`;
+
+  // UT Pilot bar
+  const pilotBar=document.getElementById('pilotBar');
+  const pilotHl=document.getElementById('pilotHeadline');
+  if(sessions.length>0){
+    pilotBar.style.display='flex';
+    pilotHl.textContent=`${sessions.length} sessions · ${withTx.length} customers engaged with AI (${Math.round(withTx.length/sessions.length*100)}%) · ${converted.length} converted (${pct}%) · AI safety analysis running`;
+  }
 
   // ── Flagging ──
   ALL_FLAGS=[];
@@ -994,21 +1055,21 @@ function runAnalysis(rows){
   }));
   const sortedC=Object.entries(compData).filter(([,ms])=>ms.length>0).sort((a,b)=>b[1].length-a[1].length);
   const maxComp=sortedC.length?sortedC[0][1].length:1;
+  // Deduplicate mentions by session so the count reflects unique sessions
+  const compTagHtml=sortedC.map(([brand,mentions])=>{
+    const uniqueSessions=[...new Map(mentions.map(m=>[m.session['Session ID'],m])).values()];
+    const c=uniqueSessions.length;
+    const sz=c>=8?'t-big':c>=3?'t-med':'';
+    const quotesHtml=uniqueSessions.map(({msg,session})=>multiQuoteEl(msg,[session],'ql-amber')).join('');
+    return `<div class="comp-tag-wrap">
+      <div class="comp-tag ${sz}" onclick="this.parentElement.classList.toggle('open')">
+        ${esc(brand)}<span class="comp-tag-count">×${c}</span>
+      </div>
+      <div class="comp-tag-quotes">${quotesHtml}</div>
+    </div>`;
+  }).join('');
   document.getElementById('competitorMentions').innerHTML=sortedC.length
-    ?sortedC.map(([brand,mentions])=>`
-      <div class="comp-item" onclick="this.classList.toggle('open')">
-        <div class="comp-hd">
-          <span class="comp-name">${esc(brand)}</span>
-          <div class="comp-bar-track"><div class="comp-bar-fill" style="width:${Math.min(mentions.length/maxComp*100,100)}%"></div></div>
-          <span class="comp-count">${mentions.length}</span>
-        </div>
-        <div class="comp-quotes">${mentions.map(({msg,session})=>`
-          <div class="comp-q" onclick="event.stopPropagation();this.classList.toggle('open')">
-            "${esc(msg)}"<span class="comp-q-date">${esc(session.Date||'')} · ${esc(session['Session ID']||'')}</span>
-            <div class="comp-q-tx">${renderTx(session.Transcript||'')}</div>
-          </div>`).join('')}
-        </div>
-      </div>`).join('')
+    ?`<div class="comp-tag-cloud">${compTagHtml}</div>`
     :'<div class="empty-msg">No competitor mentions detected</div>';
 
   // ── Internal: drop-off ──
@@ -1047,7 +1108,7 @@ function runAnalysis(rows){
   });
   document.getElementById('frustrationList').innerHTML=frustMap.size
     ?[...frustMap.entries()].map(([m,ss])=>multiQuoteEl(m,ss,'ql-red')).join('')
-    :'<div class="empty-msg">No frustration signals detected</div>';
+    :'<div class="empty-msg" style="color:var(--muted2);font-style:italic">Frustration signals detected by AI — results will appear after analysis completes</div>';
 
   buildJourneys(sessions);
 }
@@ -1104,7 +1165,7 @@ function renderJourneys(filter){
           <div class="j-head">
             <span class="j-outcome ${ocCls[j.outcome]}">${ocLabel[j.outcome]}</span>
             <div class="j-flow">${steps}</div>
-            <div class="j-meta">${esc(j.date)}<br>${j.turns} msgs · ${dur}</div>
+            <div class="j-meta">${esc(fmtDate(j.date))}<br>${j.turns} msgs · ${dur}</div>
           </div>
           <div class="j-transcript">${renderTx(j.tx)}</div>
         </div>`;
@@ -1112,13 +1173,59 @@ function renderJourneys(filter){
     :'<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--muted2)">No sessions match this filter</div>';
 }
 
-function exportJourneyCSV(){
-  const headers=['Session ID','Date','Mode','Outcome','First Message','Themes','Viewed Products','Selected Product','Turns','Duration (s)'];
-  const rows=JOURNEYS.map(j=>[j.id,j.date,j.mode,j.outcome,`"${(j.firstMsg||'').replace(/"/g,'""')}"`,`"${j.themes.join(' | ')}"`,`"${j.vp.join(' | ')}"`,j.sp||'',j.turns,j.dur]);
+function exportCSV(type){
+  document.getElementById('exportMenu').style.display='none';
+  let headers, rows, filename;
+  const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
+  if(type==='journeys'){
+    headers=['Session ID','Date','Mode','Outcome','First Message','Themes','Viewed Products','Selected Product','Turns','Duration (s)'];
+    rows=JOURNEYS.map(j=>[j.id,fmtDate(j.date),j.mode,j.outcome,q(j.firstMsg),q(j.themes.join(' | ')),q(j.vp.join(' | ')),j.sp||'',j.turns,j.dur]);
+    filename='blarney-journeys.csv';
+  } else if(type==='flags'){
+    headers=['Session ID','Date','Category','Severity','Message','Match / Reason','Source'];
+    rows=ALL_FLAGS.map(f=>[f.session?.['Session ID']||'',fmtDate(f.session?.Date||''),f.cat,f.sev,q(f.message),q(f.match||''),f.source||'regex']);
+    filename='blarney-flags.csv';
+  } else if(type==='voc'){
+    // Voice of Customer: top messages with count
+    const msgs={};
+    ALL_ROWS.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR').forEach(r=>getUserMsgs(r.Transcript||'').forEach(m=>{msgs[m]=(msgs[m]||0)+1;}));
+    const vocKw=['iphone','android','switch','upgrade','birthday','present','gift','mum','dad','daughter','son','abroad','camera','photo','trip','holiday','budget','afford','cheap','expensive','monthly','contract','price','£'];
+    headers=['Message','Count'];
+    rows=Object.entries(msgs).filter(([m])=>m.length>25&&vocKw.some(k=>m.toLowerCase().includes(k))).sort((a,b)=>b[1]-a[1]).map(([m,c])=>[q(m),c]);
+    filename='blarney-voc.csv';
+  } else if(type==='competitors'){
+    headers=['Brand','Unique Sessions','Sample Message'];
+    const competitors=['iPhone','Apple','iOS','Google Pixel','Huawei','OnePlus','Sony Xperia','Xiaomi','Motorola','Nokia','Nothing Phone'];
+    const compData={};
+    competitors.forEach(c=>{ compData[c]=[]; });
+    ALL_ROWS.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR').forEach(r=>getUserMsgs(r.Transcript||'').forEach(m=>competitors.forEach(c=>{if(m.toLowerCase().includes(c.toLowerCase())) compData[c].push({msg:m,session:r});})));
+    rows=Object.entries(compData).filter(([,ms])=>ms.length>0).sort((a,b)=>b[1].length-a[1].length)
+      .map(([brand,mentions])=>{
+        const unique=[...new Map(mentions.map(m=>[m.session['Session ID'],m])).values()];
+        return [brand,unique.length,q(unique[0]?.msg||'')];
+      });
+    filename='blarney-competitors.csv';
+  }
   const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download='blarney-journeys.csv'; a.click();
+  a.download=filename; a.click();
+}
+function toggleExportMenu(e){
+  e.stopPropagation();
+  const m=document.getElementById('exportMenu');
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',()=>{ const m=document.getElementById('exportMenu'); if(m) m.style.display='none'; });
+
+function copyPilotSummary(){
+  const txt=document.getElementById('pilotHeadline')?.textContent||'';
+  const full=`Samsung Kiosk UT Pilot Report\n${txt}\n\nPowered by Blarney · Cyphr Studio`;
+  navigator.clipboard?.writeText(full).then(()=>{
+    const btn=event.currentTarget;
+    btn.textContent='Copied!';
+    setTimeout(()=>btn.textContent='Share summary',1800);
+  });
 }
 
 // ════════════════════════════════════
