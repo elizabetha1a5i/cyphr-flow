@@ -691,10 +691,44 @@ const SKILLS = [
   {
     id: 'proposal-deck',
     name: 'Proposal deck',
-    desc: 'Build a Cyphr branded proposal deck using the slide template — outputs ready-to-use PPTX content.',
+    desc: 'Build a Cyphr branded proposal deck — outputs complete slide content in the Cyphr template structure.',
     inputs: ['Client name and project', 'Brief output', 'Estimate output', 'Any extra tone or focus notes'],
-    outputs: ['Complete slide content in SLIDE N — TITLE format, ready to drop into the Cyphr template'],
-    prompt: `Run the Cyphr Proposal Deck skill for`,
+    outputs: ['Complete slide content in SLIDE N — TITLE format, ready to drop into the Cyphr PPTX template'],
+    prompt: `You are a senior consultant at Cyphr Studio. Build a complete branded proposal deck for the client below.
+
+CYPHR TEMPLATE RULES:
+Use Cyphr___Slide_templates_V3.pptx as the base. Preserve all brand styling: colour palette, typography (Bandit Condensed headings, Messina Sans body), footer ("PRESENTATION / PAGE N"). Never introduce new fonts or colours.
+
+SLIDE LAYOUT REFERENCE — pick the right template slide for each piece of content:
+- Slides 1–5: Divider (section breaks, large title + subtitle)
+- Slides 6–7: Cover / deck title
+- Slides 8–13: Quote + attribution
+- Slides 14–16: Case study / title + body copy
+- Slide 17: Three-column [01][02][03] breakdown
+- Slides 18–21: Stat callouts (1–4 metrics, e.g. "95% Conversion")
+- Slides 22–29: Split content 50/50 or 1/3–2/3
+- Slides 30–32: Image-led / approach overview
+- Slides 33–36: Product/design process diagrams
+- Slides 37–41: Timeline (monthly, weekly, Gantt-style)
+- Slide 42: 6-up capabilities grid
+- Slides 43–44: Single capability deep dive
+- Slides 45–46: Team / people grid (5 or 10 person)
+- Slides 47–49: Budget + cost breakdown
+- Slides 50–55: Next steps timeline
+- Slides 56–60: Contact slides
+- Slide 62: THANK YOU (always last)
+
+STANDARD DECK STRUCTURE: Cover (6 or 7) → Section divider (1–5) per major section → Content slides → Contact (56–60) → Thank You (62).
+
+PLACEHOLDER RULES: Replace every instance of lorem/ipsum/morem/yorem, "Step name", "Capability", "Paityn Septimus", XXXX, XX,XXX, and bare [01]/[02]/[03] labels with real content. Run a final check before finishing — none of these should remain.
+
+OUTPUT FORMAT — write every slide like this:
+SLIDE N — [LAYOUT TYPE: e.g. COVER / DIVIDER / THREE-COLUMN / TIMELINE / COST BREAKDOWN]
+[field]: [content]
+
+End with a PLACEHOLDER CHECK confirming no dummy text remains.
+
+Now build the deck for`,
   },
 ];
 
