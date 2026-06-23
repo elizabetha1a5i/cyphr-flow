@@ -479,12 +479,7 @@ function render() {
       ${partials.map(p=>testCard(p,'warn')).join('')}
     </div>` : '';
 
-  const failTests = !isFB ? (r.tests||[]).filter(t=>t.status==='FAIL') : [];
-  const failsHTML = failTests.length ? `
-    <div class="section-label">Failing Tests</div>
-    <div class="fail-list">
-      ${failTests.map(t=>testCard(t,'fail')).join('')}
-    </div>` : '';
+  const failsHTML = ''; // Failing test details are private — visible in QA Review only
 
   document.getElementById('main').innerHTML = `
     ${warnBanner}
@@ -615,7 +610,8 @@ function renderAllRuns(runs) {
   const errored = all.filter(({t})=>t.status==='ERROR').length;
   const passRate = total ? Math.min(100, Math.round((passed+partial)/total*100)) : 0;
 
-  const failCards = all.filter(({t})=>t.status==='FAIL'||t.status==='ERROR').map(({t,r})=>{
+  const failCards = ''; // Hidden on public dashboard
+  const _unused = all.filter(({t})=>t.status==='FAIL'||t.status==='ERROR').map(({t,r})=>{
     const tip = t.summary || '';
     return `<div class="partial-item ${tip?'has-tooltip':''}" style="position:relative">
       ${tip ? `<div class="tip">${esc(tip)}</div>` : ''}
@@ -637,7 +633,7 @@ function renderAllRuns(runs) {
       <div class="kpi"><div class="kpi-label">Failing</div><div class="kpi-num">${failed+errored}</div></div>
       <div class="kpi"><div class="kpi-label">Partials</div><div class="kpi-num">${partial}</div></div>
     </div>
-    ${failCards ? `<div class="section-label">Failing Tests</div><div class="fail-list">${failCards}</div>` : '<div class="summary-card">All tests passing across selected runs ✓</div>'}`;
+    <div class="summary-card">Detailed test results are available in the <strong>QA Review</strong> section.</div>`;
 }
 
 
