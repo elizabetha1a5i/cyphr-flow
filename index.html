@@ -152,6 +152,8 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 .btn-primary { background: var(--accent); color: #fff; border: none; }
 .btn-primary:hover { background: #1f4129; }
 .btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--ink); }
+.btn-assume { background: transparent; border: 1px solid #F59E0B; color: #92400E; font-size: 10px; padding: 2px 7px; border-radius: 4px; cursor: pointer; font-family: var(--mono); letter-spacing: 0.04em; white-space: nowrap; line-height: 1.4; }
+.btn-assume:hover { background: #FEF3C7; }
 .btn-ghost:hover { background: var(--paper); }
 .btn-ai { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
 .btn-ai:hover { background: var(--accent-light); }
@@ -1852,7 +1854,16 @@ function rReq() {
       <div class="field-group"><label class="field-label">Project name${fieldHint(p.projectName,'projectNameSource')}</label><input id="f-pn" value="${p.projectName||''}" placeholder="e.g. In-Store AI Assistant"/></div>
     </div>
     <div class="two-col">
-      <div class="field-group"><label class="field-label">Sector${fieldHint(p.sector,'sectorSource')}</label><select id="f-sec">${SECTORS.map(s=>`<option ${p.sector===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field-group">
+        <label class="field-label" style="display:flex;align-items:center;gap:6px">
+          Sector${fieldHint(p.sector,'sectorSource')}
+          ${!p.sector ? `<button class="btn-assume" onclick="assumeField('sector')" title="Let AI suggest the sector from your context">Assumption</button>` : ''}
+        </label>
+        <select id="f-sec" style="${!p.sector ? 'border-color:#EF4444;' : 'border-color:#22c55e;'}" onchange="saveReqField('sector',this.value);this.style.borderColor=this.value?'#22c55e':'#EF4444'">
+          ${SECTORS.map(s=>`<option ${p.sector===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        ${!p.sector ? '<div style="font-size:11px;color:#EF4444;margin-top:4px">Required — affects document tone and recommendations</div>' : ''}
+      </div>
       <div class="field-group"><label class="field-label">Start date</label><input type="date" id="f-sd" value="${p.startDate||''}"/></div>
     </div>
     <div class="field-section-label">Financials</div>
@@ -1861,8 +1872,22 @@ function rReq() {
       <div class="field-group"><label class="field-label">Timeline${fieldHint(p.timeline,'timelineSource')}</label><input id="f-tl" value="${p.timeline||''}" placeholder="8–10 weeks"/></div>
     </div>
     <div class="field-section-label">Scope</div>
-    <div class="field-group"><label class="field-label">Requirements${fieldHint(p.requirements,'requirementsSource')}</label><textarea id="f-req" style="${(p.requirements||'').trim().length<30?'border-color:#EF4444;':''}" placeholder="Key goals, must-haves, constraints…" oninput="saveReqField('requirements',this.value);this.style.borderColor=(this.value.trim().length>=30?'':'#EF4444')">${p.requirements||''}</textarea>${(p.requirements||'').trim().length<30?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Required for accurate documents</div>':''}</div>
-    <div class="field-group"><label class="field-label">Background & considerations${fieldHint(p.bgNotes,'bgNotesSource')}</label><textarea id="f-bg" style="${(p.bgNotes||'').trim().length<20?'border-color:#EF4444;':''}" placeholder="Decision makers, objections, context…" oninput="saveReqField('bgNotes',this.value);this.style.borderColor=(this.value.trim().length>=20?'':'#EF4444')">${p.bgNotes||''}</textarea>${(p.bgNotes||'').trim().length<20?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Recommended</div>':''}</div>
+    <div class="field-group">
+      <label class="field-label" style="display:flex;align-items:center;gap:6px">
+        Requirements${fieldHint(p.requirements,'requirementsSource')}
+        ${(p.requirements||'').trim().length < 30 ? `<button class="btn-assume" onclick="assumeField('requirements')" title="Let AI draft requirements from your context">Assumption</button>` : ''}
+      </label>
+      <textarea id="f-req" style="${(p.requirements||'').trim().length<30?'border-color:#EF4444;':'border-color:#22c55e;'}" placeholder="Key goals, must-haves, constraints…" oninput="saveReqField('requirements',this.value);this.style.borderColor=(this.value.trim().length>=30?'#22c55e':'#EF4444')">${p.requirements||''}</textarea>
+      ${(p.requirements||'').trim().length<30?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Required for accurate documents</div>':''}
+    </div>
+    <div class="field-group">
+      <label class="field-label" style="display:flex;align-items:center;gap:6px">
+        Background & considerations${fieldHint(p.bgNotes,'bgNotesSource')}
+        ${(p.bgNotes||'').trim().length < 20 ? `<button class="btn-assume" onclick="assumeField('bgNotes')" title="Let AI draft background from your context">Assumption</button>` : ''}
+      </label>
+      <textarea id="f-bg" style="${(p.bgNotes||'').trim().length<20?'border-color:#EF4444;':'border-color:#22c55e;'}" placeholder="Decision makers, objections, context…" oninput="saveReqField('bgNotes',this.value);this.style.borderColor=(this.value.trim().length>=20?'#22c55e':'#EF4444')">${p.bgNotes||''}</textarea>
+      ${(p.bgNotes||'').trim().length<20?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Recommended</div>':''}
+    </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" id="btn-req-next" onclick="saveReq();advance()">Next → auto-generate brief</button></div>`;
 }
@@ -1877,6 +1902,27 @@ function saveReq() {
 
 function saveReqField(key, value) {
   saveProjectData({ [key]: value });
+}
+
+async function assumeField(field) {
+  const p = gp();
+  const ctx = [p.rawText, p.extractedContext, p.clientName, p.sector, p.requirements, p.bgNotes].filter(Boolean).join('\n');
+  if (!ctx.trim()) { toast('Add some context first — paste a transcript or notes in the Files stage'); return; }
+  const prompts = {
+    sector: `Based on this project context, pick the single most appropriate sector from this list: ${SECTORS.filter(Boolean).join(', ')}.\nContext: ${ctx.slice(0,2000)}\nReturn ONLY the sector name, nothing else.`,
+    requirements: `Based on this project context, write 3-5 concise bullet-point requirements (goals, must-haves, constraints) for a client proposal.\nContext: ${ctx.slice(0,2000)}\nReturn only the requirements, one per line starting with "- ".`,
+    bgNotes: `Based on this project context, write 2-3 sentences of background and considerations (decision makers, pressures, context) for a client proposal.\nContext: ${ctx.slice(0,2000)}\nReturn only the background text, no preamble.`,
+  };
+  const btn = event.target; btn.textContent = '…'; btn.disabled = true;
+  try {
+    const out = await callGemini(prompts[field], { maxTokens: 300 });
+    const val = out.trim();
+    saveProjectData({ [field]: val, contextConfidence: null });
+    render();
+    toast(`${field === 'sector' ? 'Sector' : field === 'requirements' ? 'Requirements' : 'Background'} filled — review and edit if needed`);
+  } catch(e) {
+    btn.textContent = 'Assumption'; btn.disabled = false;
+  }
 }
 
 // ── STAGE: BRIEF ──────────────────────────────────────────────────────────
