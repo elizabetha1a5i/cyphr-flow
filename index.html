@@ -2517,28 +2517,21 @@ function generateStatusSheet() {
   const sow = p.sowOutput || '';
   const est = p.estimateOutput || '';
 
-  // Try to extract milestone lines from SOW (lines starting with "Week" or "Month" or numbered)
-  const milestoneLines = sow.split('\n')
-    .filter(l => /^(week|month|\d+[\.\)])/i.test(l.trim()) && l.trim().length > 3)
-    .slice(0, 8)
-    .map(l => l.replace(/^(week\s*\d+:|month\s*\d+:|\d+[\.\)])\s*/i, '').trim())
-    .filter(l => l.length > 0);
+  // Extract workstreams from SOW milestones or estimate phases.
+  // Matches: numbered items, "Week N:", "Month N:", "Phase N:", "Milestone:", bullet points with content
+  const extractLines = (text, limit) => text.split('\n')
+    .map(l => l.replace(/^([-•*]|\d+[\.\)]|week\s*\d+:|month\s*\d+:|phase\s*\d*:?|milestone\s*\d*:?)\s*/i, '').trim())
+    .filter(l => l.length > 5 && !/^(cyphr|client|sign.?off|tbc|n\/a|\[)/i.test(l))
+    .slice(0, limit);
 
-  if (milestoneLines.length >= 2) {
-    // Use milestone-derived workstreams
-    workstreams = milestoneLines.map((m, i) => [
+  const sowLines = sow.length > 50 ? extractLines(sow, 8) : [];
+  const estLines = est.length > 50 ? extractLines(est, 6) : [];
+  const candidates = sowLines.length >= 2 ? sowLines : estLines;
+
+  if (candidates.length >= 2) {
+    workstreams = candidates.map((m, i) => [
       m, i === 0 ? 'In Progress' : 'Not Started', 'Cyphr', ''
     ]);
-  } else if (est && est.length > 50) {
-    // Try to extract phases from estimate output
-    const phaseLines = est.split('\n')
-      .filter(l => /phase|discovery|design|build|test|launch/i.test(l) && l.trim().length > 3)
-      .slice(0, 6)
-      .map(l => l.replace(/^[-•*]\s*/, '').trim())
-      .filter(l => l.length > 0);
-    if (phaseLines.length >= 2) {
-      workstreams = phaseLines.map((ph, i) => [ph, i === 0 ? 'In Progress' : 'Not Started', 'Cyphr', '']);
-    }
   }
 
   // Fallback: minimal placeholders — clearly marked so user knows to fill them in
