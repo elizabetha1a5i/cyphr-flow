@@ -719,6 +719,7 @@ function saveData(rows){
 function clearData(){
   SAVED=[];
   try{ localStorage.removeItem('blarney_v2'); }catch(e){}
+  try{ localStorage.removeItem('blarney_ai_flags'); }catch(e){}
 }
 
 async function pushSnapshot(){
@@ -981,6 +982,10 @@ async function runAIFlagging(){
     btn.style.display='flex'; btn.disabled=false; btn.style.opacity='1';
   } else {
     status.textContent=`✦ AI complete · ${totalFound} flag${totalFound!==1?'s':''} found${errors?` (${errors} failed)`:''}`;
+    // Save flags to localStorage so they persist across refreshes
+    try{ localStorage.setItem('blarney_ai_flags', JSON.stringify(ALL_FLAGS.map(f=>({
+      cat:f.cat, sev:f.sev, message:f.message, reason:f.reason, sessionId:f.session['Session ID'], date:f.date
+    })))); }catch(e){}
   }
 }
 
@@ -1045,7 +1050,25 @@ function showDashboard(rows){
   }
   document.getElementById('dateFilterBar').style.display='flex';
   runAnalysis(rows);
-  runAIFlagging();
+
+  // Restore cached AI flags if available, otherwise run fresh analysis
+  const cachedFlags = (() => { try{ return JSON.parse(localStorage.getItem('blarney_ai_flags')||'null'); }catch(e){ return null; } })();
+  if(cachedFlags && cachedFlags.length > 0){
+    const sessionMap = new Map(rows.map(s=>[s['Session ID'],s]));
+    ALL_FLAGS = cachedFlags.map(f=>({
+      cat: f.cat, sev: f.sev, message: f.message, reason: f.reason,
+      date: f.date, session: sessionMap.get(f.sessionId)||{}
+    }));
+    renderFlags();
+    const kpiEl = document.getElementById('flagsKpi');
+    if(kpiEl) kpiEl.textContent = `${ALL_FLAGS.length} flag${ALL_FLAGS.length!==1?'s':''} · ${ALL_FLAGS.filter(f=>f.sev==='high').length} high severity`;
+    document.getElementById('aiStatusTxt').textContent=`✦ AI complete · ${ALL_FLAGS.length} flag${ALL_FLAGS.length!==1?'s':''} found`;
+    document.getElementById('aiRunBtn').style.display='flex';
+    document.getElementById('aiRunBtn').title='Re-run AI analysis';
+  } else {
+    runAIFlagging();
+  }
+
   fetchWins();
 }
 
