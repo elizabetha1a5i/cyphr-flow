@@ -2051,13 +2051,29 @@ function saveSkillNotes() { saveProjectData({ skillOutputNotes: sv('skill-notes'
 
 function launchProposalSkill() {
   const p = gp();
-  const ctx = `Project context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,800)}\nEstimate notes: ${(p.estimateOutput||'').substring(0,400)}\n\nGenerate all 9 slides for this client. End your response with a clearly labelled SUMMARY block that can be pasted back into Cyphr Flow.`;
+  const lines = [
+    `CLIENT: ${p.clientName||'—'}`,
+    `PROJECT: ${p.projectName||'—'}`,
+    `SECTOR: ${p.sector||'—'}`,
+    `BUDGET: £${p.budget||'—'}`,
+    `TIMELINE: ${p.timeline||'—'}`,
+    ``,
+    `BRIEF:`,
+    (p.briefOutput||'No brief generated yet.').substring(0, 1200),
+    ``,
+    `ESTIMATE:`,
+    (p.estimateOutput||'No estimate generated yet.').substring(0, 800),
+  ];
+  if (p.proposalNotes) lines.push(``, `EXTRA NOTES:`, p.proposalNotes);
+  if (p.skillOutputNotes) lines.push(``, `SKILL NOTES:`, p.skillOutputNotes);
+  lines.push(``, `---`, `Build a complete Cyphr branded proposal deck for this client using the template skill instructions. Follow the SLIDE N — TITLE output format exactly.`);
+  const ctx = lines.join('\n');
   navigator.clipboard.writeText(ctx).then(() => {
-    toast('Context copied — paste it into Claude ✓', 'success');
+    toast('Context copied to clipboard — paste into Claude ✓', 'success');
     window.open('https://claude.ai/project/019ee034-8328-7313-ad9a-56d5f06e1657', '_blank');
   }).catch(() => {
-    // Clipboard failed — open anyway
     window.open('https://claude.ai/project/019ee034-8328-7313-ad9a-56d5f06e1657', '_blank');
+    toast('Open Claude and paste your project context manually');
   });
 }
 
