@@ -2134,12 +2134,17 @@ function saveSkillNotes() { saveProjectData({ skillOutputNotes: sv('skill-notes'
 function launchSkill() {
   const url = 'https://claude.ai/project/019dd912-c7e8-7151-a30f-0957e4b5da7e';
   const ctx = window._skillLaunchCtx || '';
+  const ta = document.createElement('textarea');
+  ta.value = ctx;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  var copied = false;
+  try { copied = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
   window.open(url, '_blank');
-  navigator.clipboard.writeText(ctx).then(function() {
-    toast('Context copied — paste it into Claude and press Send', 'success');
-  }).catch(function() {
-    toast('Project opened — context could not be copied automatically', 'warn');
-  });
+  toast(copied ? 'Context copied — paste it into Claude and press Send' : 'Project opened — copy context manually', copied ? 'success' : 'warn');
 }
 
 function launchProposalSkill() {
