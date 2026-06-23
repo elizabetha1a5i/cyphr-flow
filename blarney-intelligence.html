@@ -1421,7 +1421,7 @@ document.addEventListener('click',()=>{ const m=document.getElementById('exportM
 // Your Wins — benchmark comparison
 // ════════════════════════════════════
 const WINS_CACHE_KEY = 'blarney_benchmarks_v1';
-const WINS_CACHE_TTL = 86400000; // 24h
+const WINS_CACHE_TTL = 604800000; // 7 days
 
 async function fetchWins(){
   document.getElementById('winsLoading').style.display='block';
@@ -1480,7 +1480,7 @@ async function fetchWins(){
 function renderWins(benchmarks, ourMetrics, fromCache){
   document.getElementById('winsLoading').style.display='none';
   document.getElementById('winsContent').style.display='block';
-  document.getElementById('winsPowered').textContent=fromCache?'Benchmarks cached (< 24h)':'Benchmarks via Google Search · Gemini';
+  document.getElementById('winsPowered').textContent=fromCache?'Benchmarks cached (< 7 days)':'Sourced via Brave Search · ScrapeGraphAI · Gemini';
   document.getElementById('winsTimestamp').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 
   const wins=(Array.isArray(benchmarks)?benchmarks:[]).filter(b=>b.is_win);
