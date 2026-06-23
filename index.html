@@ -1656,27 +1656,107 @@ Cover: client context, the problem, the opportunity, what success looks like, ke
     saveProjectData({ briefOutput: out });
   } else if (stage === 'estimate') {
     const fresh = gp();
-    out = await callGeminiBackground(`You are a project director at Cyphr. Create a concise resource plan.
+    out = await callGeminiBackground(`You are a project director at Cyphr. Create a detailed resource plan from the brief below.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
-Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`);
+
+Format your output EXACTLY like this — the backend parser depends on it:
+
+PHASE: [Phase name]
+[Role title] — [X] days @ £[rate]/day = £[total]
+[Role title] — [X] days @ £[rate]/day = £[total]
+Phase subtotal: £[amount]
+
+PHASE: [Next phase name]
+...
+
+TOTAL: £[grand total]
+NOTES: [1-2 sentences on budget fit and key assumptions]
+
+Use realistic Cyphr day rates (Strategy Lead £950/day, Tech Lead £700/day, Producer £500/day, Developer Mid £200/day, Developer Senior £300/day). Make phases and roles specific to the project type.`);
     saveProjectData({ estimateOutput: out });
   } else if (stage === 'proposal') {
     const fresh = gp();
-    out = await callGeminiBackground(`You are a senior consultant at Cyphr. Write proposal copy.
+    out = await callGeminiBackground(`You are a senior consultant at Cyphr. Write a complete commercial proposal from the brief and resource plan below.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Resource plan: ${fresh.estimateOutput}
-Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`);
+
+Structure your output EXACTLY using these slide markers — the backend PPTX builder depends on them:
+
+SLIDE 1 — COVER
+[Leave blank — auto-generated]
+
+SLIDE 2 — EXECUTIVE SUMMARY
+[2-3 sentences: what Cyphr will do, for whom, and why it matters. Specific to this client and project.]
+
+SLIDE 3 — THE ASK
+[The client's core problem or opportunity in 1-2 sentences, then 3-4 bullet points on Cyphr's approach]
+
+SLIDE 4 — SCOPE + SERVICES
+[4 service categories relevant to this project, each with 3-4 specific items, format: Category: item, item, item]
+
+SLIDE 5 — DETAILED DELIVERABLES
+[5-7 specific deliverables]
+[Milestones: 4-5 timeline entries, format: Week N — milestone name]
+
+SLIDE 6 — COST BREAKDOWN
+[Phase name: £amount]
+Tasks: task1, task2, task3
+Team: role names
+Duration: X weeks
+[Repeat per phase]
+TOTAL: £[grand total]
+- [Assumption 1]
+- [Assumption 2]
+
+SLIDE 7 — WHY CYPHR
+[2-3 sentences: specific reasons this client should choose Cyphr — reference their sector, the project type, Cyphr's relevant expertise. Sharp, no fluff.]
+
+Sharp, confident, specific to ${fresh.clientName}. No generic filler.`);
     saveProjectData({ proposalOutput: out });
   } else if (stage === 'sow') {
     const fresh = gp();
-    out = await callGeminiBackground(`You are a project director at Cyphr. Write a Statement of Work.
+    out = await callGeminiBackground(`You are a project director at Cyphr. Write a complete, ready-to-sign Statement of Work from the brief and resource plan below.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Resource plan: ${fresh.estimateOutput}
-Proposal: ${fresh.proposalOutput}
-Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`);
+
+Structure your output EXACTLY using these section headers — the backend DOCX builder depends on them:
+
+SUMMARY:
+[2-3 sentences describing what Cyphr will deliver and for whom]
+
+OBJECTIVES:
+- [objective 1]
+- [objective 2]
+- [objective 3]
+
+SCOPE:
+- [in-scope item 1]
+- [in-scope item 2]
+- [out of scope: item]
+
+DELIVERABLES:
+- [deliverable 1]
+- [deliverable 2]
+
+MILESTONES:
+- [Milestone name — Week N / specific date]
+- [Milestone name — Week N / specific date]
+
+ASSUMPTIONS:
+- [assumption 1]
+- [assumption 2]
+
+RESPONSIBILITIES:
+Cyphr: [responsibility 1], [responsibility 2]
+${fresh.clientName}: [responsibility 1], [responsibility 2]
+
+FEE:
+[Fee statement with total amount and payment schedule]
+
+Professional, specific, no placeholders except for client contact details.`);
     saveProjectData({ sowOutput: out });
   }
 }
