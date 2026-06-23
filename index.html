@@ -2426,7 +2426,7 @@ async function generateAllFiles() {
       console.warn(`Failed to generate ${type}:`, e);
     }
   }
-  generateStatusSheet();
+  await generateStatusSheet();
 }
 
 function copyOutput(field, label) {
@@ -2506,73 +2506,31 @@ function generateJiraCSV() {
 }
 
 // ── STATUS SHEET ───────────────────────────────────────────────────────────
-function generateStatusSheet() {
+async function generateStatusSheet() {
   const p = gp();
-  const today = new Date().toLocaleDateString('en-GB');
-
-  // Derive workstreams from project data rather than using hardcoded generic phases.
-  // Parse milestones from sowOutput if available, otherwise fall back to estimate phases,
-  // otherwise use a minimal placeholder set that the user can fill in.
-  let workstreams = [];
-  const sow = p.sowOutput || '';
-  const est = p.estimateOutput || '';
-
-  // Extract workstreams from SOW milestones or estimate phases.
-  // Matches: numbered items, "Week N:", "Month N:", "Phase N:", "Milestone:", bullet points with content
-  const extractLines = (text, limit) => text.split('\n')
-    .map(l => l.replace(/^([-•*]|\d+[\.\)]|week\s*\d+:|month\s*\d+:|phase\s*\d*:?|milestone\s*\d*:?)\s*/i, '').trim())
-    .filter(l => l.length > 5 && !/^(cyphr|client|sign.?off|tbc|n\/a|\[)/i.test(l))
-    .slice(0, limit);
-
-  const sowLines = sow.length > 50 ? extractLines(sow, 8) : [];
-  const estLines = est.length > 50 ? extractLines(est, 6) : [];
-  const candidates = sowLines.length >= 2 ? sowLines : estLines;
-
-  if (candidates.length >= 2) {
-    workstreams = candidates.map((m, i) => [
-      m, i === 0 ? 'In Progress' : 'Not Started', 'Cyphr', ''
-    ]);
+  const fileApiUrl = settings.fileApiUrl || settings.proxyUrl || 'https://cyphr-api-production.up.railway.app';
+  if (!fileApiUrl) { toast('File API not configured', 'error'); return; }
+  toast('Generating status sheet…');
+  try {
+    const res = await fetch(fileApiUrl + '/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ type: 'status', projectData: {
+        clientName: p.clientName||'CLIENT', projectName: p.projectName||'PROJECT',
+        budget: p.budget||'', timeline: p.timeline||'',
+        rawText: p.bgNotes||p.requirements||'', briefOutput: p.briefOutput||'',
+        sowOutput: p.sowOutput||'', estimateOutput: p.estimateOutput||'',
+        date: new Date().toLocaleDateString('en-GB')
+      }})
+    });
+    if (!res.ok) throw new Error('Status sheet generation failed');
+    const blob = await res.blob();
+    const slug = (p.clientName||'project').toLowerCase().replace(/[^a-z0-9]/g,'_');
+    downloadBlob(blob, `${slug}_status_sheet.xlsx`);
+    toast('Status sheet downloaded ✓', 'success');
+  } catch(e) {
+    toast('Status sheet failed: ' + e.message, 'error');
   }
-
-  // Fallback: minimal placeholders — clearly marked so user knows to fill them in
-  if (workstreams.length === 0) {
-    workstreams = [
-      ['[WORKSTREAM — confirm at kick-off]', 'Not Started', 'Cyphr', ''],
-      ['[WORKSTREAM — confirm at kick-off]', 'Not Started', 'Cyphr', ''],
-      ['[WORKSTREAM — confirm at kick-off]', 'Not Started', 'Cyphr', ''],
-    ];
-  }
-
-  const rows = [
-    ['PROJECT STATUS SHEET', '', '', ''],
-    ['', '', '', ''],
-    ['Client', p.clientName||'—', 'Date', today],
-    ['Project', p.projectName||'—', 'Budget', p.budget ? `£${Number(p.budget).toLocaleString()}` : '[CONFIRM]'],
-    ['Timeline', p.timeline||'[CONFIRM]', 'Status', 'In Progress'],
-    ['', '', '', ''],
-    ['WORKSTREAM', 'STATUS', 'OWNER', 'NOTES'],
-    ...workstreams,
-    ['', '', '', ''],
-    ['RAG STATUS', '', '', ''],
-    ['🟢 On Track', '', '', ''],
-    ['', '', '', ''],
-    ['RISKS & ISSUES', '', '', ''],
-    ['[None identified]', '', '', ''],
-    ['', '', '', ''],
-    ['NEXT ACTIONS', 'OWNER', 'DUE DATE', 'STATUS'],
-    ['', '', '', ''],
-    ['', '', '', ''],
-  ];
-
-  // Build xlsx client-side using SheetJS
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:35},{wch:18},{wch:18},{wch:30}];
-  XLSX.utils.book_append_sheet(wb, ws, 'Status');
-  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-  const slug = (p.clientName||'project').toLowerCase().replace(/[^a-z0-9]/g,'_');
-  downloadBlob(new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), `${slug}_status_sheet.xlsx`);
-  toast('Status sheet downloaded ✓', 'success');
 }
 
 async function completeProject() {
