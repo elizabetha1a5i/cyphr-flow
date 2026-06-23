@@ -1055,7 +1055,7 @@ function renderDisambiguationPanel() {
           ${primaryDesc ? `<div class="disambig-card-desc">${esc(primaryDesc)}…</div>` : ''}
         </div>
         ${others.map((o, i) => `
-          <div class="disambig-card" onclick="switchPrimaryTopic(${JSON.stringify(o)})">
+          <div class="disambig-card" onclick="switchPrimaryTopic('${esc(o).replace(/'/g,'&#39;')}')">
             <div class="disambig-card-name">${esc(o)}</div>
             <div class="disambig-card-desc" style="color:var(--accent);font-weight:600">Click to re-analyse focusing on this →</div>
           </div>`).join('')}
