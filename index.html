@@ -1030,6 +1030,8 @@ function setNextAction(stageId) {
 }
 
 // ── DISAMBIGUATION ────────────────────────────────────────────────────────────
+function stripMd(s) { return s.replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/^[-\d\.\*]+\s*/,'').trim(); }
+
 function renderDisambiguationPanel() {
   const p = gp();
   const panel = document.getElementById('ext-disambiguation');
@@ -1039,11 +1041,14 @@ function renderDisambiguationPanel() {
   if (!hasOthers) { confirmPrimaryTopic(); return; }
 
   // Parse other opportunities — split by newline or numbered list
-  const others = raw.split(/\n+/).map(s => s.replace(/^[\d\.\-\*]+\s*/, '').trim()).filter(s => s.length > 3).slice(0, 4);
+  const others = raw.split(/\n+/).map(s => stripMd(s)).filter(s => s.length > 3).slice(0, 4);
   if (!others.length) { confirmPrimaryTopic(); return; }
 
-  const primaryName = p.projectName || p.clientName || 'Detected project';
-  const primaryDesc = (p.requirements || p.bgNotes || '').slice(0, 120);
+  // Store globally so onclick index lookup works safely
+  window._disambigTopics = others;
+
+  const primaryName = stripMd(p.projectName || p.clientName || 'Detected project');
+  const primaryDesc = stripMd((p.requirements || p.bgNotes || '').slice(0, 120));
 
   panel.innerHTML = `
     <div class="disambig-panel">
@@ -1054,11 +1059,13 @@ function renderDisambiguationPanel() {
           <div class="disambig-card-name">${esc(primaryName)}</div>
           ${primaryDesc ? `<div class="disambig-card-desc">${esc(primaryDesc)}…</div>` : ''}
         </div>
-        ${others.map((o, i) => `
-          <div class="disambig-card" onclick="switchPrimaryTopic('${esc(o).replace(/'/g,'&#39;')}')">
-            <div class="disambig-card-name">${esc(o)}</div>
+        ${others.map((o, i) => {
+          const title = o.length > 80 ? o.slice(0, 80) + '…' : o;
+          return `<div class="disambig-card" onclick="switchPrimaryTopic(${i})">
+            <div class="disambig-card-name">${esc(title)}</div>
             <div class="disambig-card-desc" style="color:var(--accent);font-weight:600">Click to re-analyse focusing on this →</div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary next-action" id="btn-files-next" onclick="confirmPrimaryTopic()">Yes, use the detected project →</button>
@@ -1073,13 +1080,12 @@ function confirmPrimaryTopic() {
   preGenerateAll();
 }
 
-async function switchPrimaryTopic(topicText) {
-  const rawEl = document.getElementById('f-raw');
-  const baseText = rawEl ? rawEl.value : (gp().rawText || '');
+async function switchPrimaryTopic(idx) {
+  const topicText = (window._disambigTopics || [])[idx];
+  if (!topicText) return;
+  const baseText = gp().rawText || '';
   const focusedText = baseText + '\n\n[FOCUS ON THIS PROJECT: ' + topicText + ']';
-  // Temporarily set textarea so extractContext reads it
-  if (rawEl) rawEl.value = focusedText;
-  saveProjectData({ rawText: baseText }); // keep original raw text stored
+  saveProjectData({ rawText: baseText }); // keep original raw text
   // Clear extracted fields so extraction starts fresh
   saveProjectData({ clientName:'', projectName:'', sector:'', budget:'', timeline:'', requirements:'', bgNotes:'', otherOpportunities:'', extractedContext:'' });
   const panel = document.getElementById('ext-disambiguation');
