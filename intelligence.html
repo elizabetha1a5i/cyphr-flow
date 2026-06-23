@@ -446,6 +446,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY     = 'cyphr_intelligence_v3';
 const BRIEF_STORE     = 'cyphr_intel_brief';
+const RAILWAY_URL     = 'https://cyphr-api-production.up.railway.app';
 // ⚠️ API key lives in Cloudflare Worker — update WORKER_URL to your Worker domain
 const WORKER_URL      = 'https://cyphr-proxy.elizabeth-537.workers.dev/gemini';
 const MODEL_MAIN      = 'gemini-3.5-flash';
@@ -471,10 +472,26 @@ let brief        = { topics: [...DEFAULT_TOPICS], sources: [...DEFAULT_SOURCES] 
 const searchMode = 'live';
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   loadBrief();
   loadData();
   renderBrief();
+
+  // If no local data, try loading from shared Gist snapshot
+  if (!stories.length && !digest) {
+    try {
+      const res = await fetch(`${RAILWAY_URL}/intel-snapshot`);
+      if (res.ok) {
+        const d = await res.json();
+        if (d && (d.stories?.length || d.digest)) {
+          stories = d.stories || [];
+          digest = d.digest || null;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ stories, digest })); } catch(e) {}
+        }
+      }
+    } catch(e) { console.warn('Could not load intel snapshot:', e); }
+  }
+
   renderDigest();
   renderTable();
   updateLastRunLabel();
@@ -547,6 +564,17 @@ function loadData() {
 }
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ stories, digest }));
+  pushIntelSnapshot();
+}
+
+async function pushIntelSnapshot() {
+  try {
+    await fetch(`${RAILWAY_URL}/push-intel-snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stories, digest })
+    });
+  } catch(e) { console.warn('Intel snapshot push failed:', e); }
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
