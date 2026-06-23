@@ -691,73 +691,10 @@ const SKILLS = [
   {
     id: 'proposal-deck',
     name: 'Proposal deck',
-    desc: 'Generate a Cyphr branded proposal — 9 slides matching the Cyphr template.',
-    inputs: ['Client name and project','Brief output','Estimate output','Key selling points or tone notes'],
-    outputs: ['Formatted slide content in Cyphr template structure — paste back to generate PPTX'],
-    prompt: `You are generating a Cyphr Studio commercial proposal. Output each slide as a clearly labelled section using EXACTLY the headers below. Every word must be specific to this client — no generic filler, no lorem ipsum.
-
-CYPHR BRAND VOICE: Confident, direct, no fluff. Write like a senior consultant who knows their craft.
-
-TEMPLATE STRUCTURE (9 slides — follow this exactly):
-
-SLIDE 1 — COVER
-Title: [Project name — keep short and punchy]
-Subtitle: Proposal for [Client name]
-Date: [Today's date]
-Tagline: Creating tomorrow's digital products, services and experiences.
-
-SLIDE 2 — EXECUTIVE SUMMARY
-Body: 2–3 sentences. What Cyphr will deliver, for whom, and what outcome the client gets. Specific to this project, no boilerplate.
-
-SLIDE 3 — THE ASK
-Activity Overview: 2–3 sentences summarising the challenge or opportunity the client has brought to Cyphr.
-The Digital User Journey:
-1. [First key moment or touchpoint]
-2. [Second key moment or touchpoint]
-3. [Third key moment or touchpoint]
-
-SLIDE 4 — SCOPE + SERVICES
-List ONLY the services relevant to this project under whichever of these 4 categories apply (3–5 items each, skip categories not relevant):
-Strategy & Venture: [item], [item], [item]
-Product Design & Build: [item], [item], [item]
-Marketing: [item], [item], [item]
-Data & Insights: [item], [item], [item]
-
-SLIDE 5 — DETAILED DELIVERABLES
-List each deliverable with a one-line description. Group into phases:
-DISCOVER: [deliverable] — [one-line description]
-DEFINE: [deliverable] — [one-line description]
-DESIGN & DEVELOP: [deliverable] — [one-line description]
-DELIVER: [deliverable] — [one-line description]
-
-SLIDE 6 — PROJECT MILESTONES
-List 4–6 milestones as: [Milestone name] — [Week or date]
-Example format: Kick-off & discovery — Week 1
-
-SLIDE 7 — PROJECT TIMELINE
-[Phase name]: [start] – [end], [key output]
-Write one line per phase. Use weeks or months based on the timeline provided.
-
-SLIDE 8 — COST BREAKDOWN
-For each work phase:
-[Phase name]: £[amount]
-Tasks: [bullet 1], [bullet 2], [bullet 3]
-Team: [roles]
-Duration: [X weeks]
-
-Assumptions & Exclusions:
-- [assumption 1]
-- [assumption 2]
-- [assumption 3]
-
-TOTAL: £[total]
-
-SLIDE 9 — THANK YOU
-Closing: [One punchy closing line specific to this client]
-Contact: hello@cyphr.studio | cyphr.studio
-
----
-Use the brief and estimate provided to make every slide specific to this client and project. Match the fee to the estimate. No invented figures.`,
+    desc: 'Build a Cyphr branded proposal deck using the slide template — outputs ready-to-use PPTX content.',
+    inputs: ['Client name and project', 'Brief output', 'Estimate output', 'Any extra tone or focus notes'],
+    outputs: ['Complete slide content in SLIDE N — TITLE format, ready to drop into the Cyphr template'],
+    prompt: `Run the Cyphr Proposal Deck skill for`,
   },
 ];
 
@@ -2025,21 +1962,36 @@ function selectSkill(id) {
 function rSkillDetail(id) {
   const s = SKILLS.find(x=>x.id===id); if (!s) return '';
   const p = gp();
-  const PROPOSAL_PROJECT_ID = '019ee034-8328-7313-ad9a-56d5f06e1657';
-  const isProposal = s.id === 'proposal-deck';
-  const projectCtx = isProposal
-    ? `Project context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,800)}\nEstimate notes: ${(p.estimateOutput||'').substring(0,400)}\n\nGenerate all 9 slides for this client. End your response with a clearly labelled SUMMARY block that can be pasted back into Cyphr Flow.`
-    : `${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`;
-  const launchUrl = isProposal
-    ? `https://claude.ai/project/${PROPOSAL_PROJECT_ID}`
-    : `https://claude.ai/new?q=${encodeURIComponent(projectCtx)}`;
+  let projectCtx;
+  if (s.id === 'proposal-deck') {
+    projectCtx = [
+      `${s.prompt} ${p.clientName}.`,
+      ``,
+      `CLIENT: ${p.clientName||'—'}`,
+      `PROJECT: ${p.projectName||'—'}`,
+      `SECTOR: ${p.sector||'—'}`,
+      `BUDGET: £${p.budget||'—'}`,
+      `TIMELINE: ${p.timeline||'—'}`,
+      ``,
+      `BRIEF:`,
+      (p.briefOutput||'No brief yet — use the project context above to make reasonable assumptions.').substring(0, 1200),
+      ``,
+      `ESTIMATE:`,
+      (p.estimateOutput||'No estimate yet.').substring(0, 800),
+      p.proposalNotes ? `\nEXTRA NOTES:\n${p.proposalNotes}` : '',
+      p.skillOutputNotes ? `\nSKILL NOTES:\n${p.skillOutputNotes}` : '',
+    ].filter(l => l !== undefined).join('\n');
+  } else {
+    projectCtx = `${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`;
+  }
+  const launchUrl = `https://claude.ai/new?q=${encodeURIComponent(projectCtx)}`;
   return `<div class="skill-detail">
     <div class="skill-detail-title">Running: ${s.name}</div>
     <div class="output-label">What this skill needs</div>
     <ul class="checklist">${s.inputs.map(i=>`<li><span class="check-icon">✓</span>${i}</li>`).join('')}</ul>
     <div class="output-label">What it produces</div>
     <div class="outputs-pills">${s.outputs.map(o=>`<span class="out-pill">${o}</span>`).join('')}</div>
-    ${isProposal ? `<button class="btn btn-ai" style="margin-bottom:8px" onclick="launchProposalSkill()">↗ Launch Proposal Generator</button><div style="font-size:11px;color:var(--muted);margin-bottom:12px">Context copied to clipboard automatically — just paste into Claude</div>` : `<a href="${launchUrl}" target="_blank" class="btn btn-ai" style="margin-bottom:12px;text-decoration:none">↗ Launch skill in Claude.ai</a>`}
+    <a href="${launchUrl}" target="_blank" class="btn btn-ai" style="margin-bottom:12px;text-decoration:none">↗ Launch skill in Claude.ai</a>
     <div class="field-group">
       <label class="field-label">Paste skill outputs here when done</label>
       <textarea id="skill-notes" style="min-height:80px" placeholder="Paste key outputs or decisions from running the skill — these feed into the estimate and proposal…">${gp().skillOutputNotes||''}</textarea>
