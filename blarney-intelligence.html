@@ -1197,17 +1197,6 @@ function runAnalysis(rows){
     compStatEl.style.color=compConvRate>=10?'var(--green)':'var(--muted)';
   } else { compStatEl.textContent=''; }
 
-  // ── Hardest questions (The question no one else could answer) ──
-  const hardKw=[/\bvs\b|\bversus\b|better than|difference between/i,/£|\bprice\b|\bcost\b|\bcheaper\b|\bhow much\b/i,/\bmy\b|\bi have\b|\bi need\b|\bi('m| am)\b|\bswitching from\b|\bi('ve| have) got\b/i,/s2[4-6]|a[1-5]\d|z fold|z flip|watch ultra|buds|tab s/i,/\bspecifically\b|\bexactly\b|\bpersonally\b|\bactually\b/i];
-  const hardQ=sortedMsgs.filter(([m])=>{
-    if(m.length<40) return false;
-    const lo=m.toLowerCase();
-    const isQ=lo.includes('?')||['how','what','which','why','can','is','will','would','should','could'].some(w=>lo.startsWith(w));
-    return isQ&&hardKw.some(rx=>rx.test(m));
-  }).slice(0,6);
-  document.getElementById('hardQuestions').innerHTML=hardQ.length
-    ?hardQ.map(([m,ss])=>multiQuoteEl(m,ss,'ql-purple')).join('')
-    :'<div class="empty-msg">No highly specific questions detected yet</div>';
 
   // ── Decision moments (last user msg in converted sessions) ──
   const decisionMap=new Map();
