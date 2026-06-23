@@ -217,8 +217,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .fb-frustration{background:#fef9e7;color:#78350f}
 .fb-ai{background:#f0fdf4;color:#166534;border:0.5px solid rgba(22,101,52,.25)}
 .ai-source-pill{font-size:9px;font-weight:600;letter-spacing:.04em;background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:8px;border:0.5px solid var(--green-border)}
-.flag-msg{font-size:12px;color:var(--text);line-height:1.55;font-style:italic;margin-bottom:4px}
-.flag-match{font-size:10px;color:var(--muted);margin-bottom:3px}
+.flag-msg{font-size:12px;color:var(--text);line-height:1.55;font-style:italic;margin-bottom:4px;display:flex;align-items:flex-start;gap:6px}
+.ai-reason-tip{font-style:normal;cursor:help;flex-shrink:0;position:relative}
+.ai-reason-tip:hover::after{content:attr(title);position:absolute;left:0;top:20px;z-index:99;background:#1f2937;color:#fff;font-size:11px;font-style:normal;font-weight:400;line-height:1.5;padding:8px 12px;border-radius:6px;width:260px;white-space:normal;box-shadow:0 4px 12px rgba(0,0,0,.2)}
 .flag-meta-row{display:flex;gap:10px;font-size:10px;color:var(--muted2);flex-wrap:wrap}
 .flag-expand{font-size:9px;color:var(--muted2);margin-top:6px}
 .flag-drawer{display:none;margin-top:10px;border-top:0.5px solid rgba(0,0,0,.08);padding-top:10px;max-height:320px;overflow-y:auto}
@@ -416,7 +417,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <button class="cat-pill" onclick="filterFlags('cat','frustration',this)">Frustration</button>
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
         <span id="aiStatusTxt" style="font-size:11px;color:var(--muted2)"></span>
-        <button id="aiRunBtn" onclick="runAIFlagging()" style="display:none;align-items:center;gap:6px;padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s" title="Retry AI analysis">
+        <button id="aiRunBtn" onclick="promptRetryAI()" style="display:none;align-items:center;gap:6px;padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s" title="Retry AI analysis">
           ↺ Retry AI
         </button>
       </div>
@@ -527,9 +528,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
           <div style="font-size:18px;font-weight:600;letter-spacing:-.02em">Where Blarney wins</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px">Metrics where your pilot beats industry benchmarks — ready to copy into proposals</div>
         </div>
-        <div style="font-size:10px;color:var(--muted2);text-align:right">
-          <div id="winsPowered">Benchmarks via Google Search</div>
-          <div id="winsTimestamp"></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:10px;color:var(--muted2);text-align:right">
+            <div id="winsPowered">Benchmarks via Google Search</div>
+            <div id="winsTimestamp"></div>
+          </div>
+          <button onclick="promptReanalyseBenchmarks()" style="padding:5px 12px;background:none;border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif" title="Re-fetch live benchmarks">↺ Re-analyse</button>
         </div>
       </div>
       <div id="winsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px"></div>
@@ -940,6 +944,21 @@ function applyAIFlags(aiFlags, sessions){
   return fresh.length;
 }
 
+function promptRetryAI(){
+  const pw = prompt('Enter password to re-run AI analysis:');
+  if(pw !== UPLOAD_PASSWORD){ alert('Incorrect password.'); return; }
+  localStorage.removeItem('blarney_ai_flags');
+  ALL_FLAGS = [];
+  runAIFlagging();
+}
+
+function promptReanalyseBenchmarks(){
+  const pw = prompt('Enter password to re-fetch benchmarks:');
+  if(pw !== UPLOAD_PASSWORD){ alert('Incorrect password.'); return; }
+  localStorage.removeItem(WINS_CACHE_KEY);
+  fetchWins();
+}
+
 async function runAIFlagging(){
   const btn = document.getElementById('aiRunBtn');
   const status = document.getElementById('aiStatusTxt');
@@ -1013,8 +1032,8 @@ function renderFlags(){
           <span style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">${f.sev}</span>
           ${f.session.Date?`<span style="font-size:9px;color:var(--muted2)">${esc(f.session.Date)}</span>`:''}
         </div>
-        <div class="flag-msg">"${esc(f.message)}"</div>
-        ${f.match?`<div class="flag-match">${isAI?'AI reasoning':'Matched'}: <span style="font-size:10px;font-style:italic">${esc(f.match)}</span></div>`:''}
+        <div class="flag-msg">"${esc(f.message)}"${f.match&&isAI?`<span class="ai-reason-tip" title="${esc(f.match)}">💬</span>`:''}
+        </div>
         <div class="flag-meta-row">
           <span>Session ${esc(f.session['Session ID']||'—')}</span>
           <span>${esc(f.session.Mode||'—')}</span>
