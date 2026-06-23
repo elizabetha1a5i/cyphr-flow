@@ -153,7 +153,8 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
   border-radius: 2px;
   font-style: italic;
   color: var(--ink2);
-} background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ink2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-height: 48px; }
+}
+.output-box { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ink2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-height: 48px; }
 .output-label { font-size: 10px; font-family: var(--mono); color: var(--ink3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
 
 /* ── buttons ── */
@@ -1822,7 +1823,7 @@ function fieldHint(val, sourceKey) {
 }
 
 function reqFieldState(val, minLen) {
-  const filled = (val||'').trim().length >= minLen;
+  const filled = String(val||'').trim().length >= minLen;
   return { cls: filled ? 'field-ok' : 'field-error', filled };
 }
 
@@ -1892,7 +1893,7 @@ function rReq() {
       <div class="field-group ${fBudget.cls}">
         <label class="field-label">Budget (£)${fieldHint(p.budget,'budgetSource')}</label>
         <input type="number" id="f-bud" value="${p.budget||''}" placeholder="45000" oninput="saveReqField('budget',this.value);renderReqBanner()"/>
-        ${!fBudget.filled ? `<div class="field-hint-text error">Required</div>` : ''}
+        ${!fBudget.filled ? `<div class="field-hint-text error">Required ${assumeBtn('budget')}</div>` : ''}
       </div>
       <div class="field-group ${fTimeline.cls}">
         <label class="field-label">Timeline${fieldHint(p.timeline,'timelineSource')}</label>
@@ -1965,14 +1966,16 @@ async function assumeField(field, btn) {
     sector: `Based on this project context, pick the single most appropriate sector from this list: ${SECTORS.filter(Boolean).join(', ')}.\nContext: ${ctx.slice(0,2000)}\nReturn ONLY the exact sector name from the list, nothing else.`,
     requirements: `Based on this project context, write 3-5 concise bullet-point requirements (goals, must-haves, constraints) for a client proposal.\nContext: ${ctx.slice(0,2000)}\nReturn only the requirements, one per line starting with "- ".`,
     bgNotes: `Based on this project context, write 2-3 sentences of background and considerations (decision makers, pressures, context) for a client proposal.\nContext: ${ctx.slice(0,2000)}\nReturn only the background text, no preamble.`,
+    budget: `Based on this project context, estimate a realistic budget (as a number in GBP, no currency symbol or commas) for a digital studio engagement.\nContext: ${ctx.slice(0,2000)}\nConsider: sector (${p.sector||'unknown'}), timeline (${p.timeline||'unknown'}), scope described.\nReturn ONLY a number like 45000 — no text, no £, no commas.`,
   };
+  const labels = { sector: 'Sector', requirements: 'Requirements', bgNotes: 'Background', budget: 'Budget' };
   if (btn) { btn.textContent = '…'; btn.disabled = true; }
   try {
     const out = await callGemini(prompts[field], { maxOutputTokens: 300 });
-    const val = out.trim();
+    const val = field === 'budget' ? out.trim().replace(/[^0-9]/g, '') : out.trim();
     saveProjectData({ [field]: val, contextConfidence: null });
     render();
-    toast(`${field === 'sector' ? 'Sector' : field === 'requirements' ? 'Requirements' : 'Background'} filled — review and amend if needed`, 'success');
+    toast(`${labels[field]||field} filled — review and amend if needed`, 'success');
   } catch(e) {
     if (btn) { btn.textContent = 'Assumption'; btn.disabled = false; }
     toast('Could not generate assumption — check your connection', 'error');
