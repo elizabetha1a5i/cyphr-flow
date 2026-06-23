@@ -1057,7 +1057,7 @@ function showDashboard(rows){
     const sessionMap = new Map(rows.map(s=>[s['Session ID'],s]));
     ALL_FLAGS = cachedFlags.map(f=>({
       cat: f.cat, sev: f.sev, message: f.message, reason: f.reason,
-      date: f.date, session: sessionMap.get(f.sessionId)||{}
+      match: f.reason, date: f.date, session: sessionMap.get(f.sessionId)||{}
     }));
     renderFlags();
     const kpiEl = document.getElementById('flagsKpi');
