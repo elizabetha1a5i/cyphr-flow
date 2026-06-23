@@ -1972,13 +1972,15 @@ async function assumeField(field, btn) {
   if (btn) { btn.textContent = '…'; btn.disabled = true; }
   try {
     const out = await callGemini(prompts[field], { maxOutputTokens: 300 });
+    if (out.startsWith('Error:')) throw new Error(out);
     const val = field === 'budget' ? out.trim().replace(/[^0-9]/g, '') : out.trim();
     saveProjectData({ [field]: val, contextConfidence: null });
     render();
     toast(`${labels[field]||field} filled — review and amend if needed`, 'success');
   } catch(e) {
+    console.error('[assumeField] error:', e);
     if (btn) { btn.textContent = 'Assumption'; btn.disabled = false; }
-    toast('Could not generate assumption — check your connection', 'error');
+    toast(`Could not generate assumption: ${e.message||'unknown error'}`, 'error');
   }
 }
 
