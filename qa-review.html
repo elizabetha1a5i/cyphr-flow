@@ -510,6 +510,11 @@ function render() {
             : `<button class="override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')" style="margin-left:auto">✓ Mark as pass</button>`
           }
         </div>
+        ${t.notes ? `
+        <div style="margin-top:8px">
+          <button onclick="toggleNotes('notes_${esc(oid)}')" style="font-size:10px;font-weight:600;color:var(--blue);background:none;border:none;cursor:pointer;padding:0">▶ Show transcript</button>
+          <pre id="notes_${esc(esc(oid))}" style="display:none;margin-top:8px;font-size:10px;line-height:1.6;white-space:pre-wrap;background:var(--surface2,#f8f8f8);padding:12px;border-radius:6px;max-height:300px;overflow-y:auto;font-family:monospace">${esc(t.notes)}</pre>
+        </div>` : ''}
       </div>`;
   }
 
@@ -653,13 +658,34 @@ function renderAllRuns(runs) {
   const passRate = total ? Math.min(100, Math.round((passed+partial)/total*100)) : 0;
   const failCards = all.filter(({t})=>t.status==='FAIL'||t.status==='ERROR').map(({t,r})=>{
     const tip = t.summary || '';
-    return `<div class="partial-item ${tip?'has-tooltip':''}" style="position:relative">
+    const oid = t.id || t.name;
+    const overrideKey = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
+    let overrides = {};
+    try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
+    const isOverridden = !!overrides[oid];
+    const badgeClass = isOverridden ? 'pass-override' : '';
+    const badgeLabel = isOverridden ? 'Pass' : t.status;
+    const notesId = `notes_all_${esc(oid)}`;
+    const notesHtml = t.notes ? `
+      <div style="margin-top:8px">
+        <button onclick="toggleNotes('${notesId}')" style="font-size:10px;font-weight:600;color:var(--blue);background:none;border:none;cursor:pointer;padding:0">▶ Show transcript</button>
+        <pre id="${notesId}" style="display:none;margin-top:8px;font-size:10px;line-height:1.6;white-space:pre-wrap;background:var(--surface2,#f8f8f8);padding:12px;border-radius:6px;max-height:300px;overflow-y:auto;font-family:monospace">${esc(t.notes)}</pre>
+      </div>` : '';
+    return `<div class="partial-item ${isOverridden?'overridden':''} ${tip?'has-tooltip':''}" id="card_all_${esc(oid)}" style="position:relative">
       ${tip ? `<div class="tip">${esc(tip)}</div>` : ''}
       <div class="partial-header">
         <span class="partial-name">${esc(t.name)}</span>
-        <span class="partial-badge">${esc(t.status)}</span>
+        <span class="partial-badge ${badgeClass}">${esc(badgeLabel)}</span>
         <span style="font-size:10px;color:var(--text-light);margin-left:8px">[${esc(r.environment||'prod')} · ${esc(r.date||'')}]</span>
       </div>
+      <div class="partial-footer">
+        ${isOverridden
+          ? `<span class="override-note" style="margin-left:auto">✓ Manually passed</span>
+             <button class="remove-override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')">✕</button>`
+          : `<button class="override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')">✓ Mark as pass</button>`
+        }
+      </div>
+      ${notesHtml}
     </div>`;
   }).join('');
   document.getElementById('main').innerHTML = `
@@ -684,6 +710,15 @@ function toggleHideOverrides() {
   document.querySelectorAll('.overridden').forEach(el => {
     el.style.display = hiding ? 'none' : '';
   });
+}
+
+function toggleNotes(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const btn = el.previousElementSibling;
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'block';
+  if (btn) btn.textContent = (showing ? '▶' : '▼') + ' Show transcript';
 }
 
 function toggleOverride(testId, overrideKey) {
