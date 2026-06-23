@@ -2106,7 +2106,7 @@ function rSkillDetail(id) {
   } else {
     projectCtx = `${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`;
   }
-  const launchUrl = `https://claude.ai/new?q=${encodeURIComponent(projectCtx)}`;
+  const launchUrl = `https://claude.ai/project/019dd912-c7e8-7151-a30f-0957e4b5da7e?q=${encodeURIComponent(projectCtx)}`;
   return `<div class="skill-detail">
     <div class="skill-detail-title">Running: ${s.name}</div>
     <div class="output-label">What this skill needs</div>
