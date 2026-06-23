@@ -679,6 +679,8 @@ function renderAllRuns(runs) {
         <span style="font-size:10px;color:var(--text-light);margin-left:8px">[${esc(r.environment||'prod')} · ${esc(r.date||'')}]</span>
       </div>
       <div class="partial-footer">
+        ${t.screenshot_path ? `<a class="link-btn" href="${esc(t.screenshot_path)}" target="_blank">📸 Screenshot</a>` : ''}
+        ${t.conversation_path ? `<a class="link-btn" href="${esc(t.conversation_path)}" target="_blank">💬 Conversation</a>` : ''}
         ${isOverridden
           ? `<span class="override-note" style="margin-left:auto">✓ Manually passed</span>
              <button class="remove-override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')">✕</button>`
