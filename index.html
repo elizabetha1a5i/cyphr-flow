@@ -2114,7 +2114,15 @@ function rSkillDetail(id) {
     <ul class="checklist">${s.inputs.map(i=>`<li><span class="check-icon">✓</span>${i}</li>`).join('')}</ul>
     <div class="output-label">What it produces</div>
     <div class="outputs-pills">${s.outputs.map(o=>`<span class="out-pill">${o}</span>`).join('')}</div>
-    <button class="btn btn-ai" style="margin-bottom:12px" onclick="(function(){navigator.clipboard.writeText(${JSON.stringify(_launchCtx)}).then(function(){window.open('${projectUrl}','_blank');toast('Context copied — paste it into Claude and press Send','success');}).catch(function(){window.open('${projectUrl}','_blank');toast('Opened project — copy context manually','warn');});})()">↗ Launch skill in Claude.ai</button>
+    <div style="background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.8;color:var(--ink2)">
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">How to run this skill</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div><span style="font-family:var(--mono);color:var(--accent);font-weight:600;margin-right:6px">1.</span>Click the button below — context is copied to your clipboard</div>
+        <div><span style="font-family:var(--mono);color:var(--accent);font-weight:600;margin-right:6px">2.</span>In the Claude tab that opens, click the chat input</div>
+        <div><span style="font-family:var(--mono);color:var(--accent);font-weight:600;margin-right:6px">3.</span>Press <kbd style="background:var(--bg);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-family:var(--mono);font-size:10px">Ctrl+V</kbd> to paste, then press Send</div>
+      </div>
+    </div>
+    <button class="btn btn-ai" style="margin-bottom:12px;width:100%;justify-content:center" onclick="(function(){navigator.clipboard.writeText(${JSON.stringify(_launchCtx)}).then(function(){window.open('${projectUrl}','_blank');toast('Context copied — paste it into Claude and press Send','success');}).catch(function(){window.open('${projectUrl}','_blank');toast('Opened project — copy context manually','warn');});})()">↗ Launch skill in Claude.ai</button>
     <div class="field-group">
       <label class="field-label">Paste skill outputs here when done</label>
       <textarea id="skill-notes" style="min-height:80px" placeholder="Paste key outputs or decisions from running the skill — these feed into the estimate and proposal…">${gp().skillOutputNotes||''}</textarea>
