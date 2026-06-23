@@ -718,10 +718,21 @@ function saveData(rows){
   rows.forEach(r=>{ if(r['Session ID']) map.set(r['Session ID'],r); });
   SAVED=[...map.values()];
   try{ localStorage.setItem('blarney_v2',JSON.stringify(SAVED)); }catch(e){}
+  pushSnapshot();
 }
 function clearData(){
   SAVED=[];
   try{ localStorage.removeItem('blarney_v2'); }catch(e){}
+}
+
+async function pushSnapshot(){
+  try{
+    await fetch(`${RAILWAY_URL}/push-snapshot`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({rows:SAVED})
+    });
+  }catch(e){ console.warn('Snapshot push failed:',e); }
 }
 
 // ════════════════════════════════════
@@ -1519,9 +1530,25 @@ function copyPilotSummary(btn){
 // ════════════════════════════════════
 // Boot — show saved data immediately
 // ════════════════════════════════════
-window.addEventListener('DOMContentLoaded',function(){
-  if(SAVED.length>0) showDashboard(SAVED);
-  // else: empty state shown by default (CSS display:flex)
+window.addEventListener('DOMContentLoaded', async function(){
+  if(SAVED.length>0){
+    showDashboard(SAVED);
+  } else {
+    // No local data — fetch shared snapshot from Railway/Gist
+    try{
+      const res = await fetch(`${RAILWAY_URL}/snapshot`);
+      if(res.ok){
+        const rows = await res.json();
+        if(Array.isArray(rows) && rows.length>0){
+          SAVED=rows;
+          try{ localStorage.setItem('blarney_v2',JSON.stringify(SAVED)); }catch(e){}
+          showDashboard(SAVED);
+          return;
+        }
+      }
+    }catch(e){ console.warn('Could not load shared snapshot:',e); }
+    // Still nothing — show empty state
+  }
 });
 </script>
 </body>
