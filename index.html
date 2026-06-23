@@ -2134,12 +2134,11 @@ function saveSkillNotes() { saveProjectData({ skillOutputNotes: sv('skill-notes'
 function launchSkill() {
   const url = 'https://claude.ai/project/019dd912-c7e8-7151-a30f-0957e4b5da7e';
   const ctx = window._skillLaunchCtx || '';
+  window.open(url, '_blank');
   navigator.clipboard.writeText(ctx).then(function() {
-    window.open(url, '_blank');
     toast('Context copied — paste it into Claude and press Send', 'success');
   }).catch(function() {
-    window.open(url, '_blank');
-    toast('Opened project — copy context manually', 'warn');
+    toast('Project opened — context could not be copied automatically', 'warn');
   });
 }
 
