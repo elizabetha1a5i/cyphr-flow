@@ -274,7 +274,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <div class="hstat-val" id="hdrVal">—</div>
       <div class="hstat-label">sessions loaded</div>
     </div>
-    <button class="h-upload-btn" id="uploadHeaderBtn" style="display:none" onclick="requestUpload()">
+    <button class="h-upload-btn" id="uploadHeaderBtn" style="display:none" onclick="saveSnapshot()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Save snapshot
+    </button>
+    <button class="h-upload-btn" id="uploadHeaderBtn2" style="display:none" onclick="requestUpload()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Update data
     </button>
@@ -298,7 +302,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <div class="overlay" id="pwModal">
   <div class="modal">
     <h3>🔒 Upload requires authorisation</h3>
-    <div class="modal-sub">Enter the password to upload a new data file. It will merge with existing sessions.</div>
+    <div class="modal-sub">Enter the password to upload a CSV or snapshot (.json) file.</div>
     <input class="modal-input" type="password" id="pwInput" placeholder="Password" autocomplete="off">
     <div class="modal-err" id="pwErr"></div>
     <div class="modal-actions">
@@ -328,7 +332,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div style="font-size:12px;color:var(--muted)">Analysing transcripts…</div>
 </div>
 
-<input type="file" id="fileInput" accept=".csv" style="display:none">
+<input type="file" id="fileInput" accept=".csv,.json" style="display:none">
 
 <!-- Main dashboard -->
 <div class="main" id="main" style="display:none">
@@ -727,6 +731,25 @@ document.getElementById('fileInput').addEventListener('change',function(){
   if(!this.files||!this.files[0]) return;
   const file=this.files[0]; this.value='';
   document.getElementById('loading').classList.add('show');
+
+  if(file.name.endsWith('.json')){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      document.getElementById('loading').classList.remove('show');
+      try {
+        const data=JSON.parse(e.target.result);
+        const rows=Array.isArray(data)?data:(data.rows||data.sessions||[]);
+        if(!rows.length) throw new Error('No session data found in file');
+        saveData(rows);
+        showDashboard(SAVED);
+      } catch(err){
+        alert('Could not load snapshot: '+err.message);
+      }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
   Papa.parse(file,{
     header:true, skipEmptyLines:true,
     complete: res => {
@@ -740,6 +763,13 @@ document.getElementById('fileInput').addEventListener('change',function(){
     }
   });
 });
+
+function saveSnapshot(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(SAVED)],{type:'application/json'}));
+  a.download=`blarney-snapshot-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
 
 // ════════════════════════════════════
 // Flagging engine
@@ -995,6 +1025,7 @@ function showDashboard(rows){
   document.getElementById('emptyState').style.display='none';
   document.getElementById('main').style.display='block';
   document.getElementById('uploadHeaderBtn').style.display='flex';
+  document.getElementById('uploadHeaderBtn2').style.display='flex';
   document.getElementById('hdrStat').style.display='block';
   ALL_ROWS=rows;
   const sessions=rows.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR');
