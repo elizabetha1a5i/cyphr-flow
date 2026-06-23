@@ -515,6 +515,9 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       <div style="font-size:18px;font-weight:700;color:var(--ink1);letter-spacing:-0.02em;margin-bottom:6px">Building your project pack</div>
       <div id="gen-phase-label" style="font-size:13px;color:var(--ink3);min-height:20px">Starting up…</div>
     </div>
+    <div id="gen-conf-banner" style="display:none;width:100%;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:10px 14px;gap:10px;align-items:flex-start;font-size:12px;color:#92400E;line-height:1.5">
+      <span style="flex:1">⚠ <strong>Working assumptions mode</strong> — limited context was provided. All documents will clearly mark where assumptions have been made. Review and amend each output before downloading.</span>
+    </div>
     <div style="width:100%;display:flex;flex-direction:column;gap:8px">
       <div class="gen-status-row" id="gsr-brief"><div class="gen-status-dot" id="gsd-brief"></div><div class="gen-status-text"><span class="gen-status-label">Brief</span><span class="gen-status-desc" id="gsm-brief">Reading your context…</span></div></div>
       <div class="gen-status-row" id="gsr-estimate"><div class="gen-status-dot" id="gsd-estimate"></div><div class="gen-status-text"><span class="gen-status-label">Cost estimate</span><span class="gen-status-desc" id="gsm-estimate">Waiting…</span></div></div>
@@ -567,7 +570,12 @@ function setGenProgress(pct, label) {
 
 async function preGenerateAll() {
   const p = gp(); if(!p) return;
+  const conf = contextConfidence(p);
+  if (conf !== 'high') saveProjectData({ contextConfidence: conf });
   showGenOverlay();
+  // Show amber working-assumptions banner inside overlay if context is thin
+  const confBanner = document.getElementById('gen-conf-banner');
+  if (confBanner) confBanner.style.display = (conf !== 'high') ? 'flex' : 'none';
   const steps = [
     { id:'brief',    saveTo:'briefOutput',    msg:'Reading context and writing the project brief…' },
     { id:'estimate', saveTo:'estimateOutput', msg:'Calculating resource plan from brief and budget…' },
@@ -823,6 +831,21 @@ async function callClaude(prompt) {
   } catch(e) {
     return `Error: ${e.message}`;
   }
+}
+
+// ── CONTEXT CONFIDENCE ────────────────────────────────────────────────────
+function contextConfidence(p) {
+  const words = (p.rawText || '').trim().split(/\s+/).filter(Boolean).length;
+  const hasReqs = (p.requirements || '').trim().length > 30;
+  const hasBg   = (p.bgNotes || '').trim().length > 20;
+  if (words < 80 && !hasReqs && !hasBg) return 'low';
+  if (words < 200 || (!hasReqs && !hasBg)) return 'medium';
+  return 'high';
+}
+
+function assumptionPrompt(basePrompt, conf) {
+  if (conf === 'high') return basePrompt;
+  return `LIMITED CONTEXT: You have been given minimal project information. Make commercially reasonable assumptions to fill gaps. Where you assume rather than know, prefix that sentence with "ASSUMPTION:". Do not refuse or stall — produce a complete, useful output.\n\n${basePrompt}`;
 }
 
 // ── GEMINI API (default for document generation in this app) ──────────────
@@ -1274,7 +1297,13 @@ function rFiles() {
     <div class="field-group">
       <label class="field-label">Or paste transcript / notes directly</label>
       <div class="hint" style="margin-bottom:8px"><span>💡</span><span>Multiple topics in your notes? No problem — we'll detect them all and ask you which ones to focus on.</span></div>
-      <textarea id="f-raw" style="min-height:120px" placeholder="Paste meeting transcript, notes, email thread or brief here…" oninput="updateWordCount(this)">${p.rawText||''}</textarea>
+      ${(()=>{
+        const words=(p.rawText||'').trim().split(/\s+/).filter(Boolean).length;
+        const sparse = words < 80 && !(p.requirements||'').trim() && !(p.bgNotes||'').trim();
+        const borderStyle = sparse ? 'border-color:#EF4444;' : '';
+        const hint = sparse ? '<div style="font-size:11px;color:#EF4444;margin-top:4px">Add more context to improve document quality</div>' : '';
+        return `<textarea id="f-raw" style="min-height:120px;${borderStyle}" placeholder="Paste meeting transcript, notes, email thread or brief here…" oninput="updateWordCount(this)">${p.rawText||''}</textarea>${hint}`;
+      })()}
       <div class="textarea-footer" id="word-count-row">${wordCountLabel(p.rawText||'')}</div>
     </div>
     <div id="dup-warn-row"></div>
@@ -1591,7 +1620,7 @@ ${textToUse}`;
     const parsed = JSON.parse(clean);
     const fields = {clientName:parsed.clientName,projectName:parsed.projectName,sector:parsed.sector,budget:parsed.budget,timeline:parsed.timeline,requirements:parsed.requirements,bgNotes:parsed.bgNotes,stakeholders:parsed.stakeholders,otherOpportunities:parsed.otherOpportunities,risksAndOpenQuestions:parsed.risksAndOpenQuestions,nextSteps:parsed.nextSteps};
     const sources = {clientNameSource:parsed.clientNameSource,projectNameSource:parsed.projectNameSource,sectorSource:parsed.sectorSource,budgetSource:parsed.budgetSource,timelineSource:parsed.timelineSource,requirementsSource:parsed.requirementsSource,bgNotesSource:parsed.bgNotesSource,stakeholdersSource:parsed.stakeholdersSource,otherOpportunitiesSource:parsed.otherOpportunitiesSource,risksAndOpenQuestionsSource:parsed.risksAndOpenQuestionsSource,nextStepsSource:parsed.nextStepsSource};
-    saveProjectData({...fields,...sources});
+    saveProjectData({...fields,...sources, contextConfidence: null});
     const p = gp();
     const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}\n\nStakeholders:\n${p.stakeholders||'—'}\n\nOther opportunities mentioned:\n${p.otherOpportunities||'—'}\n\nRisks & open questions:\n${p.risksAndOpenQuestions||'—'}\n\nNext steps:\n${p.nextSteps||'—'}`;
     saveProjectData({ extractedContext: summary });
@@ -1646,17 +1675,18 @@ async function preGenerateAll() {
 
 async function preGen(stage) {
   const p = gp();
+  const conf = contextConfidence(p);
   let out;
   if (stage === 'brief') {
-    out = await callGeminiBackground(`You are a senior consultant at Cyphr. Write a structured response to brief.
+    out = await callGeminiBackground(assumptionPrompt(`You are a senior consultant at Cyphr. Write a structured response to brief.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Requirements: ${p.requirements}
 Background: ${p.bgNotes}
-Cover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
-    saveProjectData({ briefOutput: out });
+Cover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`, conf));
+    saveProjectData({ briefOutput: out, contextConfidence: conf });
   } else if (stage === 'estimate') {
     const fresh = gp();
-    out = await callGeminiBackground(`You are a project director at Cyphr. Create a detailed resource plan from the brief below.
+    out = await callGeminiBackground(assumptionPrompt(`You are a project director at Cyphr. Create a detailed resource plan from the brief below.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 
@@ -1673,11 +1703,11 @@ PHASE: [Next phase name]
 TOTAL: £[grand total]
 NOTES: [1-2 sentences on budget fit and key assumptions]
 
-Use realistic Cyphr day rates (Strategy Lead £950/day, Tech Lead £700/day, Producer £500/day, Developer Mid £200/day, Developer Senior £300/day). Make phases and roles specific to the project type.`);
+Use realistic Cyphr day rates (Strategy Lead £950/day, Tech Lead £700/day, Producer £500/day, Developer Mid £200/day, Developer Senior £300/day). Make phases and roles specific to the project type.`, conf));
     saveProjectData({ estimateOutput: out });
   } else if (stage === 'proposal') {
     const fresh = gp();
-    out = await callGeminiBackground(`You are a senior consultant at Cyphr. Write a complete commercial proposal from the brief and resource plan below.
+    out = await callGeminiBackground(assumptionPrompt(`You are a senior consultant at Cyphr. Write a complete commercial proposal from the brief and resource plan below.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Resource plan: ${fresh.estimateOutput}
@@ -1713,11 +1743,11 @@ TOTAL: £[grand total]
 SLIDE 7 — WHY CYPHR
 [2-3 sentences: specific reasons this client should choose Cyphr — reference their sector, the project type, Cyphr's relevant expertise. Sharp, no fluff.]
 
-Sharp, confident, specific to ${fresh.clientName}. No generic filler.`);
+Sharp, confident, specific to ${fresh.clientName}. No generic filler.`, conf));
     saveProjectData({ proposalOutput: out });
   } else if (stage === 'sow') {
     const fresh = gp();
-    out = await callGeminiBackground(`You are a project director at Cyphr. Write a complete, ready-to-sign Statement of Work from the brief and resource plan below.
+    out = await callGeminiBackground(assumptionPrompt(`You are a project director at Cyphr. Write a complete, ready-to-sign Statement of Work from the brief and resource plan below.
 Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
 Brief: ${fresh.briefOutput}
 Resource plan: ${fresh.estimateOutput}
@@ -1756,7 +1786,7 @@ ${fresh.clientName}: [responsibility 1], [responsibility 2]
 FEE:
 [Fee statement with total amount and payment schedule]
 
-Professional, specific, no placeholders except for client contact details.`);
+Professional, specific, no placeholders except for client contact details.`, conf));
     saveProjectData({ sowOutput: out });
   }
 }
@@ -1831,8 +1861,8 @@ function rReq() {
       <div class="field-group"><label class="field-label">Timeline${fieldHint(p.timeline,'timelineSource')}</label><input id="f-tl" value="${p.timeline||''}" placeholder="8–10 weeks"/></div>
     </div>
     <div class="field-section-label">Scope</div>
-    <div class="field-group"><label class="field-label">Requirements${fieldHint(p.requirements,'requirementsSource')}</label><textarea id="f-req" placeholder="Key goals, must-haves, constraints…">${p.requirements||''}</textarea></div>
-    <div class="field-group"><label class="field-label">Background & considerations${fieldHint(p.bgNotes,'bgNotesSource')}</label><textarea id="f-bg" placeholder="Decision makers, objections, context…">${p.bgNotes||''}</textarea></div>
+    <div class="field-group"><label class="field-label">Requirements${fieldHint(p.requirements,'requirementsSource')}</label><textarea id="f-req" style="${(p.requirements||'').trim().length<30?'border-color:#EF4444;':''}" placeholder="Key goals, must-haves, constraints…" oninput="saveReqField('requirements',this.value);this.style.borderColor=(this.value.trim().length>=30?'':'#EF4444')">${p.requirements||''}</textarea>${(p.requirements||'').trim().length<30?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Required for accurate documents</div>':''}</div>
+    <div class="field-group"><label class="field-label">Background & considerations${fieldHint(p.bgNotes,'bgNotesSource')}</label><textarea id="f-bg" style="${(p.bgNotes||'').trim().length<20?'border-color:#EF4444;':''}" placeholder="Decision makers, objections, context…" oninput="saveReqField('bgNotes',this.value);this.style.borderColor=(this.value.trim().length>=20?'':'#EF4444')">${p.bgNotes||''}</textarea>${(p.bgNotes||'').trim().length<20?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Recommended</div>':''}</div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" id="btn-req-next" onclick="saveReq();advance()">Next → auto-generate brief</button></div>`;
 }
@@ -1843,6 +1873,10 @@ function saveReq() {
     timeline:sv('f-tl'), sector:sv('f-sec'), startDate:sv('f-sd'),
     requirements:sv('f-req'), bgNotes:sv('f-bg'),
   });
+}
+
+function saveReqField(key, value) {
+  saveProjectData({ [key]: value });
 }
 
 // ── STAGE: BRIEF ──────────────────────────────────────────────────────────
@@ -1873,9 +1907,10 @@ function rBrief() {
 async function genBrief() {
   if (busy) return; busy=true;
   const p=gp();
+  const conf = contextConfidence(p);
   if($('brief-load'))$('brief-load').style.display='flex'; if($('btn-gen-brief'))$('btn-gen-brief').disabled=true; if($('brief-out'))$('brief-out').textContent='';
-  const out = await callGemini(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`);
-  saveProjectData({ briefOutput: out });
+  const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`, conf));
+  saveProjectData({ briefOutput: out, contextConfidence: conf });
   if($('brief-out'))$('brief-out').value=out;
   if($('brief-load'))$('brief-load').style.display='none';
   if($('btn-gen-brief')){$('btn-gen-brief').disabled=false;$('btn-gen-brief').textContent='↺ Regenerate brief';}
@@ -2009,15 +2044,16 @@ function rEstimate() {
 async function genEstimate() {
   if (busy) return; busy=true;
   const p=gp(); const rate=sv('f-rate')||850; const days=sv('f-days'); const roles=sv('f-roles');
+  const conf = p.contextConfidence || contextConfidence(p);
   saveProjectData({rate,days,roles});
   $('est-load').style.display='flex'; if($('btn-gen-est'))$('btn-gen-est').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
-  const out = await callGemini(`You are a project director at Cyphr. Create a concise resource plan.
+  const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Create a concise resource plan.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Day rate: £${rate} | Total days: ${days} | Roles: ${roles}
 Brief: ${p.briefOutput}
 ${skillCtx}
-Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`);
+Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`, conf));
   saveProjectData({ estimateOutput:out, rate, days, roles });
   $('est-out').value=out;
   if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false; busy=false;
@@ -2049,15 +2085,16 @@ function rProposal() {
 async function genProposal() {
   if (busy) return; busy=true;
   const p=gp(); const notes=sv('f-pnotes'); saveProjectData({proposalNotes:notes});
+  const conf = p.contextConfidence || contextConfidence(p);
   $('prop-load').style.display='flex'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
-  const out = await callGemini(`You are a senior consultant at Cyphr. Write proposal copy.
+  const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write proposal copy.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Brief: ${p.briefOutput}
 ${skillCtx}
 Resource plan: ${p.estimateOutput}
 Extra notes: ${notes}
-Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`);
+Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`, conf));
   saveProjectData({ proposalOutput:out });
   $('prop-out').value=out;
   if($('prop-load'))$('prop-load').style.display='none'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=false; busy=false;
@@ -2088,13 +2125,14 @@ function rSOW() {
 async function genSOW() {
   if (busy) return; busy=true;
   const p=gp();
+  const conf = p.contextConfidence || contextConfidence(p);
   $('sow-load').style.display='flex'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=true;
-  const out = await callGemini(`You are a project director at Cyphr. Write a Statement of Work.
+  const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Write a Statement of Work.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Brief: ${p.briefOutput}
 Resource plan: ${p.estimateOutput}
 Proposal: ${p.proposalOutput}
-Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`);
+Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`, conf));
   saveProjectData({ sowOutput:out });
   $('sow-out').value=out;
   if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false; busy=false;
