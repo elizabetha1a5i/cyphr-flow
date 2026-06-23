@@ -1975,7 +1975,7 @@ async function assumeField(field, btn) {
     if (out.startsWith('Error:')) throw new Error(out);
     const val = field === 'budget' ? out.trim().replace(/[^0-9]/g, '') : out.trim();
     saveProjectData({ [field]: val, contextConfidence: null });
-    render();
+    renderStage();
     toast(`${labels[field]||field} filled — review and amend if needed`, 'success');
   } catch(e) {
     console.error('[assumeField] error:', e);
