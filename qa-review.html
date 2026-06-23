@@ -10,9 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --blue:        #2323CC;
-    --blue-light:  #EAEAFF;
-    --blue-dark:   #070809;
+    --blue:        #258ed8;
+    --blue-light:  #e8f4fd;
+    --blue-dark:   #080331;
     --pink:        #dd23bb;
     --bg:          #f5f6fa;
     --surface:     #ffffff;
@@ -510,11 +510,6 @@ function render() {
             : `<button class="override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')" style="margin-left:auto">✓ Mark as pass</button>`
           }
         </div>
-        ${t.notes ? `
-        <div style="margin-top:8px">
-          <button onclick="toggleNotes('notes_${esc(oid)}')" style="font-size:10px;font-weight:600;color:var(--blue);background:none;border:none;cursor:pointer;padding:0">▶ Show transcript</button>
-          <pre id="notes_${esc(esc(oid))}" style="display:none;margin-top:8px;font-size:10px;line-height:1.6;white-space:pre-wrap;background:var(--surface2,#f8f8f8);padding:12px;border-radius:6px;max-height:300px;overflow-y:auto;font-family:monospace">${esc(t.notes)}</pre>
-        </div>` : ''}
       </div>`;
   }
 
@@ -658,79 +653,15 @@ function renderAllRuns(runs) {
   const passRate = total ? Math.min(100, Math.round((passed+partial)/total*100)) : 0;
   const failCards = all.filter(({t})=>t.status==='FAIL'||t.status==='ERROR').map(({t,r})=>{
     const tip = t.summary || '';
-    const oid = t.id || t.name;
-    const overrideKey = `overrides_${r.date}_${r.environment||'prod'}_${r.test_type||'criteria'}`;
-    let overrides = {};
-    try { overrides = JSON.parse(localStorage.getItem(overrideKey)||'{}'); } catch(e){}
-    const isOverridden = !!overrides[oid];
-    const badgeClass = isOverridden ? 'pass-override' : '';
-    const badgeLabel = isOverridden ? 'Pass' : t.status;
-    const notesId = `notes_all_${esc(oid)}`;
-    const notesHtml = t.notes ? `
-      <div style="margin-top:8px">
-        <button onclick="toggleNotes('${notesId}')" style="font-size:10px;font-weight:600;color:var(--blue);background:none;border:none;cursor:pointer;padding:0">▶ Show transcript</button>
-        <pre id="${notesId}" style="display:none;margin-top:8px;font-size:10px;line-height:1.6;white-space:pre-wrap;background:var(--surface2,#f8f8f8);padding:12px;border-radius:6px;max-height:300px;overflow-y:auto;font-family:monospace">${esc(t.notes)}</pre>
-      </div>` : '';
-    return `<div class="partial-item ${isOverridden?'overridden':''} ${tip?'has-tooltip':''}" id="card_all_${esc(oid)}" style="position:relative">
+    return `<div class="partial-item ${tip?'has-tooltip':''}" style="position:relative">
       ${tip ? `<div class="tip">${esc(tip)}</div>` : ''}
       <div class="partial-header">
         <span class="partial-name">${esc(t.name)}</span>
-        <span class="partial-badge ${badgeClass}">${esc(badgeLabel)}</span>
+        <span class="partial-badge">${esc(t.status)}</span>
         <span style="font-size:10px;color:var(--text-light);margin-left:8px">[${esc(r.environment||'prod')} · ${esc(r.date||'')}]</span>
       </div>
-      <div class="partial-footer">
-        ${t.screenshot_path ? `<a class="link-btn" href="${esc(t.screenshot_path)}" target="_blank">📸 Screenshot</a>` : ''}
-        ${t.conversation_path ? `<a class="link-btn" href="${esc(t.conversation_path)}" target="_blank">💬 Conversation</a>` : ''}
-        ${isOverridden
-          ? `<span class="override-note" style="margin-left:auto">✓ Manually passed</span>
-             <button class="remove-override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')">✕</button>`
-          : `<button class="override-btn" onclick="toggleOverride('${esc(oid)}','${esc(overrideKey)}')">✓ Mark as pass</button>`
-        }
-      </div>
-      ${notesHtml}
     </div>`;
   }).join('');
-  // Build aggregated category bars across all runs
-  const catMap = {};
-  runs.forEach(r => {
-    Object.entries(r.categories||{}).forEach(([name, v]) => {
-      if (!catMap[name]) catMap[name] = {pass:0,partial:0,fail:0,total:0};
-      catMap[name].pass    += v.pass    || 0;
-      catMap[name].partial += v.partial || 0;
-      catMap[name].fail    += v.fail    || 0;
-      catMap[name].total   += v.total   || 0;
-    });
-  });
-  const catEntries = Object.entries(catMap);
-  const catBarsHTML = catEntries.length ? `
-    <div class="two-col">
-      <div class="card">
-        <h3>By Category</h3>
-        <p class="card-sub">Aggregated pass rate per category</p>
-        <div class="cat-bars">
-          ${catEntries.sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v]) => {
-            const t=v.total||0, p=(v.pass||0)+(v.partial||0), f=v.fail||0;
-            const cp=pct(p,t), fc=f>0?'fail':(v.partial||0)>0?'partial':'full';
-            return `<div class="cat-row">
-              <div class="cat-label"><span>${esc(name)}</span><span class="cat-pct">${cp}%&nbsp;(${p}/${t})</span></div>
-              <div class="bar-track"><div class="bar-fill ${fc}" style="width:${cp}%"></div></div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-      <div class="card">
-        <h3>Results Split</h3>
-        <p class="card-sub">Across ${runs.length} run${runs.length!==1?'s':''} · ${total} tests</p>
-        <div class="donut-wrap">
-          <svg id="donut-svg" width="120" height="120" viewBox="0 0 110 110"></svg>
-          <div class="donut-legend">
-            ${[[passed,'#258ed8','Pass'],[partial,'#f0c040','Partial'],[failed,'#b91c1c','Fail'],[errored,'#9ea3b8','Error']].filter(([v])=>v>0).map(([v,c,l])=>`
-              <div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${esc(l)}<span class="legend-val">${v}</span></div>`).join('')}
-          </div>
-        </div>
-      </div>
-    </div>` : '';
-
   document.getElementById('main').innerHTML = `
     <div class="section-label">All Runs — Aggregated (${runs.length} run${runs.length!==1?'s':''})</div>
     <div class="summary-card">Showing latest result per test across all filtered runs · ${total} unique tests · Pass rate <strong>${passRate}%</strong></div>
@@ -741,15 +672,7 @@ function renderAllRuns(runs) {
       <div class="kpi"><div class="kpi-label">Failing</div><div class="kpi-num">${failed+errored}</div></div>
       <div class="kpi"><div class="kpi-label">Partials</div><div class="kpi-num">${partial}</div></div>
     </div>
-    <div class="section-label">Breakdown</div>
-    ${buildTrendHTML(runs)}
-    ${catBarsHTML}
     ${failCards ? `<div class="section-label">Failing Tests</div><div class="fail-list">${failCards}</div>` : '<div class="summary-card">All tests passing across selected runs ✓</div>'}`;
-
-  drawDonut(
-    [[passed,'#258ed8'],[partial,'#f0c040'],[failed,'#b91c1c'],[errored,'#9ea3b8']].filter(([v])=>v>0),
-    total, passRate
-  );
 }
 
 function toggleHideOverrides() {
@@ -761,15 +684,6 @@ function toggleHideOverrides() {
   document.querySelectorAll('.overridden').forEach(el => {
     el.style.display = hiding ? 'none' : '';
   });
-}
-
-function toggleNotes(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const btn = el.previousElementSibling;
-  const showing = el.style.display !== 'none';
-  el.style.display = showing ? 'none' : 'block';
-  if (btn) btn.textContent = (showing ? '▶' : '▼') + ' Show transcript';
 }
 
 function toggleOverride(testId, overrideKey) {
