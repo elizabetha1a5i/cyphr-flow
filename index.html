@@ -115,6 +115,15 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 .field-label { font-size: 11px; font-family: var(--mono); color: var(--ink3); letter-spacing: 0.06em; display: block; margin-bottom: 5px; text-transform: uppercase; }
 .field-group input, .field-group select, .field-group textarea { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; font-family: var(--sans); color: var(--ink); outline: none; transition: border-color 0.15s; }
 .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
+.field-error input, .field-error select, .field-error textarea { border-color: #EF4444 !important; }
+.field-ok input, .field-ok select, .field-ok textarea { border-color: #22c55e !important; }
+.field-hint-text { font-size: 11px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.field-hint-text.error { color: #EF4444; }
+.field-hint-text.ok { color: #22c55e; }
+.ctx-banner { border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; line-height: 1.5; display: flex; gap: 10px; align-items: flex-start; }
+.ctx-banner.warn { background: #FEF3C7; border: 1px solid #F59E0B; color: #92400E; }
+.ctx-banner.error { background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; }
+.ctx-banner.ok { background: #F0FDF4; border: 1px solid #22c55e; color: #166534; }
 .field-group textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .output-editable {
@@ -1812,52 +1821,101 @@ function fieldHint(val, sourceKey) {
   return `<span class="field-hint">ⓘ<span class="field-hint-tip">${tipText}</span></span><span class="conf-dot ${conf}" title="${conf === 'high' ? 'Found explicitly in your notes' : 'Inferred — worth checking'}"></span>`;
 }
 
+function reqFieldState(val, minLen) {
+  const filled = (val||'').trim().length >= minLen;
+  return { cls: filled ? 'field-ok' : 'field-error', filled };
+}
+
+function assumeBtn(field) {
+  return `<button class="btn-assume" onclick="assumeField('${field}',this)">Assumption</button>`;
+}
+
 function rReq() {
   const p = gp();
   const extracted = !!p.extractedContext;
+
+  // Field states
+  const fSector   = { cls: p.sector ? 'field-ok' : 'field-error', filled: !!p.sector };
+  const fReqs     = reqFieldState(p.requirements, 30);
+  const fBg       = reqFieldState(p.bgNotes, 20);
+  const fBudget   = reqFieldState(p.budget, 1);
+  const fTimeline = reqFieldState(p.timeline, 2);
+
+  // Context quality banner
+  const missing = [
+    !fSector.filled   && 'Sector',
+    !fReqs.filled     && 'Requirements',
+    !fBg.filled       && 'Background',
+    !fBudget.filled   && 'Budget',
+    !fTimeline.filled && 'Timeline',
+  ].filter(Boolean);
+
+  let banner = '';
+  if (missing.length >= 3) {
+    banner = `<div class="ctx-banner error">
+      <span style="font-size:16px">⚠</span>
+      <div><strong>Low context — documents will be heavily assumed.</strong><br>Missing: ${missing.join(', ')}. Fill what you can or use the <strong>Assumption</strong> buttons to let AI fill the gaps.</div>
+    </div>`;
+  } else if (missing.length > 0) {
+    banner = `<div class="ctx-banner warn">
+      <span style="font-size:16px">◐</span>
+      <div><strong>Some fields missing.</strong> Missing: ${missing.join(', ')}. Fill them in or click <strong>Assumption</strong> to auto-fill from your context.</div>
+    </div>`;
+  } else {
+    banner = `<div class="ctx-banner ok"><span style="font-size:16px">✓</span><div><strong>Good context</strong> — all key fields are filled. Documents will be specific to this project.</div></div>`;
+  }
+
   return `<div class="card">
     <div class="card-title">Requirements</div>
     <div class="card-sub">${extracted ? 'Pre-filled from your files — review and edit.' : 'Enter the project basics.'}</div>
-    ${extracted ? `<div class="hint"><span>✓</span><span>Context extracted — hover the ⓘ icons to see where each value came from.</span></div>` : ''}
+    ${banner}
     <div class="field-section-label">Project identity</div>
     <div class="two-col">
-      <div class="field-group"><label class="field-label">Client name${fieldHint(p.clientName,'clientNameSource')}</label><input id="f-cn" value="${p.clientName||''}" placeholder="e.g. Currys"/></div>
-      <div class="field-group"><label class="field-label">Project name${fieldHint(p.projectName,'projectNameSource')}</label><input id="f-pn" value="${p.projectName||''}" placeholder="e.g. In-Store AI Assistant"/></div>
+      <div class="field-group"><label class="field-label">Client name${fieldHint(p.clientName,'clientNameSource')}</label><input id="f-cn" value="${p.clientName||''}" placeholder="e.g. Currys" oninput="saveReqField('clientName',this.value)"/></div>
+      <div class="field-group"><label class="field-label">Project name${fieldHint(p.projectName,'projectNameSource')}</label><input id="f-pn" value="${p.projectName||''}" placeholder="e.g. In-Store AI Assistant" oninput="saveReqField('projectName',this.value)"/></div>
     </div>
     <div class="two-col">
-      <div class="field-group">
+      <div class="field-group ${fSector.cls}">
         <label class="field-label" style="display:flex;align-items:center;gap:6px">
           Sector${fieldHint(p.sector,'sectorSource')}
-          ${!p.sector ? `<button class="btn-assume" onclick="assumeField('sector')" title="Let AI suggest the sector from your context">Assumption</button>` : ''}
+          ${!fSector.filled ? assumeBtn('sector') : ''}
         </label>
-        <select id="f-sec" style="${!p.sector ? 'border-color:#EF4444;' : 'border-color:#22c55e;'}" onchange="saveReqField('sector',this.value);this.style.borderColor=this.value?'#22c55e':'#EF4444'">
+        <select id="f-sec" onchange="saveReqField('sector',this.value);renderReqBanner()">
           ${SECTORS.map(s=>`<option ${p.sector===s?'selected':''}>${s}</option>`).join('')}
         </select>
-        ${!p.sector ? '<div style="font-size:11px;color:#EF4444;margin-top:4px">Required — affects document tone and recommendations</div>' : ''}
+        ${!fSector.filled ? `<div class="field-hint-text error">Required — affects document tone and recommendations</div>` : ''}
       </div>
-      <div class="field-group"><label class="field-label">Start date</label><input type="date" id="f-sd" value="${p.startDate||''}"/></div>
+      <div class="field-group"><label class="field-label">Start date</label><input type="date" id="f-sd" value="${p.startDate||''}" oninput="saveReqField('startDate',this.value)"/></div>
     </div>
     <div class="field-section-label">Financials</div>
     <div class="two-col">
-      <div class="field-group"><label class="field-label">Budget (£)${fieldHint(p.budget,'budgetSource')}</label><input type="number" id="f-bud" value="${p.budget||''}" placeholder="45000"/></div>
-      <div class="field-group"><label class="field-label">Timeline${fieldHint(p.timeline,'timelineSource')}</label><input id="f-tl" value="${p.timeline||''}" placeholder="8–10 weeks"/></div>
+      <div class="field-group ${fBudget.cls}">
+        <label class="field-label">Budget (£)${fieldHint(p.budget,'budgetSource')}</label>
+        <input type="number" id="f-bud" value="${p.budget||''}" placeholder="45000" oninput="saveReqField('budget',this.value);renderReqBanner()"/>
+        ${!fBudget.filled ? `<div class="field-hint-text error">Required</div>` : ''}
+      </div>
+      <div class="field-group ${fTimeline.cls}">
+        <label class="field-label">Timeline${fieldHint(p.timeline,'timelineSource')}</label>
+        <input id="f-tl" value="${p.timeline||''}" placeholder="8–10 weeks" oninput="saveReqField('timeline',this.value);renderReqBanner()"/>
+        ${!fTimeline.filled ? `<div class="field-hint-text error">Required</div>` : ''}
+      </div>
     </div>
     <div class="field-section-label">Scope</div>
-    <div class="field-group">
+    <div class="field-group ${fReqs.cls}">
       <label class="field-label" style="display:flex;align-items:center;gap:6px">
         Requirements${fieldHint(p.requirements,'requirementsSource')}
-        ${(p.requirements||'').trim().length < 30 ? `<button class="btn-assume" onclick="assumeField('requirements')" title="Let AI draft requirements from your context">Assumption</button>` : ''}
+        ${!fReqs.filled ? assumeBtn('requirements') : ''}
       </label>
-      <textarea id="f-req" style="${(p.requirements||'').trim().length<30?'border-color:#EF4444;':'border-color:#22c55e;'}" placeholder="Key goals, must-haves, constraints…" oninput="saveReqField('requirements',this.value);this.style.borderColor=(this.value.trim().length>=30?'#22c55e':'#EF4444')">${p.requirements||''}</textarea>
-      ${(p.requirements||'').trim().length<30?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Required for accurate documents</div>':''}
+      <textarea id="f-req" placeholder="Key goals, must-haves, constraints…" oninput="saveReqField('requirements',this.value);renderReqBanner()">${p.requirements||''}</textarea>
+      ${!fReqs.filled ? `<div class="field-hint-text error">Required for accurate documents</div>` : `<div class="field-hint-text ok">✓ Looks good</div>`}
     </div>
-    <div class="field-group">
+    <div class="field-group ${fBg.cls}">
       <label class="field-label" style="display:flex;align-items:center;gap:6px">
         Background & considerations${fieldHint(p.bgNotes,'bgNotesSource')}
-        ${(p.bgNotes||'').trim().length < 20 ? `<button class="btn-assume" onclick="assumeField('bgNotes')" title="Let AI draft background from your context">Assumption</button>` : ''}
+        ${!fBg.filled ? assumeBtn('bgNotes') : ''}
       </label>
-      <textarea id="f-bg" style="${(p.bgNotes||'').trim().length<20?'border-color:#EF4444;':'border-color:#22c55e;'}" placeholder="Decision makers, objections, context…" oninput="saveReqField('bgNotes',this.value);this.style.borderColor=(this.value.trim().length>=20?'#22c55e':'#EF4444')">${p.bgNotes||''}</textarea>
-      ${(p.bgNotes||'').trim().length<20?'<div style="font-size:11px;color:#EF4444;margin-top:4px">Recommended</div>':''}
+      <textarea id="f-bg" placeholder="Decision makers, objections, context…" oninput="saveReqField('bgNotes',this.value);renderReqBanner()">${p.bgNotes||''}</textarea>
+      ${!fBg.filled ? `<div class="field-hint-text error">Recommended — improves proposal accuracy</div>` : `<div class="field-hint-text ok">✓ Looks good</div>`}
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" id="btn-req-next" onclick="saveReq();advance()">Next → auto-generate brief</button></div>`;
@@ -1875,24 +1933,49 @@ function saveReqField(key, value) {
   saveProjectData({ [key]: value });
 }
 
-async function assumeField(field) {
+function renderReqBanner() {
+  // Re-render just the banner without losing field focus
+  const p = gp();
+  const missing = [
+    !p.sector                              && 'Sector',
+    (p.requirements||'').trim().length < 30 && 'Requirements',
+    (p.bgNotes||'').trim().length < 20      && 'Background',
+    !p.budget                              && 'Budget',
+    (p.timeline||'').trim().length < 2     && 'Timeline',
+  ].filter(Boolean);
+  const banner = document.querySelector('.ctx-banner');
+  if (!banner) return;
+  if (missing.length >= 3) {
+    banner.className = 'ctx-banner error';
+    banner.innerHTML = `<span style="font-size:16px">⚠</span><div><strong>Low context — documents will be heavily assumed.</strong><br>Missing: ${missing.join(', ')}. Fill what you can or use the <strong>Assumption</strong> buttons.</div>`;
+  } else if (missing.length > 0) {
+    banner.className = 'ctx-banner warn';
+    banner.innerHTML = `<span style="font-size:16px">◐</span><div><strong>Some fields missing.</strong> Missing: ${missing.join(', ')}. Fill them in or click <strong>Assumption</strong> to auto-fill.</div>`;
+  } else {
+    banner.className = 'ctx-banner ok';
+    banner.innerHTML = `<span style="font-size:16px">✓</span><div><strong>Good context</strong> — all key fields filled. Documents will be specific to this project.</div>`;
+  }
+}
+
+async function assumeField(field, btn) {
   const p = gp();
   const ctx = [p.rawText, p.extractedContext, p.clientName, p.sector, p.requirements, p.bgNotes].filter(Boolean).join('\n');
   if (!ctx.trim()) { toast('Add some context first — paste a transcript or notes in the Files stage'); return; }
   const prompts = {
-    sector: `Based on this project context, pick the single most appropriate sector from this list: ${SECTORS.filter(Boolean).join(', ')}.\nContext: ${ctx.slice(0,2000)}\nReturn ONLY the sector name, nothing else.`,
+    sector: `Based on this project context, pick the single most appropriate sector from this list: ${SECTORS.filter(Boolean).join(', ')}.\nContext: ${ctx.slice(0,2000)}\nReturn ONLY the exact sector name from the list, nothing else.`,
     requirements: `Based on this project context, write 3-5 concise bullet-point requirements (goals, must-haves, constraints) for a client proposal.\nContext: ${ctx.slice(0,2000)}\nReturn only the requirements, one per line starting with "- ".`,
     bgNotes: `Based on this project context, write 2-3 sentences of background and considerations (decision makers, pressures, context) for a client proposal.\nContext: ${ctx.slice(0,2000)}\nReturn only the background text, no preamble.`,
   };
-  const btn = event.target; btn.textContent = '…'; btn.disabled = true;
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
   try {
-    const out = await callGemini(prompts[field], { maxTokens: 300 });
+    const out = await callGemini(prompts[field], { maxOutputTokens: 300 });
     const val = out.trim();
     saveProjectData({ [field]: val, contextConfidence: null });
     render();
-    toast(`${field === 'sector' ? 'Sector' : field === 'requirements' ? 'Requirements' : 'Background'} filled — review and edit if needed`);
+    toast(`${field === 'sector' ? 'Sector' : field === 'requirements' ? 'Requirements' : 'Background'} filled — review and amend if needed`, 'success');
   } catch(e) {
-    btn.textContent = 'Assumption'; btn.disabled = false;
+    if (btn) { btn.textContent = 'Assumption'; btn.disabled = false; }
+    toast('Could not generate assumption — check your connection', 'error');
   }
 }
 
