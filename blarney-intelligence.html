@@ -1451,24 +1451,30 @@ async function fetchWins(){
   try {
     const cached=JSON.parse(localStorage.getItem(WINS_CACHE_KEY)||'null');
     if(cached&&Date.now()-cached.ts<WINS_CACHE_TTL){
+      console.log('[Blarney] Benchmarks: loading from cache', cached.data);
       renderWins(cached.data, ourMetrics, true);
       return;
+    } else {
+      console.log('[Blarney] Benchmarks: no valid cache, fetching live');
     }
   } catch(e){}
 
   // Fetch from Railway
+  console.log('[Blarney] Benchmarks: sending metrics to Railway', ourMetrics);
   try {
     const res=await fetch(`${RAILWAY_URL}/benchmarks`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({metrics:ourMetrics})
     });
+    console.log('[Blarney] Benchmarks: Railway responded', res.status);
     if(!res.ok) throw new Error(res.status);
     const data=await res.json();
+    console.log('[Blarney] Benchmarks: data received', data);
     localStorage.setItem(WINS_CACHE_KEY,JSON.stringify({ts:Date.now(),data}));
     renderWins(data, ourMetrics, false);
   } catch(err){
-    console.error('Benchmarks failed:',err);
+    console.error('[Blarney] Benchmarks failed:',err);
     document.getElementById('winsLoading').style.display='none';
     document.getElementById('winsContent').style.display='block';
     document.getElementById('winsGrid').innerHTML='';
