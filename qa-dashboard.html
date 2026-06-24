@@ -590,12 +590,8 @@ function buildTrendHTML(runs) {
 }
 
 function renderAllRuns(runs) {
-  // Aggregate all tests across all filtered runs, deduped by test id — most recent run wins
-  const seen = new Map();
-  [...runs].reverse().forEach(r => {
-    (r.tests||[]).forEach(t => { if (t.id) seen.set(t.id, {t, r}); });
-  });
-  const all = [...seen.values()];
+  // Collect every test execution across every run — no deduplication
+  const all = runs.flatMap(r => (r.tests||[]).map(t => ({t, r})));
   const total   = all.length;
   const passed  = all.filter(({t})=>t.status==='PASS').length;
   const partial = all.filter(({t})=>t.status==='WARN').length;
