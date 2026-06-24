@@ -440,40 +440,6 @@ function render() {
       ${splitCard}
     </div>` : `<div style="margin-bottom:28px">${splitCard}</div>`;
 
-  const issueHTML = isFB ? buildIssueTracker(r, prevRun) : '';
-
-  function testCard(t, typeClass) {
-    const criteriaStr = t.criteria_failed||t.critical_failures||t.high_failures||'';
-    const critTags = criteriaStr.split(/[,;|]/).map(s=>s.trim()).filter(Boolean)
-      .map(c=>`<span class="criteria-tag ${typeClass==='warn'?'warn':''}">${esc(c)}</span>`).join('');
-    const screenshotLink = t.screenshot_path
-      ? `<a class="link-btn" href="${esc(t.screenshot_path)}" target="_blank">📸 Screenshot</a>` : '';
-    const convLink = t.conversation_path
-      ? `<a class="link-btn" href="${esc(t.conversation_path)}" target="_blank">💬 Conversation</a>` : '';
-    const isManualPass = !!t.manually_passed;
-    const badgeLabel = isManualPass ? 'Pass' : (t.score || (typeClass==='warn' ? 'Partial' : 'Fail'));
-    const badgeStyle = isManualPass ? 'background:var(--green-bg);color:var(--green);border:1px solid #b7f5c8;' : '';
-    const tipText = t.summary || '';
-    return `
-      <div class="partial-item ${tipText?'has-tooltip':''}">
-        ${tipText ? `<div class="tip">${esc(tipText)}</div>` : ''}
-        <div class="partial-header">
-          <span class="partial-name">${esc(t.name)}</span>
-          <span class="partial-badge" style="${badgeStyle}">${esc(badgeLabel)}</span>
-        </div>
-        <div class="partial-footer">
-          ${critTags}
-          ${screenshotLink}
-          ${convLink}
-          ${isManualPass ? `<span style="font-size:10px;color:var(--green);font-weight:600;margin-left:auto">✓ Reviewed</span>` : ''}
-        </div>
-      </div>`;
-  }
-
-  const partialsHTML = '';
-
-  const failsHTML = '';
-
   document.getElementById('main').innerHTML = `
     ${warnBanner}
     <div class="section-label">Summary</div>
@@ -504,13 +470,8 @@ function render() {
     <div class="section-label">Breakdown</div>
     ${buildTrendHTML(runs)}
     ${catHTML}
-    ${issueHTML}
-    ${failsHTML}
-    ${partialsHTML}
     <div class="disclaimer">
       Results reflect automated ${esc(r.test_type||'criteria')} testing against the ${esc(r.environment||'production')} environment${r.date?' on '+esc(fmtDate(r.date)):''}.
-      ${failed>0?`${failed} test${failed>1?'s':''} failed defined criteria thresholds.`:'All tests passed defined criteria thresholds.'}
-      ${partial>0?` ${partial} partial result${partial>1?'s':''} indicate responses where one criterion was not fully met but overall behaviour was correct.`:''} Tests should be reviewed alongside manual testing.
     </div>`;
 
   drawDonut(
