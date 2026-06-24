@@ -470,19 +470,9 @@ function render() {
       </div>`;
   }
 
-  const partials = r.partials||[];
-  const partialsHTML = !isFB && partials.length ? `
-    <div class="section-label">Partials to Monitor</div>
-    <div class="partial-list">
-      ${partials.map(p=>testCard(p,'warn')).join('')}
-    </div>` : '';
+  const partialsHTML = '';
 
-  const failTests = !isFB ? (r.tests||[]).filter(t=>t.status==='FAIL') : [];
-  const failsHTML = failTests.length ? `
-    <div class="section-label">Failing Tests</div>
-    <div class="fail-list">
-      ${failTests.map(t=>testCard(t,'fail')).join('')}
-    </div>` : '';
+  const failsHTML = '';
 
   document.getElementById('main').innerHTML = `
     ${warnBanner}
@@ -688,7 +678,7 @@ function renderAllRuns(runs) {
     <div class="section-label">Breakdown</div>
     ${buildTrendHTML(runs)}
     ${catBarsHTML}
-    ${failCards ? `<div class="section-label">Failing Tests</div><div class="fail-list">${failCards}</div>` : '<div class="summary-card" style="margin-top:12px">All tests passing across selected runs ✓</div>'}`;
+    `;
 
   drawDonut(
     [[passed,'#258ed8'],[partial,'#f0c040'],[failed,'#b91c1c'],[errored,'#9ea3b8']].filter(([v])=>v>0),
