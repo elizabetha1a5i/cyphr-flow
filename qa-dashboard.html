@@ -257,7 +257,7 @@
 
 <script>
 let allRuns = [], currentRun = null, activeEnv = 'all', activeType = 'all';
-let dateFrom = '', dateTo = '', showAllRuns = false;
+let dateFrom = '', dateTo = '', showAllRuns = true;
 
 function filteredRuns() {
   return allRuns.filter(r => {
@@ -721,7 +721,7 @@ function bindNav() {
 }
 
 function clearDates() {
-  dateFrom=''; dateTo=''; showAllRuns=false; currentRun=null;
+  dateFrom=''; dateTo=''; showAllRuns=true; currentRun=null;
   document.getElementById('date-from').value='';
   document.getElementById('date-to').value='';
   render();
