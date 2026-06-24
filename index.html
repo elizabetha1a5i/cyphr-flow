@@ -304,8 +304,12 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 .disambig-card-badge { font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-bottom: 6px; }
 
 /* ── Extraction key-value display ── */
-.ext-kv { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 6px; }
-.ext-kv-row { display: flex; gap: 8px; font-size: 12px; }
+.ext-kv { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 6px; font-size: 12px; }
+.ext-top-row { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--ink2); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.ext-section { display: flex; flex-direction: column; gap: 3px; }
+.ext-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); font-family: var(--mono); margin-bottom: 2px; }
+.ext-kv-item { color: var(--ink2); line-height: 1.5; padding-left: 4px; }
+.ext-kv-row { display: flex; gap: 8px; }
 .ext-kv-key { font-weight: 700; color: var(--ink2); min-width: 100px; flex-shrink: 0; }
 .ext-kv-val { color: var(--ink1); }
 
@@ -1607,17 +1611,40 @@ ${textToUse}`;
     const p = gp();
     const summary = `Client: ${p.clientName||'—'} · Sector: ${p.sector||'—'} · Budget: £${p.budget||'—'} · Timeline: ${p.timeline||'—'}\n\nRequirements:\n${p.requirements||'—'}\n\nBackground:\n${p.bgNotes||'—'}\n\nStakeholders:\n${p.stakeholders||'—'}\n\nOther opportunities mentioned:\n${p.otherOpportunities||'—'}\n\nRisks & open questions:\n${p.risksAndOpenQuestions||'—'}\n\nNext steps:\n${p.nextSteps||'—'}`;
     saveProjectData({ extractedContext: summary });
-    // Render formatted key-value extraction display
+    // Render formatted extraction display with sections
     const extOut = document.getElementById('ext-out');
     const extWrap = document.getElementById('ext-out-wrap');
     if (extOut) {
-      const kvRows = [
-        ['Client', p.clientName], ['Project', p.projectName], ['Sector', p.sector],
-        ['Budget', p.budget ? '£' + p.budget : null], ['Timeline', p.timeline],
-        ['Requirements', p.requirements ? p.requirements.slice(0,120)+'…' : null],
-        ['Stakeholders', p.stakeholders],
-      ].filter(([,v]) => v).map(([k,v]) => `<div class="ext-kv-row"><span class="ext-kv-key">${k}</span><span class="ext-kv-val">${esc(v)}</span></div>`).join('');
-      extOut.innerHTML = kvRows || '<div class="ext-kv-row"><span class="ext-kv-val">Extracted — review in Requirements</span></div>';
+      function extSection(label, value) {
+        if (!value) return '';
+        let content = '';
+        if (Array.isArray(value)) {
+          if (typeof value[0] === 'object') {
+            content = value.map(o => `<div class="ext-kv-item">• <strong>${esc(o.name||'')}</strong>${o.description ? ' — ' + esc(o.description) : ''}</div>`).join('');
+          } else {
+            content = value.map(v => `<div class="ext-kv-item">• ${esc(v)}</div>`).join('');
+          }
+        } else {
+          content = `<div class="ext-kv-item">${esc(String(value))}</div>`;
+        }
+        return `<div class="ext-section"><div class="ext-section-label">${label}</div>${content}</div>`;
+      }
+      const topRow = [
+        p.clientName && `<span><strong>Client:</strong> ${esc(p.clientName)}</span>`,
+        p.projectName && `<span><strong>Project:</strong> ${esc(p.projectName)}</span>`,
+        p.sector && `<span><strong>Sector:</strong> ${esc(p.sector)}</span>`,
+        p.budget && `<span><strong>Budget:</strong> £${esc(String(p.budget))}</span>`,
+        p.timeline && `<span><strong>Timeline:</strong> ${esc(p.timeline)}</span>`,
+      ].filter(Boolean).join('');
+      extOut.innerHTML = `
+        <div class="ext-top-row">${topRow}</div>
+        ${extSection('Requirements', p.requirements)}
+        ${extSection('Background & considerations', p.bgNotes)}
+        ${extSection('Stakeholders', p.stakeholders)}
+        ${extSection('Other opportunities', p.otherOpportunities)}
+        ${extSection('Risks & open questions', p.risksAndOpenQuestions)}
+        ${extSection('Next steps', p.nextSteps)}
+      ` || '<div class="ext-kv-item">Extracted — review in Requirements</div>';
     }
     if (extWrap) extWrap.style.display = 'block';
     // Duplicate client detection
