@@ -946,8 +946,6 @@ function applyAIFlags(aiFlags, sessions){
 }
 
 function promptRetryAI(){
-  const pw = prompt('Enter password to re-run AI analysis:');
-  if(pw !== UPLOAD_PASSWORD){ alert('Incorrect password.'); return; }
   localStorage.removeItem('blarney_ai_flags');
   ALL_FLAGS = [];
   runAIFlagging();
