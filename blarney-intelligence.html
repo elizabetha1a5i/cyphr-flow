@@ -415,12 +415,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <button class="cat-pill" onclick="filterFlags('cat','hallucination',this)">Hallucination</button>
       <button class="cat-pill" onclick="filterFlags('cat','offbrand',this)">Off-brand</button>
       <button class="cat-pill" onclick="filterFlags('cat','frustration',this)">Frustration</button>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
         <span id="aiStatusTxt" style="font-size:11px;color:var(--muted2)"></span>
-        <input id="geminiKeyInput" type="password" placeholder="Gemini API key" autocomplete="off"
-          style="font-size:11px;padding:4px 8px;border:1px solid var(--border,#333);border-radius:6px;background:var(--card,#1a1a1a);color:var(--text,#e8e8e8);width:180px;font-family:'DM Sans',sans-serif"
-          oninput="localStorage.setItem('blarney_gemini_key',this.value)"
-          title="Your Google AI Studio API key — used directly in the browser, never sent to Railway">
         <button id="aiRunBtn" onclick="promptRetryAI()" style="display:none;align-items:center;gap:6px;padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s" title="Retry AI analysis">
           ↺ Retry AI
         </button>
@@ -552,6 +548,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 // ════════════════════════════════════
 const UPLOAD_PASSWORD = 'blarney25';
 const RAILWAY_URL     = 'https://cyphr-api-production.up.railway.app';
+const GEMINI_KEY      = 'AQ.Ab8RN6Lt2cNYwkydNpuBYkspORO_6PYbbyKih2P3NuD3h2s-pw';
 
 // ════════════════════════════════════
 // Helpers
@@ -986,13 +983,7 @@ async function runAIFlagging(){
   const btn = document.getElementById('aiRunBtn');
   const status = document.getElementById('aiStatusTxt');
 
-  const geminiKey = (document.getElementById('geminiKeyInput')?.value || '').trim()
-    || localStorage.getItem('blarney_gemini_key') || '';
-  if (!geminiKey) {
-    status.textContent = 'Paste your Gemini API key first ↑';
-    if(btn){ btn.style.display='flex'; btn.disabled=false; btn.style.opacity='1'; }
-    return;
-  }
+  const geminiKey = GEMINI_KEY;
 
   const sessions = ALL_ROWS.filter(r =>
     (r.Mode==='Kiosk'||r.Mode==='QR') && r.Transcript && r.Transcript.trim().length>0
@@ -1605,11 +1596,6 @@ function copyPilotSummary(btn){
 // Boot — show saved data immediately
 // ════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async function(){
-  // Restore saved Gemini key
-  const savedKey = localStorage.getItem('blarney_gemini_key') || '';
-  const keyInput = document.getElementById('geminiKeyInput');
-  if(keyInput && savedKey) keyInput.value = savedKey;
-
   if(SAVED.length>0){
     showDashboard(SAVED);
   } else {
