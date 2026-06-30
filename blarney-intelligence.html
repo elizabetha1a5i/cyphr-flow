@@ -755,6 +755,7 @@ document.getElementById('fileInput').addEventListener('change',function(){
         if(!rows.length) throw new Error('No session data found in file');
         saveData(rows);
         showDashboard(SAVED);
+        pushSnapshot();
       } catch(err){
         alert('Could not load snapshot: '+err.message);
       }
@@ -769,6 +770,7 @@ document.getElementById('fileInput').addEventListener('change',function(){
       document.getElementById('loading').classList.remove('show');
       saveData(res.data);
       showDashboard(SAVED);
+      pushSnapshot();
     },
     error: err => {
       document.getElementById('loading').classList.remove('show');
