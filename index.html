@@ -417,6 +417,12 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     </div>
     <div class="sidebar-footer">
       <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
+      <a href="docs.html" style="display:block;margin-top:6px;font-size:11px;color:var(--ink3);opacity:0.6;text-decoration:none;padding:2px 0" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">📄 Platform docs</a>
+      <div id="usage-badge" onclick="openSettings()" title="Estimated Gemini spend this month — click for details" style="display:flex;align-items:center;gap:5px;margin-top:6px;cursor:pointer;padding:4px 8px;border-radius:4px;background:rgba(0,0,0,0.04);font-size:11px;color:var(--ink3)">
+        <span style="font-size:9px">◈</span>
+        <span id="usage-cost">£0.00</span>
+        <span style="opacity:0.6">est. this month</span>
+      </div>
     </div>
   </aside>
 
@@ -515,6 +521,10 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       <label class="field-label">Your name</label>
       <input type="text" id="s-name" placeholder="e.g. Elizabeth" oninput="saveSetting('userName', this.value)">
     </div>
+
+    <div class="settings-section">API Usage</div>
+    <div id="usage-detail" style="font-size:12px;color:var(--ink2);line-height:1.8"></div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:6px;margin-bottom:4px">Resets 1st of each month · Covers this browser only · Estimate based on June 2026 pricing</div>
 
     <div class="settings-section">Danger zone</div>
     <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="clearAllData()">Clear all project data</button>
@@ -863,6 +873,8 @@ async function callGemini(prompt, options = {}) {
       return `Error: ${msg}`;
     }
     const d = await res.json();
+    const usage = d?.usageMetadata;
+    if (usage) trackTokenUsage(usage.promptTokenCount || 0, usage.candidatesTokenCount || 0);
     const candidate = d?.candidates?.[0];
     const text = candidate?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || '';
     if (candidate?.finishReason === 'MAX_TOKENS' && text.trim().length < 20) {
@@ -1818,6 +1830,8 @@ async function callGeminiBackground(prompt, maxTokens = 4000) {
     })
   });
   const data = await res.json();
+  const bgUsage = data?.usageMetadata;
+  if (bgUsage) trackTokenUsage(bgUsage.promptTokenCount || 0, bgUsage.candidatesTokenCount || 0);
   const candidate = data?.candidates?.[0];
   return candidate?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || '';
 }
@@ -2036,12 +2050,62 @@ function rBrief() {
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: skill →</button></div>`;
 }
 
-async function genBrief() {
+// ── GEMINI RESPONSE CACHE ─────────────────────────────────────────────────
+function _gHash(fields) {
+  const s = JSON.stringify(fields);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function geminiCacheKey(projectId, stage, fields) { return `gCache_${projectId}_${stage}_${_gHash(fields)}`; }
+function getCached(key) { try { return localStorage.getItem(key) || null; } catch { return null; } }
+function setCached(key, val) { try { localStorage.setItem(key, val); } catch {} }
+
+// ── GEMINI TOKEN TRACKER ───────────────────────────────────────────────────
+const COST_PER_INPUT_TOKEN  = 0.024  / 1_000_000;
+const COST_PER_OUTPUT_TOKEN = 0.237  / 1_000_000;
+
+function trackTokenUsage(inputTokens, outputTokens) {
+  const key = 'geminiUsage_' + new Date().toISOString().slice(0, 7);
+  const d = JSON.parse(localStorage.getItem(key) || '{"input":0,"output":0}');
+  d.input  += (inputTokens  || 0);
+  d.output += (outputTokens || 0);
+  localStorage.setItem(key, JSON.stringify(d));
+  refreshUsageBadge();
+}
+
+function getMonthlyUsage() {
+  const key = 'geminiUsage_' + new Date().toISOString().slice(0, 7);
+  const d = JSON.parse(localStorage.getItem(key) || '{"input":0,"output":0}');
+  const cost = (d.input * COST_PER_INPUT_TOKEN) + (d.output * COST_PER_OUTPUT_TOKEN);
+  return { ...d, cost };
+}
+
+function refreshUsageBadge() {
+  const { cost } = getMonthlyUsage();
+  const el = document.getElementById('usage-cost');
+  if (el) el.textContent = '£' + cost.toFixed(2);
+}
+
+async function genBrief(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp();
   const conf = contextConfidence(p);
+  const cacheKey = geminiCacheKey(p.id, 'brief', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, requirements:p.requirements, bgNotes:p.bgNotes });
+  if (!forceRefresh) {
+    const cached = getCached(cacheKey);
+    if (cached) {
+      saveProjectData({ briefOutput: cached, contextConfidence: conf });
+      if($('brief-out'))$('brief-out').value=cached;
+      if($('btn-gen-brief')){$('btn-gen-brief').disabled=false;$('btn-gen-brief').textContent='↺ Regenerate brief';}
+      if($('btn-brief-docx')){$('btn-brief-docx').disabled=false;$('btn-brief-docx').style.opacity='1';}
+      if($('btn-brief-pdf')){$('btn-brief-pdf').disabled=false;$('btn-brief-pdf').style.opacity='1';}
+      busy=false; return;
+    }
+  }
   if($('brief-load'))$('brief-load').style.display='flex'; if($('btn-gen-brief'))$('btn-gen-brief').disabled=true; if($('brief-out'))$('brief-out').textContent='';
   const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`, conf));
+  setCached(cacheKey, out);
   saveProjectData({ briefOutput: out, contextConfidence: conf });
   if($('brief-out'))$('brief-out').value=out;
   if($('brief-load'))$('brief-load').style.display='none';
@@ -2246,11 +2310,20 @@ function rEstimate() {
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveEstimate();advance()">Next → auto-generate proposal</button></div>`;
 }
 
-async function genEstimate() {
+async function genEstimate(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp(); const rate=sv('f-rate')||850; const days=sv('f-days'); const roles=sv('f-roles');
   const conf = p.contextConfidence || contextConfidence(p);
   saveProjectData({rate,days,roles});
+  const cacheKey = geminiCacheKey(p.id, 'estimate', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, rate, days, roles, selectedSkill:p.selectedSkill, skillOutputNotes:p.skillOutputNotes });
+  if (!forceRefresh) {
+    const cached = getCached(cacheKey);
+    if (cached) {
+      saveProjectData({ estimateOutput: cached, rate, days, roles });
+      $('est-out').value = cached;
+      if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false; busy=false; return;
+    }
+  }
   $('est-load').style.display='flex'; if($('btn-gen-est'))$('btn-gen-est').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
   const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Create a concise resource plan.
@@ -2259,6 +2332,7 @@ Day rate: £${rate} | Total days: ${days} | Roles: ${roles}
 Brief: ${p.briefOutput}
 ${skillCtx}
 Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`, conf));
+  setCached(cacheKey, out);
   saveProjectData({ estimateOutput:out, rate, days, roles });
   $('est-out').value=out;
   if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false; busy=false;
@@ -2295,10 +2369,19 @@ function rProposal() {
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveProposal();advance()">Next → auto-generate SOW</button></div>`;
 }
 
-async function genProposal() {
+async function genProposal(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp(); const notes=sv('f-pnotes'); saveProjectData({proposalNotes:notes});
   const conf = p.contextConfidence || contextConfidence(p);
+  const cacheKey = geminiCacheKey(p.id, 'proposal', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput, proposalNotes:notes, selectedSkill:p.selectedSkill, skillOutputNotes:p.skillOutputNotes });
+  if (!forceRefresh) {
+    const cached = getCached(cacheKey);
+    if (cached) {
+      saveProjectData({ proposalOutput: cached });
+      $('prop-out').value = cached;
+      if($('prop-load'))$('prop-load').style.display='none'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=false; busy=false; return;
+    }
+  }
   $('prop-load').style.display='flex'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
   const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write proposal copy.
@@ -2308,6 +2391,7 @@ ${skillCtx}
 Resource plan: ${p.estimateOutput}
 Extra notes: ${notes}
 Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`, conf));
+  setCached(cacheKey, out);
   saveProjectData({ proposalOutput:out });
   $('prop-out').value=out;
   if($('prop-load'))$('prop-load').style.display='none'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=false; busy=false;
@@ -2335,10 +2419,19 @@ function rSOW() {
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: project setup →</button></div>`;
 }
 
-async function genSOW() {
+async function genSOW(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp();
   const conf = p.contextConfidence || contextConfidence(p);
+  const cacheKey = geminiCacheKey(p.id, 'sow', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput, proposalOutput:p.proposalOutput });
+  if (!forceRefresh) {
+    const cached = getCached(cacheKey);
+    if (cached) {
+      saveProjectData({ sowOutput: cached });
+      $('sow-out').value = cached;
+      if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false; busy=false; return;
+    }
+  }
   $('sow-load').style.display='flex'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=true;
   const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Write a Statement of Work.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
@@ -2346,6 +2439,7 @@ Brief: ${p.briefOutput}
 Resource plan: ${p.estimateOutput}
 Proposal: ${p.proposalOutput}
 Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`, conf));
+  setCached(cacheKey, out);
   saveProjectData({ sowOutput:out });
   $('sow-out').value=out;
   if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false; busy=false;
@@ -2922,7 +3016,19 @@ function renderSidebar() {
 }
 
 // ── SETTINGS ───────────────────────────────────────────────────────────────
-function openSettings() { $('settings-overlay').classList.add('open'); loadSettings(); }
+function openSettings() {
+  $('settings-overlay').classList.add('open');
+  loadSettings();
+  const { input, output, cost } = getMonthlyUsage();
+  const detail = document.getElementById('usage-detail');
+  if (detail) {
+    const month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    detail.innerHTML = `<div><strong>${month}</strong></div>
+      <div>Input tokens: ${input.toLocaleString()}</div>
+      <div>Output tokens: ${output.toLocaleString()}</div>
+      <div style="margin-top:4px;font-weight:600;color:var(--ink)">Estimated cost: £${cost.toFixed(4)}</div>`;
+  }
+}
 function closeSettings() { $('settings-overlay').classList.remove('open'); }
 function closeSettingsIfBg(e) { if (e.target === $('settings-overlay')) closeSettings(); }
 function clearAllData() {
@@ -2952,6 +3058,7 @@ function initApp() {
   if (el) el.textContent = greeting;
   renderSidebar();
   renderDashboard();
+  refreshUsageBadge();
 }
 
 function handleGoogleLogin(response) {
