@@ -1615,7 +1615,8 @@ Text:
 ${textToUse}`;
   const out = await callGemini(prompt, { maxTokens: 8000 });
   try {
-    const clean = out.replace(/```json\s*|```\s*/g,'').replace(/^["']?json\s*/i,'').trim();
+    const jsonMatch = out.match(/\{[\s\S]*\}/);
+    const clean = jsonMatch ? jsonMatch[0] : out.replace(/```json\s*|```\s*/g,'').replace(/^["']?json\s*/i,'').trim();
     const parsed = JSON.parse(clean);
     const fields = {clientName:parsed.clientName,projectName:parsed.projectName,sector:parsed.sector,budget:parsed.budget,timeline:parsed.timeline,requirements:parsed.requirements,bgNotes:parsed.bgNotes,stakeholders:parsed.stakeholders,otherOpportunities:parsed.otherOpportunities,risksAndOpenQuestions:parsed.risksAndOpenQuestions,nextSteps:parsed.nextSteps};
     const sources = {clientNameSource:parsed.clientNameSource,projectNameSource:parsed.projectNameSource,sectorSource:parsed.sectorSource,budgetSource:parsed.budgetSource,timelineSource:parsed.timelineSource,requirementsSource:parsed.requirementsSource,bgNotesSource:parsed.bgNotesSource,stakeholdersSource:parsed.stakeholdersSource,otherOpportunitiesSource:parsed.otherOpportunitiesSource,risksAndOpenQuestionsSource:parsed.risksAndOpenQuestionsSource,nextStepsSource:parsed.nextStepsSource};
