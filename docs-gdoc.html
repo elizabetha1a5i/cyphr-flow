@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cyphr Platform — Full Technical Documentation</title>
+</head>
+<body>
+
+<h1>Cyphr Platform — Full Technical Documentation</h1>
+<p>July 2026 · Covers all apps, backend routes, services, costs, and hosting plan</p>
+
+<h1>1. Platform Overview</h1>
+
+<p>Cyphr is a studio toolset with two distinct products sharing a common backend. Everything is built as self-contained single-file HTML applications — no build step, no framework, no npm. The backend is a Python Flask API deployed on Railway.</p>
+
+<table border="1">
+<tr><th>Product</th><th>What it does</th><th>Primary user</th></tr>
+<tr><td>Cyphr Flow</td><td>AI-assisted proposal builder — brief → estimate → proposal → SOW → download</td><td>Cyphr studio team</td></tr>
+<tr><td>Blarney Intelligence</td><td>Analyse Samsung kiosk AI conversations — flags, journeys, benchmarks</td><td>Client (Samsung/Blarney project)</td></tr>
+<tr><td>Intelligence Dashboard</td><td>General-purpose brief and project analysis</td><td>Cyphr studio team</td></tr>
+<tr><td>QA Dashboard / Review</td><td>Test case management and QA review workflows</td><td>QA team</td></tr>
+</table>
+
+<h2>High-level architecture</h2>
+<p>Browser (GitHub Pages / local)</p>
+<ul>
+<li>Cyphr Flow (index.html)
+  <ul>
+  <li>POST /gemini → Cloudflare Worker → Gemini 2.5-flash</li>
+  <li>POST /generate → Railway API (app.py) → Claude Haiku</li>
+  <li>File ops → Railway API (app.py)</li>
+  </ul>
+</li>
+<li>Blarney Intelligence (blarney-intelligence.html)
+  <ul>
+  <li>POST /ai-flag → Railway API (app.py) → Gemini 2.0-flash</li>
+  <li>POST /benchmarks → Railway API (app.py) → Brave Search + Gemini</li>
+  <li>GET/POST /snapshot → Railway API (app.py) → GitHub Gist</li>
+  </ul>
+</li>
+</ul>
+
+<p><strong>No database.</strong> All project data lives in the browser's localStorage. The Railway API is stateless — every request contains all the data it needs. The only persistent server-side storage is GitHub Gist, used exclusively for Blarney session snapshots.</p>
+
+
+<h1>2. Applications</h1>
+
+<h2>Cyphr Flow — index.html</h2>
+
+<p>The main studio tool. A project is created once and moves through a fixed pipeline of stages. Each stage builds on the previous one — the brief feeds the estimate, the estimate feeds the proposal, and so on. All data is stored in localStorage under the key cyphr_projects.</p>
+
+<h3>Pipeline stages</h3>
+<table border="1">
+<tr><th>Stage</th><th>What happens</th><th>AI model</th><th>Cost per run</th></tr>
+<tr><td>setup</td><td>Name, client, sector, budget, timeline entered manually</td><td>None</td><td>£0</td></tr>
+<tr><td>files</td><td>Upload reference PDFs (stored locally)</td><td>None</td><td>£0</td></tr>
+<tr><td>req</td><td>Requirements and background notes written manually</td><td>None</td><td>£0</td></tr>
+<tr><td>brief</td><td>Gemini reads all inputs, writes structured project brief</td><td>gemini-2.5-flash</td><td>~£0.003</td></tr>
+<tr><td>estimate</td><td>Gemini reads brief + rates, calculates scope, roles, days, cost</td><td>gemini-2.5-flash</td><td>~£0.004</td></tr>
+<tr><td>proposal</td><td>Gemini reads everything above, writes full commercial proposal</td><td>gemini-2.5-flash</td><td>~£0.007</td></tr>
+<tr><td>sow</td><td>Gemini writes statement of work with deliverables and timeline</td><td>gemini-2.5-flash</td><td>~£0.005</td></tr>
+<tr><td>complete</td><td>Download .docx / .xlsx / .pptx files via Railway</td><td>Claude Haiku</td><td>~£0.001</td></tr>
+</table>
+
+<h3>Response caching (added July 2026)</h3>
+<p>Before every Gemini call, a hash of all input fields for that stage is computed. If the hash matches a cached result in localStorage, the stored result is returned instantly — no API call, no cost. The cache is invalidated automatically when any input field changes. Shift+click any generate button to force a fresh call.</p>
+
+<h3>Key JavaScript functions</h3>
+<table border="1">
+<tr><th>Function</th><th>What it does</th></tr>
+<tr><td>genBrief(forceRefresh)</td><td>Generate project brief via Gemini proxy. Checks cache first.</td></tr>
+<tr><td>genEstimate(forceRefresh)</td><td>Generate cost estimate via Gemini proxy. Passes brief as context.</td></tr>
+<tr><td>genProposal(forceRefresh)</td><td>Generate proposal doc via Gemini proxy. Passes brief + estimate.</td></tr>
+<tr><td>genSOW(forceRefresh)</td><td>Generate statement of work via Gemini proxy.</td></tr>
+<tr><td>geminiCacheKey(id, stage, fields)</td><td>Hash input fields to a cache key string.</td></tr>
+<tr><td>getCached(key) / setCached(key, val)</td><td>Read/write localStorage cache entries.</td></tr>
+<tr><td>callGemini(prompt)</td><td>POST to Cloudflare Worker /gemini, returns generated text. Extracts usageMetadata.</td></tr>
+<tr><td>trackTokenUsage(input, output)</td><td>Accumulate token counts in localStorage monthly key.</td></tr>
+<tr><td>refreshUsageBadge()</td><td>Update sidebar cost badge from accumulated token data.</td></tr>
+<tr><td>generateDocument(type)</td><td>POST to Railway /generate, triggers .docx/.xlsx/.pptx download.</td></tr>
+<tr><td>gp()</td><td>Get the currently active project object.</td></tr>
+<tr><td>saveProjectData(update)</td><td>Merge update into current project, persist to localStorage.</td></tr>
+<tr><td>initGoogleAuth()</td><td>Initialise Google OAuth for user login.</td></tr>
+<tr><td>toast(msg, type)</td><td>Show notification toast in UI.</td></tr>
+<tr><td>contextConfidence(project)</td><td>Returns 0–100 score of how much data is available for generation.</td></tr>
+</table>
+
+<h3>localStorage keys</h3>
+<table border="1">
+<tr><th>Key</th><th>Contents</th></tr>
+<tr><td>cyphr_projects</td><td>JSON array of all project objects</td></tr>
+<tr><td>cyphr_settings</td><td>Global settings (proxyUrl, fileApiUrl, etc.)</td></tr>
+<tr><td>cyphr_user</td><td>Logged-in Google user object</td></tr>
+<tr><td>todos_{projectId}</td><td>To-do list for each project</td></tr>
+<tr><td>gCache_{projectId}_{stage}_{hash}</td><td>Cached Gemini output per stage per input state</td></tr>
+<tr><td>geminiUsage_{YYYY-MM}</td><td>Monthly token usage accumulator: {input, output}</td></tr>
+</table>
+
+<h3>Settings and config constants</h3>
+<table border="1">
+<tr><th>Setting</th><th>Default value</th></tr>
+<tr><td>proxyUrl</td><td>https://cyphr-proxy.elizabeth-537.workers.dev</td></tr>
+<tr><td>fileApiUrl</td><td>https://cyphr-api-production.up.railway.app</td></tr>
+<tr><td>Google OAuth Client ID</td><td>525638809485-alhqq17v7qhijjinq3o7e47i3nlhhk1b.apps.googleusercontent.com</td></tr>
+</table>
+
+
+<h2>Blarney Intelligence — blarney-intelligence.html</h2>
+
+<p>Analyses conversation transcripts from Samsung kiosk AI sessions. A CSV of sessions is uploaded, parsed locally, and pushed to Railway for persistence. AI-powered safety flagging runs against the transcripts via the Railway /ai-flag endpoint.</p>
+
+<h3>Dashboard tabs</h3>
+<ul>
+<li><strong>Flags &amp; Alerts</strong> — rule-based and AI-detected safety issues. Categories: jailbreak, offensive, hallucination, offbrand, frustration. Severity: high / medium / low.</li>
+<li><strong>Advertising</strong> — decision-moment quotes, top customer questions, voice of customer, competitor mentions.</li>
+<li><strong>Journeys</strong> — customer journey cards grouped by conversion outcome.</li>
+<li><strong>Internal</strong> — drop-off analysis, talk ratio, unanswered questions, frustration signals.</li>
+<li><strong>Your Wins</strong> — live benchmark comparisons from Brave Search + Gemini analysis.</li>
+</ul>
+
+<h3>Automatic flagging rules (pattern-based, no API cost)</h3>
+<table border="1">
+<tr><th>Category</th><th>Examples detected</th><th>Severity</th></tr>
+<tr><td>jailbreak</td><td>"ignore instructions", "developer mode", "DAN mode", "bypass restrictions"</td><td>high / medium</td></tr>
+<tr><td>offensive</td><td>Profanity, slurs, threats, abusive language</td><td>high / medium</td></tr>
+<tr><td>hallucination</td><td>"You're wrong", "that's incorrect", "contradicting yourself"</td><td>medium</td></tr>
+<tr><td>offbrand</td><td>"that's inappropriate", "weird", "creepy", "strange"</td><td>low</td></tr>
+<tr><td>frustration</td><td>AI contextual analysis only (no hardcoded patterns)</td><td>low–high</td></tr>
+</table>
+
+<h3>Session data format (CSV columns)</h3>
+<p>Session ID, Date, Mode, Transcript, Buy In Store, Buy Online (QRs)</p>
+<p>Transcript format: lines prefixed [User] or [AI]. Mode is typically "Kiosk" or "QR".</p>
+
+<h3>Key JavaScript functions</h3>
+<table border="1">
+<tr><th>Function</th><th>What it does</th></tr>
+<tr><td>runAIFlagging()</td><td>Batches transcripts (20 per batch), POSTs to Railway /ai-flag, applies results.</td></tr>
+<tr><td>detectFlags(msg, session)</td><td>Regex-based flag detection on a single customer message.</td></tr>
+<tr><td>applyAIFlags(flags, sessions)</td><td>Merge Gemini-returned flags into the live flag list.</td></tr>
+<tr><td>pushSnapshot()</td><td>POST all session rows to Railway /push-snapshot → stored in GitHub Gist.</td></tr>
+<tr><td>fetchWins()</td><td>POST metrics to Railway /benchmarks, renders benchmark comparison cards.</td></tr>
+<tr><td>buildJourneys(sessions)</td><td>Group sessions by conversion outcome, render journey cards.</td></tr>
+<tr><td>runAnalysis(rows)</td><td>Calculate all KPIs, render charts, detect all flags.</td></tr>
+<tr><td>exportCSV(type)</td><td>Export journeys / flags / VOC / competitors as CSV download.</td></tr>
+</table>
+
+<h3>localStorage keys</h3>
+<table border="1">
+<tr><th>Key</th><th>Contents</th></tr>
+<tr><td>blarney_v2</td><td>Full session records array (all imported CSV data)</td></tr>
+<tr><td>blarney_ai_flags</td><td>Cached AI flag results (cleared on retry)</td></tr>
+<tr><td>blarney_wins_cache</td><td>Timestamp + cached benchmark wins from /benchmarks</td></tr>
+</table>
+
+
+<h2>Other Tools</h2>
+<table border="1">
+<tr><th>File</th><th>Lines</th><th>Purpose</th></tr>
+<tr><td>intelligence.html</td><td>1,117</td><td>General AI brief and project intelligence dashboard. Sidebar navigation, brief sections, status indicators, risk tracking.</td></tr>
+<tr><td>blarney-transcript-intelligence.html</td><td>646</td><td>Simplified transcript viewer — formats [User]/[AI] lines with speaker colour coding.</td></tr>
+<tr><td>qa-dashboard.html</td><td>755</td><td>QA test case repository — execution tracking, pass/fail status, reporting.</td></tr>
+<tr><td>qa-review.html</td><td>850</td><td>Individual test case reviewer — transcript and evidence capture per case.</td></tr>
+<tr><td>docs.html</td><td>—</td><td>This documentation page — published in the app and on GitHub Pages.</td></tr>
+</table>
+
+
+<h1>3. Backend API (Railway)</h1>
+
+<p>A Flask REST API deployed on Railway as a Docker container using Gunicorn. Handles document generation, AI flagging, benchmark fetching, and session snapshot storage. All API keys are stored as Railway environment variables.</p>
+
+<ul>
+<li>Container: Python 3.11-slim</li>
+<li>Server: Gunicorn, port 8080, 120s timeout</li>
+<li>URL: https://cyphr-api-production.up.railway.app</li>
+</ul>
+
+<h2>All Routes</h2>
+
+<h3>POST /generate</h3>
+<p>Generates a Word, PowerPoint, or Excel document from project data. Returns the binary file for download.</p>
+<p><strong>Request body:</strong></p>
+<ul>
+<li>type: "brief" | "sow" | "proposal" | "proposal-pptx" | "estimate" | "gantt" | "status"</li>
+<li>projectData: clientName, projectName, sector, budget, timeline, requirements, bgNotes, briefOutput, estimateOutput, proposalOutput, sowOutput</li>
+</ul>
+<p><strong>Returns:</strong> Binary .docx / .xlsx / .pptx file. AI used: Claude Haiku (default).</p>
+
+<h3>POST /ai-flag</h3>
+<p>Runs Gemini 2.0-flash over batches of kiosk transcripts, returns detected safety flags.</p>
+<p><strong>Request:</strong> { "transcripts": [ { "Session ID", "Date", "Mode", "Transcript" } ] }</p>
+<p><strong>Returns:</strong> Array of { sessionId, date, category, severity, message, reason }</p>
+<p>AI model: gemini-2.0-flash (hardcoded). Output cap: 2,048 tokens. Key source: GEMINI_KEY env var.</p>
+
+<h3>POST /benchmarks</h3>
+<p>Fetches live industry benchmarks via Brave Search, then runs Gemini analysis. Falls back to static benchmarks if the live pipeline fails.</p>
+<p><strong>Request:</strong> { "metrics": { conversionRate, engagementRate, avgTurns, competitorRetention } }</p>
+<p><strong>Returns:</strong> Array of benchmark win objects where our metrics beat the industry figure.</p>
+
+<h3>POST /push-snapshot</h3>
+<p>Stores Blarney session records to a GitHub Gist for shared access across browsers.</p>
+<p><strong>Request:</strong> { "rows": array } | <strong>Returns:</strong> { "ok": true, "raw_url": string }</p>
+
+<h3>GET /snapshot</h3>
+<p>Returns the stored Blarney session snapshot from GitHub Gist as a JSON array.</p>
+
+<h3>POST /push-intel-snapshot</h3>
+<p>Stores intelligence/analysis data to a separate GitHub Gist (INTEL_GIST_ID).</p>
+
+<h3>GET /intel-snapshot</h3>
+<p>Returns stored intelligence JSON object, or null.</p>
+
+<h3>GET /health</h3>
+<p>Returns: { "status": "ok", "provider": string, "api_key_set": boolean }</p>
+
+
+<h2>Document Builders</h2>
+<table border="1">
+<tr><th>Builder</th><th>Output</th><th>AI call?</th><th>What it produces</th></tr>
+<tr><td>build_brief()</td><td>.docx</td><td>No</td><td>Renders pre-generated brief text with branded cover and client metadata</td></tr>
+<tr><td>build_sow()</td><td>.docx</td><td>No</td><td>Renders pre-generated SOW with cover, objectives, milestones, fee, signature table</td></tr>
+<tr><td>build_proposal_docx()</td><td>.docx</td><td>Yes — Claude</td><td>Generates full proposal JSON via Claude, renders as branded Word doc</td></tr>
+<tr><td>build_proposal_pptx()</td><td>.pptx</td><td>No</td><td>Injects data into cost_proposal_template.pptx (slides 1, 2, 3, 6, 8)</td></tr>
+<tr><td>build_estimate()</td><td>.xlsx</td><td>No</td><td>Multi-sheet workbook: Estimate, Timings, Rate Card. 10% contingency, 50% margin.</td></tr>
+<tr><td>build_status_sheet()</td><td>.xlsx</td><td>No</td><td>Project status workbook: KPIs, workstreams, risks, next actions.</td></tr>
+<tr><td>build_gantt()</td><td>.xlsx</td><td>Yes — Claude</td><td>Generates phase/task breakdown via Claude, populates gantt.xlsx template.</td></tr>
+</table>
+
+<h2>Team Rate Card</h2>
+<table border="1">
+<tr><th>Role</th><th>Display name</th><th>Day rate</th></tr>
+<tr><td>strategy_rob / strategy_james</td><td>Strategy Lead</td><td>£950/day</td></tr>
+<tr><td>tech_lead</td><td>Tech Lead (Redian)</td><td>£700/day</td></tr>
+<tr><td>tech_lead_p2</td><td>Tech Lead (Redian) — P2</td><td>£500/day</td></tr>
+<tr><td>producer</td><td>Producer (Verity)</td><td>£500/day</td></tr>
+<tr><td>qa</td><td>QA</td><td>£450/day</td></tr>
+<tr><td>support</td><td>Support</td><td>£500/day</td></tr>
+<tr><td>hosting</td><td>Hosting &amp; 3rd Party</td><td>£500/day</td></tr>
+<tr><td>dev_mid</td><td>Developer (Mid)</td><td>£200/day</td></tr>
+<tr><td>dev_senior</td><td>Developer (Senior)</td><td>£300/day</td></tr>
+</table>
+
+<h2>Output Validation</h2>
+<p>Every generated document is passed through a verify_output() check before returning:</p>
+<ul>
+<li><strong>Template bleed</strong> — checks for previous project names (Blue Square, Samsung, MentorLink, lorem ipsum) that shouldn't appear</li>
+<li><strong>Invented names</strong> — flags two-word capitalised names not in the team config or source notes</li>
+<li><strong>Budget overrun</strong> — warns if any calculated fee exceeds the user's stated budget by more than 20%</li>
+<li><strong>Placeholder convention</strong> — missing data surfaces as [CONFIRM: reason] so incomplete documents are obvious before sending</li>
+</ul>
+
+<h2>AI Provider Configuration</h2>
+<table border="1">
+<tr><th>Provider value</th><th>Model used</th><th>Used for</th></tr>
+<tr><td>anthropic (default)</td><td>claude-haiku-4-5-20251001</td><td>Document generation. Supports PDF attachment.</td></tr>
+<tr><td>openai</td><td>gpt-4o-mini</td><td>Fallback document generation</td></tr>
+<tr><td>gemini</td><td>configurable via GEMINI_MODEL env var</td><td>Benchmark extraction. /ai-flag always uses gemini-2.0-flash regardless.</td></tr>
+</table>
+
+
+<h1>4. External Services and Tools</h1>
+<table border="1">
+<tr><th>Service</th><th>Used by</th><th>Purpose</th><th>Auth method</th></tr>
+<tr><td>Google Gemini API</td><td>Cloudflare Worker (Flow), Railway (Blarney)</td><td>Text generation for proposals/briefs; conversation flagging</td><td>API key in env var</td></tr>
+<tr><td>Anthropic Claude API</td><td>Railway</td><td>Document generation (SOW, proposal, Gantt)</td><td>API key in env var</td></tr>
+<tr><td>OpenAI API</td><td>Railway (fallback)</td><td>Document generation if AI_PROVIDER=openai</td><td>API key in env var</td></tr>
+<tr><td>Cloudflare Workers</td><td>Cyphr Flow browser</td><td>Proxy for Gemini calls — keeps API key server-side</td><td>Key in Worker env var</td></tr>
+<tr><td>Railway</td><td>Both apps</td><td>Python Flask API hosting, Docker container</td><td>Env vars in Railway dashboard</td></tr>
+<tr><td>GitHub Gist API</td><td>Railway</td><td>Persistent storage for Blarney snapshots and intelligence data</td><td>Bearer token (GITHUB_TOKEN)</td></tr>
+<tr><td>Brave Search API</td><td>Railway /benchmarks</td><td>Live industry benchmark sourcing</td><td>X-Subscription-Token header</td></tr>
+<tr><td>ScrapeGraphAI</td><td>Railway /benchmarks</td><td>Extract stats from benchmark web pages (currently disabled in flow)</td><td>SGAI-APIKEY header</td></tr>
+<tr><td>Google OAuth</td><td>Cyphr Flow browser</td><td>User authentication</td><td>OAuth Client ID (public)</td></tr>
+<tr><td>GitHub Pages</td><td>Static hosting</td><td>Hosts all HTML files publicly</td><td>None (public repo)</td></tr>
+</table>
+
+
+<h1>5. Environment Variables</h1>
+
+<h2>Railway (app.py)</h2>
+<table border="1">
+<tr><th>Variable</th><th>Required</th><th>What it does</th></tr>
+<tr><td>GEMINI_KEY</td><td>Yes</td><td>Google Gemini API key for /ai-flag and /benchmarks</td></tr>
+<tr><td>ANTHROPIC_API_KEY</td><td>Yes (default provider)</td><td>Anthropic Claude API key for document generation</td></tr>
+<tr><td>GITHUB_TOKEN</td><td>Yes (Blarney)</td><td>GitHub personal access token for Gist read/write</td></tr>
+<tr><td>GIST_ID</td><td>Yes (Blarney)</td><td>GitHub Gist ID for Blarney session snapshots</td></tr>
+<tr><td>INTEL_GIST_ID</td><td>Yes (Blarney)</td><td>GitHub Gist ID for intelligence snapshots</td></tr>
+<tr><td>BRAVE_KEY</td><td>Optional</td><td>Brave Search API key for live benchmark sourcing</td></tr>
+<tr><td>OPENAI_API_KEY</td><td>Optional</td><td>OpenAI key if AI_PROVIDER=openai</td></tr>
+<tr><td>SCRAPEGRAPH_KEY</td><td>Optional</td><td>ScrapeGraphAI key for web stat extraction</td></tr>
+<tr><td>AI_PROVIDER</td><td>Optional</td><td>Switch AI provider: "anthropic" (default), "openai", "gemini"</td></tr>
+<tr><td>GEMINI_MODEL</td><td>Optional</td><td>Gemini model name for non-flagging calls</td></tr>
+</table>
+
+<h2>Cloudflare Worker</h2>
+<table border="1">
+<tr><th>Variable</th><th>Required</th><th>What it does</th></tr>
+<tr><td>GEMINI_KEY</td><td>Yes</td><td>Gemini API key injected into forwarded requests from Cyphr Flow browser</td></tr>
+</table>
+
+<p><strong>Key rotation:</strong> When a key is rotated, update it in Railway dashboard (Variables tab → redeploy) and in the Cloudflare Worker dashboard (Settings → Variables). No code changes required.</p>
+
+
+<h1>6. Data Storage</h1>
+<table border="1">
+<tr><th>What</th><th>Where</th><th>Format</th><th>Who can access</th></tr>
+<tr><td>Cyphr Flow projects</td><td>Browser localStorage (cyphr_projects)</td><td>JSON array</td><td>That browser only</td></tr>
+<tr><td>Blarney session records</td><td>Browser localStorage + GitHub Gist</td><td>JSON array</td><td>Any browser that loads the snapshot</td></tr>
+<tr><td>AI flag cache</td><td>Browser localStorage</td><td>JSON array</td><td>That browser only</td></tr>
+<tr><td>Intelligence data</td><td>Browser localStorage + GitHub Gist (INTEL_GIST_ID)</td><td>JSON object</td><td>Any browser via /intel-snapshot</td></tr>
+<tr><td>Gemini response cache</td><td>Browser localStorage</td><td>String (generated text)</td><td>That browser only</td></tr>
+<tr><td>Token usage tracker</td><td>Browser localStorage (geminiUsage_YYYY-MM)</td><td>JSON {input, output}</td><td>That browser only</td></tr>
+<tr><td>Document files (.docx/.xlsx/.pptx)</td><td>Downloaded to user's machine</td><td>Binary</td><td>User only</td></tr>
+<tr><td>Proposal templates</td><td>Railway container (/app/templates/)</td><td>Binary (.pptx, .xlsx)</td><td>Railway API only</td></tr>
+</table>
+
+<p><strong>No persistent database.</strong> Railway is completely stateless. If the Railway container restarts, no project data is lost — it was never stored there.</p>
+
+
+<h1>7. API Costs</h1>
+
+<h2>Gemini pricing (July 2026)</h2>
+<table border="1">
+<tr><th>Model</th><th>Input per 1M tokens</th><th>Output per 1M tokens</th><th>Used for</th></tr>
+<tr><td>gemini-2.5-flash</td><td>$0.30 (~£0.024)</td><td>$2.50 (~£0.20)</td><td>Cyphr Flow generations (brief, estimate, proposal, SOW)</td></tr>
+<tr><td>gemini-2.0-flash</td><td>~$0.10</td><td>~$0.40</td><td>Blarney /ai-flag, /benchmarks</td></tr>
+<tr><td>gemini-3.5-flash</td><td>$1.50</td><td>$9.00</td><td>Premium model — do not use for cost savings</td></tr>
+</table>
+
+<h2>Cost per action</h2>
+<table border="1">
+<tr><th>Action</th><th>App</th><th>Cost (uncached)</th><th>Cost (cached)</th></tr>
+<tr><td>Generate brief</td><td>Cyphr Flow</td><td>~£0.003</td><td>£0.00</td></tr>
+<tr><td>Generate estimate</td><td>Cyphr Flow</td><td>~£0.004</td><td>£0.00</td></tr>
+<tr><td>Generate proposal</td><td>Cyphr Flow</td><td>~£0.007</td><td>£0.00</td></tr>
+<tr><td>Generate SOW</td><td>Cyphr Flow</td><td>~£0.005</td><td>£0.00</td></tr>
+<tr><td>Full pipeline run (all 4 stages)</td><td>Cyphr Flow</td><td>~£0.019</td><td>£0.00</td></tr>
+<tr><td>AI flagging batch (20 sessions)</td><td>Blarney</td><td>~£0.001</td><td>—</td></tr>
+<tr><td>Benchmark analysis</td><td>Blarney</td><td>~£0.001</td><td>—</td></tr>
+</table>
+
+<h2>Monthly projection</h2>
+<table border="1">
+<tr><th>SKU</th><th>June 2026 (actual)</th><th>July 2026 (projected)</th><th>Change</th></tr>
+<tr><td>Proposal/brief output tokens</td><td>£17.63</td><td>~£4–5</td><td>Response cache eliminates repeat testing</td></tr>
+<tr><td>Field fill output tokens</td><td>£1.77</td><td>~£0.70</td><td>Caching reduces call volume</td></tr>
+<tr><td>Backend flagging (2.0-flash)</td><td>—</td><td>~£0.80–1</td><td>New SKU, cheaper model</td></tr>
+<tr><td>Input tokens</td><td>£0.63</td><td>~£0.20</td><td>Fewer calls from caching</td></tr>
+<tr><td>Legacy routing mismatch</td><td>£0.30</td><td>~£0.05</td><td>GEMINI_KEY env var unified</td></tr>
+<tr><td>Total</td><td>£20.03</td><td>~£6–7</td><td>~65% reduction</td></tr>
+</table>
+
+
+<h1>8. Hosting — Current Setup and Next Steps</h1>
+
+<h2>How it is set up now — GitHub</h2>
+
+<p>All frontend HTML files live in a GitHub repository (cyphr-flow). GitHub Pages serves them publicly as static files directly from the main branch — no build step, no server. Every git push to main automatically updates the live site within seconds.</p>
+
+<table border="1">
+<tr><th>File</th><th>Live URL (GitHub Pages)</th></tr>
+<tr><td>index.html</td><td>https://elizabetha1a5i.github.io/cyphr-flow/</td></tr>
+<tr><td>blarney-intelligence.html</td><td>https://elizabetha1a5i.github.io/cyphr-flow/blarney-intelligence.html</td></tr>
+<tr><td>intelligence.html</td><td>https://elizabetha1a5i.github.io/cyphr-flow/intelligence.html</td></tr>
+<tr><td>docs.html</td><td>https://elizabetha1a5i.github.io/cyphr-flow/docs.html</td></tr>
+</table>
+
+<p>The GitHub repository also stores all source history, acts as the deployment trigger (push = deploy), and hosts the Gist files used for Blarney snapshot storage via the GitHub API.</p>
+
+<p><strong>GitHub Pages limitations:</strong> No custom domain HTTPS without a CNAME file, no preview deployments per branch, no deployment logs, no rollback UI, and no environment variable support. Fine for the current stage — but as the platform grows, Vercel removes all of these friction points.</p>
+
+<h2>Next Steps — Moving to Vercel and Switching the Domain</h2>
+
+<p>The plan is to move the static frontend from GitHub Pages to Vercel and point the cyphr.studio domain (or a subdomain) at it. The Railway backend, Cloudflare Worker, and GitHub Gist storage all stay exactly where they are — only the static host changes.</p>
+
+<h3>Why Vercel</h3>
+<ul>
+<li><strong>Custom domain with automatic HTTPS</strong> — point flow.cyphr.studio at it, certificate is provisioned instantly</li>
+<li><strong>Preview deployments</strong> — every branch gets its own URL, so you can test changes before merging to main</li>
+<li><strong>Deployment logs and rollback</strong> — one click to go back to any previous version</li>
+<li><strong>Better CDN performance</strong> — global edge, HTTP/2, faster load times internationally</li>
+<li><strong>Zero config</strong> — Vercel reads the repo and deploys automatically, same as GitHub Pages but with more control</li>
+</ul>
+
+<h3>What moves and what stays</h3>
+<table border="1">
+<tr><th>Component</th><th>Current home</th><th>After migration</th></tr>
+<tr><td>index.html, blarney-intelligence.html, all HTML files</td><td>GitHub Pages</td><td>Vercel (static)</td></tr>
+<tr><td>Railway API (app.py)</td><td>Railway</td><td>Railway — unchanged</td></tr>
+<tr><td>Cloudflare Worker (Gemini proxy)</td><td>Cloudflare</td><td>Cloudflare — unchanged</td></tr>
+<tr><td>GitHub Gist (Blarney snapshots)</td><td>GitHub</td><td>GitHub — unchanged</td></tr>
+<tr><td>GitHub repo (source + git history)</td><td>GitHub</td><td>GitHub — unchanged. Vercel reads from it.</td></tr>
+</table>
+
+<h3>Migration steps</h3>
+<ol>
+<li><strong>Create a Vercel account</strong> at vercel.com using your GitHub login — this lets Vercel access the repo without any token setup.</li>
+<li><strong>Import the repository</strong> — Vercel dashboard → Add New → Project → find cyphr-flow → Import. Vercel detects it as a static site automatically.</li>
+<li><strong>Set build config</strong> — Framework Preset: Other · Build Command: blank · Output Directory: ./ · Root Directory: ./. Click Deploy. You get a cyphr-flow.vercel.app URL in ~10 seconds.</li>
+<li><strong>Add the custom domain</strong> — Project Settings → Domains → add flow.cyphr.studio. Vercel gives you a CNAME record to add in your DNS registrar. HTTPS certificate is automatic.</li>
+<li><strong>Update Google OAuth origins</strong> — in Google Cloud Console → APIs &amp; Services → Credentials → your OAuth client → Authorised JavaScript origins, add the new Vercel URL and custom domain. Without this, Google login will fail on the new domain.</li>
+<li><strong>Disable GitHub Pages</strong> — once Vercel is confirmed working, go to GitHub repo → Settings → Pages → change source to "None". This avoids duplicate live sites.</li>
+<li><strong>Test the full flow</strong> — open the Vercel URL, log in with Google, create a project, generate a brief, download a document. Check network tab to confirm calls reach the Cloudflare Worker and Railway without errors.</li>
+</ol>
+
+<p><strong>After migration, deployments stay automatic.</strong> Every push to main on GitHub triggers a Vercel redeploy — same workflow as now, just with a proper domain and preview URLs for branches.</p>
+
+<p><strong>No code changes needed for the migration.</strong> All backend URLs in the HTML files (RAILWAY_URL, proxyUrl) are hardcoded to the Railway and Cloudflare services which don't change. The only things that need updating are the Google OAuth origins list and DNS records.</p>
+
+
+<h1>9. Security Notes</h1>
+<table border="1">
+<tr><th>Area</th><th>Current state</th><th>Status</th></tr>
+<tr><td>Gemini key in blarney-intelligence.html</td><td>Removed July 2026. All calls now route through Railway /ai-flag.</td><td>Fixed</td></tr>
+<tr><td>Cyphr Flow Gemini calls</td><td>All calls go through Cloudflare Worker — key never reaches the browser.</td><td>Secure</td></tr>
+<tr><td>Railway API keys</td><td>All keys in Railway environment variables. Dockerfile and app.py contain no secrets.</td><td>Secure</td></tr>
+<tr><td>Google OAuth</td><td>Client ID is public by design (this is normal for OAuth). Authorised origins restrict where it can be used.</td><td>Normal</td></tr>
+<tr><td>Blarney upload password</td><td>Hardcoded in client-side JS (blarney25). Lightweight access control only — not protecting any server resource.</td><td>Noted</td></tr>
+<tr><td>Placeholder enforcement</td><td>[CONFIRM: reason] convention prevents sending documents with missing client contact info or invented data.</td><td>Active</td></tr>
+</table>
+
+<hr>
+<p>Generated July 2026 from live codebase · cyphr-flow/ + cyphr-api/ · All figures reflect post-fix July 2026 baseline · Cyphr Studio</p>
+
+</body>
+</html>

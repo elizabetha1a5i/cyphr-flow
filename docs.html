@@ -705,7 +705,6 @@ Storage: GitHub Gist (GIST_ID env var), file: blarney-snapshot.json
     <tr><td>Railway API keys</td><td>All keys in Railway environment variables. Dockerfile and app.py contain no secrets.</td><td style="color:#145C38;font-weight:700">Secure</td></tr>
     <tr><td>Google OAuth</td><td>Client ID is public by design (this is normal for OAuth). Authorised origins restrict where it can be used.</td><td style="color:#145C38;font-weight:700">Normal</td></tr>
     <tr><td>Blarney upload password</td><td>Hardcoded in client-side JS (blarney25). Lightweight access control only — not protecting any server resource.</td><td style="color:#B36A14;font-weight:700">Noted</td></tr>
-    <tr><td>CORS</td><td>flask-cors enabled on Railway with permissive settings. Consider restricting to known origins in production.</td><td style="color:#B36A14;font-weight:700">Monitor</td></tr>
     <tr><td>Placeholder enforcement</td><td>[CONFIRM: reason] convention prevents sending documents with missing client contact info or invented data.</td><td style="color:#145C38;font-weight:700">Active</td></tr>
   </tbody>
 </table>
