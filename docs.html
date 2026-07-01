@@ -1,0 +1,725 @@
+<title>Cyphr Platform — Full Technical Documentation</title>
+<meta name="description" content="Complete technical documentation for the Cyphr platform: architecture, apps, backend API, services, environment variables, costs, and Vercel deployment.">
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D0E18;--ink-mid:#3A3C52;--ink-light:#7A7E9E;
+  --blue:#2323CC;--blue-pale:#EEEEFF;--blue-dim:#5555DD;
+  --border:#D0D2E8;--bg:#FFFFFF;--surface:#F6F7FB;
+  --green-ink:#145C38;--green-bg:#E6F5EC;--green-bd:#7EC8A0;
+  --amber-ink:#7A4700;--amber-bg:#FEF3E2;--amber-bd:#E8C07A;
+  --red-ink:#8C1A1A;--red-bg:#FDECEA;--red-bd:#E8A0A0;
+  --mono:'SF Mono','Fira Code','Consolas',monospace;
+}
+body{background:#FFF;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:13.5px;line-height:1.65;padding:48px 40px 80px}
+.page{max-width:820px;margin:0 auto}
+
+/* header */
+.doc-header{border-bottom:2px solid var(--blue);padding-bottom:20px;margin-bottom:36px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.eyebrow{font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+h1{font-size:26px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;color:var(--ink)}
+.doc-sub{font-size:12px;color:var(--ink-light);margin-top:5px}
+.print-btn{padding:8px 16px;background:var(--blue);color:#FFF;border:none;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;cursor:pointer;border-radius:3px;flex-shrink:0}
+.print-btn:hover{background:var(--blue-dim)}
+
+/* toc */
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:20px 24px;margin-bottom:40px}
+.toc-title{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-light);margin-bottom:12px}
+.toc-list{list-style:none;display:flex;flex-direction:column;gap:3px}
+.toc-list li{font-size:12px}
+.toc-list a{color:var(--blue);text-decoration:none}
+.toc-list a:hover{text-decoration:underline}
+.toc-list .sub{padding-left:14px;font-size:11px;color:var(--ink-mid)}
+
+/* section */
+.section{margin-bottom:48px}
+h2{font-size:17px;font-weight:800;letter-spacing:-0.025em;color:var(--ink);border-bottom:1.5px solid var(--border);padding-bottom:8px;margin-bottom:18px}
+h3{font-size:13.5px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);margin:22px 0 8px}
+h4{font-size:12px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:var(--ink-light);margin:16px 0 6px}
+p{font-size:13px;color:var(--ink-mid);margin-bottom:10px;max-width:68ch}
+ul,ol{padding-left:18px;display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+li{font-size:13px;color:var(--ink-mid);line-height:1.5}
+li strong{color:var(--ink)}
+
+/* code/mono */
+code{font-family:var(--mono);font-size:11.5px;background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--blue)}
+pre{font-family:var(--mono);font-size:11.5px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 16px;overflow-x:auto;margin:10px 0 14px;line-height:1.6;color:var(--ink-mid)}
+pre strong{color:var(--blue);font-weight:600}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light);text-align:left;padding:7px 10px;border-bottom:1.5px solid var(--border);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #ECECF8;vertical-align:top;line-height:1.4;color:var(--ink-mid)}
+td:first-child{font-family:var(--mono);font-size:11px;color:var(--blue);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#F8F8FD}
+
+/* callout boxes */
+.box{border-radius:4px;padding:12px 16px;margin:12px 0;font-size:12px;line-height:1.6}
+.box.info{background:var(--blue-pale);border:1px solid #C0C0F0;color:var(--ink-mid)}
+.box.green{background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green-ink)}
+.box.amber{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber-ink)}
+.box.red{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red-ink)}
+.box strong{font-weight:700}
+
+/* badges inline */
+.badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;padding:2px 6px;vertical-align:middle;margin-left:4px}
+.badge.get{background:#E6F5EC;color:#145C38;border:1px solid #7EC8A0}
+.badge.post{background:#EAEAFF;color:#1A1AAA;border:1px solid #9090D8}
+.badge.free{background:#FEF3E2;color:#7A4700;border:1px solid #E8C07A}
+
+/* steps */
+.steps{counter-reset:steps;display:flex;flex-direction:column;gap:14px;margin:12px 0}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{counter-increment:steps;content:counter(steps);flex-shrink:0;width:24px;height:24px;background:var(--blue);color:#FFF;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step-body{font-size:13px;color:var(--ink-mid);padding-top:3px;flex:1}
+.step-body strong{color:var(--ink)}
+
+/* separator */
+hr{border:none;border-top:1px solid var(--border);margin:40px 0}
+
+/* footer */
+.doc-footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--ink-light)}
+.doc-footer strong{color:var(--blue);font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
+
+@media print{
+  body{padding:20px 28px 40px;font-size:12.5px}
+  .print-btn{display:none}
+  .section{break-inside:avoid}
+  h2{break-before:page}
+  h2:first-of-type{break-before:avoid}
+}
+</style>
+
+<div class="page">
+
+<header class="doc-header">
+  <div>
+    <div class="eyebrow">Cyphr Studio · Technical Documentation</div>
+    <h1>Platform Architecture<br>& Full Technical Reference</h1>
+    <div class="doc-sub">July 2026 · Covers all apps, backend routes, services, costs, and Vercel deployment</div>
+  </div>
+  <button class="print-btn" onclick="window.print()">Save as PDF</button>
+</header>
+
+<!-- TOC -->
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ul class="toc-list">
+    <li><a href="#overview">1. Platform Overview</a></li>
+    <li><a href="#apps">2. Applications</a></li>
+    <li class="sub"><a href="#app-flow">— Cyphr Flow (index.html)</a></li>
+    <li class="sub"><a href="#app-blarney">— Blarney Intelligence</a></li>
+    <li class="sub"><a href="#app-other">— Other Tools</a></li>
+    <li><a href="#backend">3. Backend API (Railway)</a></li>
+    <li class="sub"><a href="#routes">— All Routes</a></li>
+    <li class="sub"><a href="#doc-builders">— Document Builders</a></li>
+    <li class="sub"><a href="#ai-providers">— AI Providers</a></li>
+    <li><a href="#services">4. External Services & Tools</a></li>
+    <li><a href="#env">5. Environment Variables</a></li>
+    <li><a href="#data">6. Data Storage</a></li>
+    <li><a href="#costs">7. API Costs</a></li>
+    <li><a href="#vercel">8. Hosting — Current Setup & Next Steps</a></li>
+    <li><a href="#security">9. Security Notes</a></li>
+  </ul>
+</nav>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="overview">
+<h2>1. Platform Overview</h2>
+
+<p>Cyphr is a studio toolset with two distinct products sharing a common backend. Everything is built as self-contained single-file HTML applications — no build step, no framework, no npm. The backend is a Python Flask API deployed on Railway.</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Product</th><th>What it does</th><th>Primary user</th></tr></thead>
+  <tbody>
+    <tr><td>Cyphr Flow</td><td>AI-assisted proposal builder — brief → estimate → proposal → SOW → download</td><td>Cyphr studio team</td></tr>
+    <tr><td>Blarney Intelligence</td><td>Analyse Samsung kiosk AI conversations — flags, journeys, benchmarks</td><td>Client (Samsung/Blarney project)</td></tr>
+    <tr><td>Intelligence Dashboard</td><td>General-purpose brief and project analysis</td><td>Cyphr studio team</td></tr>
+    <tr><td>QA Dashboard / Review</td><td>Test case management and QA review workflows</td><td>QA team</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>High-level architecture</h3>
+<pre>
+Browser (GitHub Pages / local)
+  │
+  ├── Cyphr Flow (index.html)
+  │     ├── POST /gemini  ──────────→  Cloudflare Worker  ──→  Gemini 2.5-flash
+  │     ├── POST /generate ─────────→  Railway API (app.py)  ──→  Claude Haiku
+  │     └── File ops  ──────────────→  Railway API (app.py)
+  │
+  └── Blarney Intelligence (blarney-intelligence.html)
+        ├── POST /ai-flag ──────────→  Railway API (app.py)  ──→  Gemini 2.0-flash
+        ├── POST /benchmarks ───────→  Railway API (app.py)  ──→  Brave Search + Gemini
+        └── GET/POST /snapshot ─────→  Railway API (app.py)  ──→  GitHub Gist
+</pre>
+
+<div class="box info"><strong>No database.</strong> All project data lives in the browser's localStorage. The Railway API is stateless — every request contains all the data it needs. The only persistent server-side storage is GitHub Gist, used exclusively for Blarney session snapshots.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="apps">
+<h2>2. Applications</h2>
+
+<div id="app-flow">
+<h3>Cyphr Flow — <code>index.html</code></h3>
+<p>The main studio tool. A project is created once and moves through a fixed pipeline of stages. Each stage builds on the previous one — the brief feeds the estimate, the estimate feeds the proposal, and so on. All data is stored in <code>localStorage</code> under the key <code>cyphr_projects</code>.</p>
+
+<h4>Pipeline stages</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Stage</th><th>What happens</th><th>AI model</th><th>Cost per run</th></tr></thead>
+  <tbody>
+    <tr><td>setup</td><td>Name, client, sector, budget, timeline entered manually</td><td>None</td><td>£0</td></tr>
+    <tr><td>files</td><td>Upload reference PDFs (stored locally)</td><td>None</td><td>£0</td></tr>
+    <tr><td>req</td><td>Requirements and background notes written manually</td><td>None</td><td>£0</td></tr>
+    <tr><td>brief</td><td>Gemini reads all inputs, writes structured project brief</td><td>gemini-2.5-flash</td><td>~£0.003</td></tr>
+    <tr><td>estimate</td><td>Gemini reads brief + rates, calculates scope, roles, days, cost</td><td>gemini-2.5-flash</td><td>~£0.004</td></tr>
+    <tr><td>proposal</td><td>Gemini reads everything above, writes full commercial proposal</td><td>gemini-2.5-flash</td><td>~£0.007</td></tr>
+    <tr><td>sow</td><td>Gemini writes statement of work with deliverables and timeline</td><td>gemini-2.5-flash</td><td>~£0.005</td></tr>
+    <tr><td>complete</td><td>Download .docx / .xlsx / .pptx files via Railway</td><td>Claude Haiku</td><td>~£0.001</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Response caching (added July 2026)</h4>
+<p>Before every Gemini call, a hash of all input fields for that stage is computed. If the hash matches a cached result in localStorage, the stored result is returned instantly — no API call, no cost. The cache is invalidated automatically when any input field changes. Shift+click any generate button to force a fresh call.</p>
+
+<h4>Key JavaScript functions</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>genBrief(forceRefresh)</td><td>Generate project brief via Gemini proxy. Checks cache first.</td></tr>
+    <tr><td>genEstimate(forceRefresh)</td><td>Generate cost estimate via Gemini proxy. Passes brief as context.</td></tr>
+    <tr><td>genProposal(forceRefresh)</td><td>Generate proposal doc via Gemini proxy. Passes brief + estimate.</td></tr>
+    <tr><td>genSOW(forceRefresh)</td><td>Generate statement of work via Gemini proxy.</td></tr>
+    <tr><td>geminiCacheKey(id, stage, fields)</td><td>Hash input fields to a cache key string.</td></tr>
+    <tr><td>getCached(key) / setCached(key, val)</td><td>Read/write localStorage cache entries.</td></tr>
+    <tr><td>callGemini(prompt)</td><td>POST to Cloudflare Worker /gemini, returns generated text. Extracts usageMetadata.</td></tr>
+    <tr><td>trackTokenUsage(input, output)</td><td>Accumulate token counts in localStorage monthly key.</td></tr>
+    <tr><td>refreshUsageBadge()</td><td>Update sidebar cost badge from accumulated token data.</td></tr>
+    <tr><td>generateDocument(type)</td><td>POST to Railway /generate, triggers .docx/.xlsx/.pptx download.</td></tr>
+    <tr><td>gp()</td><td>Get the currently active project object.</td></tr>
+    <tr><td>saveProjectData(update)</td><td>Merge update into current project, persist to localStorage.</td></tr>
+    <tr><td>initGoogleAuth()</td><td>Initialise Google OAuth for user login.</td></tr>
+    <tr><td>toast(msg, type)</td><td>Show notification toast in UI.</td></tr>
+    <tr><td>contextConfidence(project)</td><td>Returns 0–100 score of how much data is available for generation.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>localStorage keys</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Key</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr><td>cyphr_projects</td><td>JSON array of all project objects</td></tr>
+    <tr><td>cyphr_settings</td><td>Global settings (proxyUrl, fileApiUrl, etc.)</td></tr>
+    <tr><td>cyphr_user</td><td>Logged-in Google user object</td></tr>
+    <tr><td>todos_{projectId}</td><td>To-do list for each project</td></tr>
+    <tr><td>gCache_{projectId}_{stage}_{hash}</td><td>Cached Gemini output per stage per input state</td></tr>
+    <tr><td>geminiUsage_{YYYY-MM}</td><td>Monthly token usage accumulator: {input, output}</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Settings / config constants</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Setting</th><th>Default value</th></tr></thead>
+  <tbody>
+    <tr><td>proxyUrl</td><td>https://cyphr-proxy.elizabeth-537.workers.dev</td></tr>
+    <tr><td>fileApiUrl</td><td>https://cyphr-api-production.up.railway.app</td></tr>
+    <tr><td>Google OAuth Client ID</td><td>525638809485-alhqq17v7qhijjinq3o7e47i3nlhhk1b.apps.googleusercontent.com</td></tr>
+  </tbody>
+</table>
+</div>
+</div><!-- /app-flow -->
+
+<div id="app-blarney">
+<h3>Blarney Intelligence — <code>blarney-intelligence.html</code></h3>
+<p>Analyses conversation transcripts from Samsung kiosk AI sessions. A CSV of sessions is uploaded, parsed locally, and pushed to Railway for persistence. AI-powered safety flagging runs against the transcripts via the Railway <code>/ai-flag</code> endpoint.</p>
+
+<h4>Dashboard tabs</h4>
+<ul>
+  <li><strong>Flags & Alerts</strong> — rule-based and AI-detected safety issues. Categories: jailbreak, offensive, hallucination, offbrand, frustration. Severity: high / medium / low.</li>
+  <li><strong>Advertising</strong> — decision-moment quotes, top customer questions, voice of customer, competitor mentions.</li>
+  <li><strong>Journeys</strong> — customer journey cards grouped by conversion outcome.</li>
+  <li><strong>Internal</strong> — drop-off analysis, talk ratio, unanswered questions, frustration signals.</li>
+  <li><strong>Your Wins</strong> — live benchmark comparisons from Brave Search + Gemini analysis.</li>
+</ul>
+
+<h4>Automatic flagging rules (pattern-based, no API cost)</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Category</th><th>Examples detected</th><th>Severity</th></tr></thead>
+  <tbody>
+    <tr><td>jailbreak</td><td>"ignore instructions", "developer mode", "DAN mode", "bypass restrictions"</td><td>high / medium</td></tr>
+    <tr><td>offensive</td><td>Profanity, slurs, threats, abusive language</td><td>high / medium</td></tr>
+    <tr><td>hallucination</td><td>"You're wrong", "that's incorrect", "contradicting yourself"</td><td>medium</td></tr>
+    <tr><td>offbrand</td><td>"that's inappropriate", "weird", "creepy", "strange"</td><td>low</td></tr>
+    <tr><td>frustration</td><td>AI contextual analysis only (no hardcoded patterns)</td><td>low–high</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Session data format (CSV columns)</h4>
+<pre>Session ID, Date, Mode, Transcript, Buy In Store, Buy Online (QRs), ...</pre>
+<p>Transcript format: lines prefixed <code>[User]</code> or <code>[AI]</code>. Mode is typically "Kiosk" or "QR".</p>
+
+<h4>Key JavaScript functions</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>runAIFlagging()</td><td>Batches transcripts (20 per batch), POSTs to Railway /ai-flag, applies results.</td></tr>
+    <tr><td>detectFlags(msg, session)</td><td>Regex-based flag detection on a single customer message.</td></tr>
+    <tr><td>applyAIFlags(flags, sessions)</td><td>Merge Gemini-returned flags into the live flag list.</td></tr>
+    <tr><td>pushSnapshot()</td><td>POST all session rows to Railway /push-snapshot → stored in GitHub Gist.</td></tr>
+    <tr><td>fetchWins()</td><td>POST metrics to Railway /benchmarks, renders benchmark comparison cards.</td></tr>
+    <tr><td>buildJourneys(sessions)</td><td>Group sessions by conversion outcome, render journey cards.</td></tr>
+    <tr><td>runAnalysis(rows)</td><td>Calculate all KPIs, render charts, detect all flags.</td></tr>
+    <tr><td>exportCSV(type)</td><td>Export journeys / flags / VOC / competitors as CSV download.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>localStorage keys</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Key</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr><td>blarney_v2</td><td>Full session records array (all imported CSV data)</td></tr>
+    <tr><td>blarney_ai_flags</td><td>Cached AI flag results (cleared on retry)</td></tr>
+    <tr><td>blarney_wins_cache</td><td>Timestamp + cached benchmark wins from /benchmarks</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Upload password</h4>
+<p>Data upload is gated by a hardcoded password: <code>blarney25</code>. This is a lightweight access control for the client-facing tool — it does not protect any API key or server resource.</p>
+</div><!-- /app-blarney -->
+
+<div id="app-other">
+<h3>Other tools</h3>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>File</th><th>Lines</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>intelligence.html</td><td>1,117</td><td>General AI brief and project intelligence dashboard. Sidebar navigation, brief sections, status indicators, risk tracking.</td></tr>
+    <tr><td>blarney-transcript-intelligence.html</td><td>646</td><td>Simplified transcript viewer — formats [User]/[AI] lines with speaker colour coding. Minimal interactivity.</td></tr>
+    <tr><td>qa-dashboard.html</td><td>755</td><td>QA test case repository — execution tracking, pass/fail status, reporting.</td></tr>
+    <tr><td>qa-review.html</td><td>850</td><td>Individual test case reviewer — transcript and evidence capture per case.</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div><!-- /apps -->
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="backend">
+<h2>3. Backend API (Railway)</h2>
+
+<p>A Flask REST API. Deployed on Railway as a Docker container using Gunicorn. Handles document generation, AI flagging, benchmark fetching, and session snapshot storage. All API keys are stored as Railway environment variables — nothing in the code.</p>
+
+<pre>
+Container:  Python 3.11-slim
+Server:     Gunicorn, port 8080, 120s timeout
+URL:        https://cyphr-api-production.up.railway.app
+</pre>
+
+<div id="routes">
+<h3>All routes</h3>
+
+<h4>POST /generate <span class="badge post">POST</span></h4>
+<p>Generates a Word, PowerPoint, or Excel document from project data. Returns the binary file for download.</p>
+<pre>
+Request body:
+{
+  "type": "brief" | "sow" | "proposal" | "proposal-pptx" | "estimate" | "gantt" | "status",
+  "projectData": {
+    "clientName": string,
+    "projectName": string,
+    "sector": string,
+    "budget": string | number,
+    "timeline": string,
+    "requirements": string,
+    "bgNotes": string,
+    "briefOutput": string,   // pre-generated AI text
+    "estimateOutput": string,
+    "proposalOutput": string,
+    "sowOutput": string
+  }
+}
+
+Returns: Binary .docx / .xlsx / .pptx file
+Filename: {client-slug}_{type}.{ext}
+AI used: Claude Haiku (default) for generation; no AI call for brief/SOW (renders pre-generated text)
+</pre>
+
+<h4>POST /ai-flag <span class="badge post">POST</span></h4>
+<p>Runs Gemini 2.0-flash over batches of kiosk transcripts, returns detected safety flags.</p>
+<pre>
+Request body:
+{ "transcripts": [ { "Session ID": string, "Date": string, "Mode": string, "Transcript": string } ] }
+
+Returns:
+[
+  {
+    "sessionId": string,
+    "date": string,
+    "category": "jailbreak" | "offensive" | "hallucination" | "offbrand" | "frustration",
+    "severity": "high" | "medium" | "low",
+    "message": string,   // exact customer message
+    "reason": string     // one sentence explanation
+  }
+]
+
+AI model: gemini-2.0-flash (hardcoded)
+Output cap: 2,048 tokens
+Key source: GEMINI_KEY env var
+</pre>
+
+<h4>POST /benchmarks <span class="badge post">POST</span></h4>
+<p>Fetches live industry benchmarks via Brave Search, then runs Gemini analysis to compare against the submitted metrics. Falls back to static benchmarks if the live pipeline fails.</p>
+<pre>
+Request body:
+{ "metrics": { "conversionRate": number, "engagementRate": number, "avgTurns": number, "competitorRetention": number } }
+
+Returns: Array of benchmark win objects (where our metrics beat the industry figure)
+
+Live pipeline: Brave Search → parse snippets → Gemini extraction → comparison
+Fallback: STATIC_BENCHMARKS (Forrester, Gartner, Salesforce, McKinsey figures)
+</pre>
+
+<h4>POST /push-snapshot <span class="badge post">POST</span></h4>
+<p>Stores Blarney session records to a GitHub Gist for shared access across browsers.</p>
+<pre>
+Request body: { "rows": array }
+Returns: { "ok": true, "raw_url": string }
+Storage: GitHub Gist (GIST_ID env var), file: blarney-snapshot.json
+</pre>
+
+<h4>GET /snapshot <span class="badge get">GET</span></h4>
+<p>Returns the stored Blarney session snapshot from GitHub Gist.</p>
+<pre>Returns: JSON array of session records</pre>
+
+<h4>POST /push-intel-snapshot <span class="badge post">POST</span></h4>
+<p>Stores intelligence/analysis data to a separate GitHub Gist.</p>
+<pre>Request body: any JSON object · Storage: INTEL_GIST_ID Gist, file: intelligence-snapshot.json</pre>
+
+<h4>GET /intel-snapshot <span class="badge get">GET</span></h4>
+<pre>Returns: Stored intelligence JSON object, or null</pre>
+
+<h4>GET /health <span class="badge get">GET</span></h4>
+<pre>Returns: { "status": "ok", "provider": string, "api_key_set": boolean }</pre>
+</div><!-- /routes -->
+
+<div id="doc-builders">
+<h3>Document builders</h3>
+<p>Each document type has a dedicated builder function in <code>app.py</code>.</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Builder</th><th>Output</th><th>AI call?</th><th>What it produces</th></tr></thead>
+  <tbody>
+    <tr><td>build_brief()</td><td>.docx</td><td>No</td><td>Renders pre-generated brief text with branded cover, client metadata</td></tr>
+    <tr><td>build_sow()</td><td>.docx</td><td>No</td><td>Renders pre-generated SOW with cover, objectives, milestones, fee, signature table</td></tr>
+    <tr><td>build_proposal_docx()</td><td>.docx</td><td>Yes — Claude</td><td>Generates full proposal JSON via Claude, renders as branded Word doc</td></tr>
+    <tr><td>build_proposal_pptx()</td><td>.pptx</td><td>No</td><td>Injects data into cost_proposal_template.pptx (slides 1, 2, 3, 6, 8)</td></tr>
+    <tr><td>build_estimate()</td><td>.xlsx</td><td>No</td><td>Multi-sheet workbook: Estimate, Timings, Rate Card. 10% contingency, 50% margin applied.</td></tr>
+    <tr><td>build_status_sheet()</td><td>.xlsx</td><td>No</td><td>Project status workbook: KPIs, workstreams, risks, next actions. Extracts from existing outputs.</td></tr>
+    <tr><td>build_gantt()</td><td>.xlsx</td><td>Yes — Claude</td><td>Generates phase/task breakdown via Claude, populates gantt.xlsx template with week headers</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Team rate card (used by build_estimate)</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Role key</th><th>Display name</th><th>Day rate</th></tr></thead>
+  <tbody>
+    <tr><td>strategy_rob / strategy_james</td><td>Strategy Lead</td><td>£950/day</td></tr>
+    <tr><td>tech_lead</td><td>Tech Lead (Redian)</td><td>£700/day</td></tr>
+    <tr><td>tech_lead_p2</td><td>Tech Lead (Redian) — P2</td><td>£500/day</td></tr>
+    <tr><td>producer</td><td>Producer (Verity)</td><td>£500/day</td></tr>
+    <tr><td>qa</td><td>QA</td><td>£450/day</td></tr>
+    <tr><td>support</td><td>Support</td><td>£500/day</td></tr>
+    <tr><td>hosting</td><td>Hosting & 3rd Party</td><td>£500/day</td></tr>
+    <tr><td>dev_mid</td><td>Developer (Mid)</td><td>£200/day</td></tr>
+    <tr><td>dev_senior</td><td>Developer (Senior)</td><td>£300/day</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Output validation</h4>
+<p>Every generated document is passed through a <code>verify_output()</code> check before returning:</p>
+<ul>
+  <li><strong>Template bleed</strong> — checks for previous project names (Blue Square, Samsung, MentorLink, lorem ipsum) that shouldn't appear</li>
+  <li><strong>Invented names</strong> — flags two-word capitalised names not in the team config or source notes</li>
+  <li><strong>Budget overrun</strong> — warns if any calculated fee exceeds the user's stated budget by more than 20%</li>
+  <li><strong>Placeholder convention</strong> — missing or unconfirmed data surfaces as <code>[CONFIRM: reason]</code> so incomplete documents are obvious before sending</li>
+</ul>
+</div><!-- /doc-builders -->
+
+<div id="ai-providers">
+<h3>AI provider configuration</h3>
+<p>The backend can switch between three AI providers via the <code>AI_PROVIDER</code> environment variable. Default is Anthropic.</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Provider value</th><th>Model used</th><th>Endpoint</th><th>Used for</th></tr></thead>
+  <tbody>
+    <tr><td>anthropic (default)</td><td>claude-haiku-4-5-20251001</td><td>api.anthropic.com/v1/messages</td><td>Document generation. Supports PDF attachment via beta feature.</td></tr>
+    <tr><td>openai</td><td>gpt-4o-mini</td><td>api.openai.com/v1/chat/completions</td><td>Fallback document generation</td></tr>
+    <tr><td>gemini</td><td>configurable (GEMINI_MODEL env var)</td><td>generativelanguage.googleapis.com</td><td>Benchmark extraction. /ai-flag always uses gemini-2.0-flash regardless of this setting.</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div><!-- /backend -->
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="services">
+<h2>4. External Services & Tools</h2>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Service</th><th>Used by</th><th>Purpose</th><th>Auth method</th></tr></thead>
+  <tbody>
+    <tr><td>Google Gemini API</td><td>Cloudflare Worker (Flow), Railway (Blarney)</td><td>Text generation for proposals/briefs; conversation flagging</td><td>API key in env var</td></tr>
+    <tr><td>Anthropic Claude API</td><td>Railway</td><td>Document generation (SOW, proposal, Gantt)</td><td>API key in env var</td></tr>
+    <tr><td>OpenAI API</td><td>Railway (fallback)</td><td>Document generation if AI_PROVIDER=openai</td><td>API key in env var</td></tr>
+    <tr><td>Cloudflare Workers</td><td>Cyphr Flow browser</td><td>Proxy for Gemini calls — keeps API key server-side</td><td>Key in Worker env var</td></tr>
+    <tr><td>Railway</td><td>Both apps</td><td>Python Flask API hosting, Docker container</td><td>Env vars in Railway dashboard</td></tr>
+    <tr><td>GitHub Gist API</td><td>Railway</td><td>Persistent storage for Blarney snapshots and intelligence data</td><td>Bearer token (GITHUB_TOKEN)</td></tr>
+    <tr><td>Brave Search API</td><td>Railway /benchmarks</td><td>Live industry benchmark sourcing</td><td>X-Subscription-Token header</td></tr>
+    <tr><td>ScrapeGraphAI</td><td>Railway /benchmarks</td><td>Extract stats from benchmark web pages (currently disabled in flow)</td><td>SGAI-APIKEY header</td></tr>
+    <tr><td>Google OAuth</td><td>Cyphr Flow browser</td><td>User authentication</td><td>OAuth Client ID (public)</td></tr>
+    <tr><td>GitHub Pages</td><td>Static hosting</td><td>Hosts blarney-intelligence.html publicly</td><td>None (public repo)</td></tr>
+    <tr><td>pdf.js (Cloudflare CDN)</td><td>Cyphr Flow browser</td><td>Render uploaded PDF reference files in browser</td><td>None (public CDN)</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="env">
+<h2>5. Environment Variables</h2>
+
+<h3>Railway (app.py)</h3>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Variable</th><th>Required</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>GEMINI_KEY</td><td>Yes</td><td>Google Gemini API key for /ai-flag and /benchmarks</td></tr>
+    <tr><td>ANTHROPIC_API_KEY</td><td>Yes (default provider)</td><td>Anthropic Claude API key for document generation</td></tr>
+    <tr><td>GITHUB_TOKEN</td><td>Yes (Blarney)</td><td>GitHub personal access token for Gist read/write</td></tr>
+    <tr><td>GIST_ID</td><td>Yes (Blarney)</td><td>GitHub Gist ID for Blarney session snapshots</td></tr>
+    <tr><td>INTEL_GIST_ID</td><td>Yes (Blarney)</td><td>GitHub Gist ID for intelligence snapshots</td></tr>
+    <tr><td>BRAVE_KEY</td><td>Optional</td><td>Brave Search API key for live benchmark sourcing</td></tr>
+    <tr><td>OPENAI_API_KEY</td><td>Optional</td><td>OpenAI key if AI_PROVIDER=openai</td></tr>
+    <tr><td>SCRAPEGRAPH_KEY</td><td>Optional</td><td>ScrapeGraphAI key for web stat extraction</td></tr>
+    <tr><td>AI_PROVIDER</td><td>Optional</td><td>Switch AI provider: "anthropic" (default), "openai", "gemini"</td></tr>
+    <tr><td>GEMINI_MODEL</td><td>Optional</td><td>Gemini model name for non-flagging calls (default: gemini-3.5-flash)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Cloudflare Worker</h3>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Variable</th><th>Required</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>GEMINI_KEY</td><td>Yes</td><td>Gemini API key injected into forwarded requests from Cyphr Flow browser</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box amber"><strong>Key rotation:</strong> When a key is rotated, update it in Railway dashboard (Variables tab → redeploy) and in the Cloudflare Worker dashboard (Settings → Variables). No code changes required.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="data">
+<h2>6. Data Storage</h2>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>What</th><th>Where</th><th>Format</th><th>Who can access</th></tr></thead>
+  <tbody>
+    <tr><td>Cyphr Flow projects</td><td>Browser localStorage (cyphr_projects)</td><td>JSON array</td><td>That browser only</td></tr>
+    <tr><td>Blarney session records</td><td>Browser localStorage + GitHub Gist</td><td>JSON array</td><td>Any browser that loads the snapshot via /snapshot</td></tr>
+    <tr><td>AI flag cache</td><td>Browser localStorage</td><td>JSON array</td><td>That browser only</td></tr>
+    <tr><td>Intelligence data</td><td>Browser localStorage + GitHub Gist (INTEL_GIST_ID)</td><td>JSON object</td><td>Any browser via /intel-snapshot</td></tr>
+    <tr><td>Gemini response cache</td><td>Browser localStorage</td><td>String (generated text)</td><td>That browser only</td></tr>
+    <tr><td>Token usage tracker</td><td>Browser localStorage (geminiUsage_YYYY-MM)</td><td>JSON {input, output}</td><td>That browser only</td></tr>
+    <tr><td>Document files (.docx/.xlsx/.pptx)</td><td>Downloaded to user's machine</td><td>Binary</td><td>User only</td></tr>
+    <tr><td>Proposal templates</td><td>Railway container filesystem (/app/templates/)</td><td>Binary (.pptx, .xlsx)</td><td>Railway API only</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box info"><strong>No persistent database.</strong> Railway is completely stateless. If the Railway container restarts, no project data is lost — it was never stored there. All project data is in the browser or in GitHub Gist.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="costs">
+<h2>7. API Costs</h2>
+
+<h3>Gemini pricing (July 2026)</h3>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Model</th><th>Input per 1M tokens</th><th>Output per 1M tokens</th><th>Used for</th></tr></thead>
+  <tbody>
+    <tr><td>gemini-2.5-flash</td><td>$0.30 (~£0.024)</td><td>$2.50 (~£0.20)</td><td>Cyphr Flow generations (brief, estimate, proposal, SOW)</td></tr>
+    <tr><td>gemini-2.0-flash</td><td>~$0.10</td><td>~$0.40</td><td>Blarney /ai-flag, /benchmarks</td></tr>
+    <tr><td>gemini-3.5-flash</td><td>$1.50</td><td>$9.00</td><td>Premium model — DO NOT use for cost savings</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Cost per action</h3>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Action</th><th>App</th><th>Cost (uncached)</th><th>Cost (cached)</th></tr></thead>
+  <tbody>
+    <tr><td>Generate brief</td><td>Cyphr Flow</td><td>~£0.003</td><td>£0.00</td></tr>
+    <tr><td>Generate estimate</td><td>Cyphr Flow</td><td>~£0.004</td><td>£0.00</td></tr>
+    <tr><td>Generate proposal</td><td>Cyphr Flow</td><td>~£0.007</td><td>£0.00</td></tr>
+    <tr><td>Generate SOW</td><td>Cyphr Flow</td><td>~£0.005</td><td>£0.00</td></tr>
+    <tr><td>Full pipeline run (all 4)</td><td>Cyphr Flow</td><td>~£0.019</td><td>£0.00</td></tr>
+    <tr><td>AI flagging batch (20 sessions)</td><td>Blarney</td><td>~£0.001</td><td>—</td></tr>
+    <tr><td>Benchmark analysis</td><td>Blarney</td><td>~£0.001</td><td>—</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Monthly projection (normal team usage)</h3>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>SKU</th><th>June 2026 (actual)</th><th>July 2026 (projected)</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td>Proposal/brief output tokens</td><td>£17.63</td><td>~£4–5</td><td>Response cache eliminates repeat testing</td></tr>
+    <tr><td>Field fill output tokens</td><td>£1.77</td><td>~£0.70</td><td>Caching reduces call volume</td></tr>
+    <tr><td>Backend flagging (2.0-flash)</td><td>—</td><td>~£0.80–1</td><td>New SKU, cheaper model</td></tr>
+    <tr><td>Input tokens</td><td>£0.63</td><td>~£0.20</td><td>Fewer calls from caching</td></tr>
+    <tr><td>Legacy routing mismatch</td><td>£0.30</td><td>~£0.05</td><td>GEMINI_KEY env var unified</td></tr>
+    <tr><td><strong>Total</strong></td><td><strong>£20.03</strong></td><td><strong>~£6–7</strong></td><td><strong>~65% reduction</strong></td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="vercel">
+<h2>8. Hosting — Current Setup & Next Steps</h2>
+
+<h3>How it is set up now — GitHub</h3>
+<p>All frontend HTML files live in a GitHub repository (<code>cyphr-flow</code>). GitHub Pages serves them publicly as static files directly from the <code>main</code> branch — no build step, no server. Every <code>git push</code> to main automatically updates the live site within seconds.</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>File</th><th>Live URL (GitHub Pages)</th></tr></thead>
+  <tbody>
+    <tr><td>index.html</td><td>https://[org].github.io/cyphr-flow/</td></tr>
+    <tr><td>blarney-intelligence.html</td><td>https://[org].github.io/cyphr-flow/blarney-intelligence.html</td></tr>
+    <tr><td>intelligence.html</td><td>https://[org].github.io/cyphr-flow/intelligence.html</td></tr>
+    <tr><td>docs.html</td><td>https://[org].github.io/cyphr-flow/docs.html</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The GitHub repository also stores all source history, acts as the deployment trigger (push = deploy), and hosts the Gist files used for Blarney snapshot storage via the GitHub API.</p>
+
+<div class="box info"><strong>GitHub Pages limitations:</strong> No custom domain HTTPS without a CNAME file, no preview deployments per branch, no deployment logs, no rollback UI, and no environment variable support. Fine for the current stage — but as the platform grows, Vercel removes all of these friction points.</div>
+
+<h3>Next steps — Moving to Vercel & switching the domain</h3>
+<p>The plan is to move the static frontend from GitHub Pages to Vercel and point the <code>cyphr.studio</code> domain (or a subdomain) at it. The Railway backend, Cloudflare Worker, and GitHub Gist storage all stay exactly where they are — only the static host changes.</p>
+
+<h4>Why Vercel</h4>
+<ul>
+  <li><strong>Custom domain with automatic HTTPS</strong> — point <code>flow.cyphr.studio</code> at it, certificate is provisioned instantly</li>
+  <li><strong>Preview deployments</strong> — every branch gets its own URL, so you can test changes before merging to main</li>
+  <li><strong>Deployment logs and rollback</strong> — one click to go back to any previous version</li>
+  <li><strong>Better CDN performance</strong> — global edge, HTTP/2, faster load times internationally</li>
+  <li><strong>Zero config</strong> — Vercel reads the repo and deploys automatically, same as GitHub Pages but with more control</li>
+</ul>
+
+<h4>What moves and what stays</h4>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Component</th><th>Current home</th><th>After migration</th></tr></thead>
+  <tbody>
+    <tr><td>index.html, blarney-intelligence.html, all HTML files</td><td>GitHub Pages</td><td>Vercel (static)</td></tr>
+    <tr><td>Railway API (app.py)</td><td>Railway</td><td>Railway — unchanged</td></tr>
+    <tr><td>Cloudflare Worker (Gemini proxy)</td><td>Cloudflare</td><td>Cloudflare — unchanged</td></tr>
+    <tr><td>GitHub Gist (Blarney snapshots)</td><td>GitHub</td><td>GitHub — unchanged</td></tr>
+    <tr><td>GitHub repo (source + git history)</td><td>GitHub</td><td>GitHub — unchanged. Vercel reads from it.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Migration steps</h4>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a Vercel account</strong> at vercel.com using your GitHub login — this lets Vercel access the repo without any token setup.</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Import the repository</strong> — Vercel dashboard → Add New → Project → find <code>cyphr-flow</code> → Import. Vercel detects it as a static site automatically.</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Set build config</strong> — Framework Preset: <strong>Other</strong> · Build Command: blank · Output Directory: <code>./</code> · Root Directory: <code>./</code>. Click Deploy. You get a <code>cyphr-flow.vercel.app</code> URL in ~10 seconds.</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Add the custom domain</strong> — Project Settings → Domains → add <code>flow.cyphr.studio</code> (or <code>app.cyphr.studio</code>). Vercel gives you a CNAME record to add in your DNS registrar. HTTPS certificate is automatic.</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Update Google OAuth origins</strong> — in Google Cloud Console → APIs & Services → Credentials → your OAuth client → Authorised JavaScript origins, add the new Vercel URL and custom domain. Without this, Google login will fail on the new domain.</div></div>
+  <div class="step"><div class="step-num">6</div><div class="step-body"><strong>Disable GitHub Pages</strong> — once Vercel is confirmed working on the custom domain, go to the GitHub repo → Settings → Pages → change source to "None". This avoids duplicate live sites.</div></div>
+  <div class="step"><div class="step-num">7</div><div class="step-body"><strong>Test the full flow</strong> — open the Vercel URL, log in with Google, create a project, generate a brief, download a document. Check network tab to confirm calls reach the Cloudflare Worker and Railway without errors.</div></div>
+</div>
+
+<div class="box green"><strong>After migration, deployments stay automatic.</strong> Every push to <code>main</code> on GitHub triggers a Vercel redeploy — same workflow as now, just with a proper domain and preview URLs for branches.</div>
+
+<div class="box amber"><strong>No code changes needed for the migration.</strong> All backend URLs in the HTML files (<code>RAILWAY_URL</code>, <code>proxyUrl</code>) are hardcoded to the Railway and Cloudflare services which don't change. The only things that need updating are the Google OAuth origins list and DNS records.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="security">
+<h2>9. Security Notes</h2>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>Area</th><th>Current state</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Gemini key in blarney-intelligence.html</td><td>Removed July 2026. All calls now route through Railway /ai-flag.</td><td style="color:#145C38;font-weight:700">Fixed</td></tr>
+    <tr><td>Cyphr Flow Gemini calls</td><td>All calls go through Cloudflare Worker — key never reaches the browser.</td><td style="color:#145C38;font-weight:700">Secure</td></tr>
+    <tr><td>Railway API keys</td><td>All keys in Railway environment variables. Dockerfile and app.py contain no secrets.</td><td style="color:#145C38;font-weight:700">Secure</td></tr>
+    <tr><td>Google OAuth</td><td>Client ID is public by design (this is normal for OAuth). Authorised origins restrict where it can be used.</td><td style="color:#145C38;font-weight:700">Normal</td></tr>
+    <tr><td>Blarney upload password</td><td>Hardcoded in client-side JS (blarney25). Lightweight access control only — not protecting any server resource.</td><td style="color:#B36A14;font-weight:700">Noted</td></tr>
+    <tr><td>CORS</td><td>flask-cors enabled on Railway with permissive settings. Consider restricting to known origins in production.</td><td style="color:#B36A14;font-weight:700">Monitor</td></tr>
+    <tr><td>Placeholder enforcement</td><td>[CONFIRM: reason] convention prevents sending documents with missing client contact info or invented data.</td><td style="color:#145C38;font-weight:700">Active</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<hr>
+
+<footer class="doc-footer">
+  <div>Generated July 2026 from live codebase · cyphr-flow/ + cyphr-api/ · All figures reflect post-fix July 2026 baseline</div>
+  <strong>Cyphr Studio</strong>
+</footer>
+
+</div>
+
+<script>
+// Step numbers via JS since CSS counters and flexbox don't always play nice across print engines
+document.querySelectorAll('.step-num').forEach((el, i) => { el.textContent = i + 1; });
+</script>
