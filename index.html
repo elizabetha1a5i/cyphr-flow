@@ -863,7 +863,8 @@ async function callGemini(prompt, options = {}) {
           // which silently eats into the room left for the actual answer. Disable thinking
           // by default for structured extraction/generation tasks where we want the full
           // budget spent on the visible output. Pass thinkingBudget explicitly to override.
-          thinkingConfig: { thinkingBudget: options.thinkingBudget ?? 0 }
+          thinkingConfig: { thinkingBudget: options.thinkingBudget ?? 0 },
+          ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {})
         }
       }),
     });
@@ -1613,7 +1614,7 @@ ${truncated ? '\nNOTE: Input was truncated to 40,000 characters. Extract from wh
 
 Text:
 ${textToUse}`;
-  const out = await callGemini(prompt, { maxTokens: 8000 });
+  const out = await callGemini(prompt, { maxTokens: 8000, responseMimeType: 'application/json' });
   try {
     const clean = out.replace(/```json\s*|```\s*/g,'').replace(/^["']?json\s*/i,'').trim();
     const parsed = JSON.parse(clean);
