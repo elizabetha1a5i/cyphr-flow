@@ -547,8 +547,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div style="width:100%;display:flex;flex-direction:column;gap:8px">
       <div class="gen-status-row" id="gsr-brief"><div class="gen-status-dot" id="gsd-brief"></div><div class="gen-status-text"><span class="gen-status-label">Brief</span><span class="gen-status-desc" id="gsm-brief">Reading your context…</span></div></div>
       <div class="gen-status-row" id="gsr-estimate"><div class="gen-status-dot" id="gsd-estimate"></div><div class="gen-status-text"><span class="gen-status-label">Cost estimate</span><span class="gen-status-desc" id="gsm-estimate">Waiting…</span></div></div>
-      <div class="gen-status-row" id="gsr-proposal"><div class="gen-status-dot" id="gsd-proposal"></div><div class="gen-status-text"><span class="gen-status-label">Proposal</span><span class="gen-status-desc" id="gsm-proposal">Waiting…</span></div></div>
-      <div class="gen-status-row" id="gsr-sow"><div class="gen-status-dot" id="gsd-sow"></div><div class="gen-status-text"><span class="gen-status-label">Statement of work</span><span class="gen-status-desc" id="gsm-sow">Waiting…</span></div></div>
+<div class="gen-status-row" id="gsr-sow"><div class="gen-status-dot" id="gsd-sow"></div><div class="gen-status-text"><span class="gen-status-label">Statement of work</span><span class="gen-status-desc" id="gsm-sow">Waiting…</span></div></div>
       <div class="gen-status-row" id="gsr-verify"><div class="gen-status-dot" id="gsd-verify"></div><div class="gen-status-text"><span class="gen-status-label">Verifying</span><span class="gen-status-desc" id="gsm-verify">Waiting…</span></div></div>
     </div>
     <div style="width:100%;height:3px;background:var(--border);border-radius:2px;overflow:hidden"><div id="gen-progress-bar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.5s ease"></div></div>
@@ -579,7 +578,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 function showGenOverlay() { const el=document.getElementById('gen-overlay'); if(el) el.style.display='flex'; }
 function closeGenOverlay() {
   const el=document.getElementById('gen-overlay'); if(el) el.style.display='none';
-  const fns={files:rFiles,req:rReq,brief:rBrief,skill:rSkill,estimate:rEstimate,proposal:rProposal,sow:rSOW,setup:rSetup};
+  const fns={files:rFiles,req:rReq,brief:rBrief,skill:rSkill,estimate:rEstimate,sow:rSOW,setup:rSetup};
   const stage=STAGES[currentStage]; if(!stage) return;
   const fn=fns[stage.id]; if(!fn) return;
   const el2=document.getElementById('stage-content'); if(el2) el2.innerHTML=fn();
@@ -605,12 +604,11 @@ async function preGenerateAll() {
   const steps = [
     { id:'brief',    saveTo:'briefOutput',    msg:'Reading context and writing the project brief…' },
     { id:'estimate', saveTo:'estimateOutput', msg:'Calculating resource plan from brief and budget…' },
-    { id:'proposal', saveTo:'proposalOutput', msg:'Drafting proposal narrative…' },
     { id:'sow',      saveTo:'sowOutput',      msg:'Compiling scope, deliverables, and commercial terms…' },
   ];
-  const labels = ['Generating brief…','Building cost estimate…','Writing proposal…','Drafting statement of work…'];
+  const labels = ['Generating brief…','Building cost estimate…','Drafting statement of work…'];
   let verifyIssues = [];
-  ['brief','estimate','proposal','sow','verify'].forEach(d => setGenStatus(d,'waiting','Waiting…'));
+  ['brief','estimate','sow','verify'].forEach(d => setGenStatus(d,'waiting','Waiting…'));
   try {
     for(let i=0; i<steps.length; i++) {
       const step=steps[i]; const fresh=gp();
@@ -624,7 +622,7 @@ async function preGenerateAll() {
     setGenStatus('verify','active','Checking for missing data and placeholder text…');
     await new Promise(r=>setTimeout(r,500));
     const finalP=gp();
-    const allText=[finalP.briefOutput,finalP.estimateOutput,finalP.proposalOutput,finalP.sowOutput].join(' ');
+    const allText=[finalP.briefOutput,finalP.estimateOutput,finalP.sowOutput].join(' ');
     const bleedTerms=['Blue Square','Charlotte Cavanagh','Samsung Roadshow','lorem ipsum','MentorLink','Spotify Kids'];
     bleedTerms.forEach(t=>{ if(allText.includes(t)) verifyIssues.push(`"${t}" — previous project data`); });
     if(!finalP.clientName) verifyIssues.push('Client name missing');
@@ -698,7 +696,6 @@ const STAGES = [
   { id:'brief',    label:'Brief' },
   { id:'skill',    label:'Skill' },
   { id:'estimate', label:'Estimate' },
-  { id:'proposal', label:'Proposal' },
   { id:'sow',      label:'SOW' },
   { id:'setup',    label:'Setup' },
 ];
@@ -711,48 +708,6 @@ const SKILLS = [
     inputs: ['Brand name and store URL','Geography and currency','Visual identity (colours, fonts)','Category structure'],
     outputs: ['brand-record.md','categories.md','Product CSVs','Decision tree CSV'],
     prompt: 'Run the Blarney brand onboarding skill',
-  },
-  {
-    id: 'proposal-deck',
-    name: 'Proposal deck',
-    desc: 'Build a Cyphr branded proposal deck — outputs complete slide content in the Cyphr template structure.',
-    inputs: ['Client name and project', 'Brief output', 'Estimate output', 'Any extra tone or focus notes'],
-    outputs: ['Complete slide content in SLIDE N — TITLE format, ready to drop into the Cyphr PPTX template'],
-    prompt: `You are a senior consultant at Cyphr Studio. Build a complete branded proposal deck for the client below.
-
-CYPHR TEMPLATE RULES:
-Use Cyphr___Slide_templates_V3.pptx as the base. Preserve all brand styling: colour palette, typography (Bandit Condensed headings, Messina Sans body), footer ("PRESENTATION / PAGE N"). Never introduce new fonts or colours.
-
-SLIDE LAYOUT REFERENCE — pick the right template slide for each piece of content:
-- Slides 1–5: Divider (section breaks, large title + subtitle)
-- Slides 6–7: Cover / deck title
-- Slides 8–13: Quote + attribution
-- Slides 14–16: Case study / title + body copy
-- Slide 17: Three-column [01][02][03] breakdown
-- Slides 18–21: Stat callouts (1–4 metrics, e.g. "95% Conversion")
-- Slides 22–29: Split content 50/50 or 1/3–2/3
-- Slides 30–32: Image-led / approach overview
-- Slides 33–36: Product/design process diagrams
-- Slides 37–41: Timeline (monthly, weekly, Gantt-style)
-- Slide 42: 6-up capabilities grid
-- Slides 43–44: Single capability deep dive
-- Slides 45–46: Team / people grid (5 or 10 person)
-- Slides 47–49: Budget + cost breakdown
-- Slides 50–55: Next steps timeline
-- Slides 56–60: Contact slides
-- Slide 62: THANK YOU (always last)
-
-STANDARD DECK STRUCTURE: Cover (6 or 7) → Section divider (1–5) per major section → Content slides → Contact (56–60) → Thank You (62).
-
-PLACEHOLDER RULES: Replace every instance of lorem/ipsum/morem/yorem, "Step name", "Capability", "Paityn Septimus", XXXX, XX,XXX, and bare [01]/[02]/[03] labels with real content. Run a final check before finishing — none of these should remain.
-
-OUTPUT FORMAT — write every slide like this:
-SLIDE N — [LAYOUT TYPE: e.g. COVER / DIVIDER / THREE-COLUMN / TIMELINE / COST BREAKDOWN]
-[field]: [content]
-
-End with a PLACEHOLDER CHECK confirming no dummy text remains.
-
-Now build the deck for`,
   },
 ];
 
@@ -1094,7 +1049,6 @@ const NEXT_ACTION_MAP = {
   brief:    'btn-gen-brief',
   skill:    'btn-skill-next',
   estimate: 'btn-gen-est',
-  proposal: 'btn-gen-prop',
   sow:      'btn-gen-sow',
   setup:    'btn-dl-all',
 };
@@ -1239,8 +1193,6 @@ async function autoGenerate() {
     await genBrief();
   } else if (stageId === 'estimate' && !p.estimateOutput) {
     await genEstimate();
-  } else if (stageId === 'proposal' && !p.proposalOutput) {
-    await genProposal();
   } else if (stageId === 'sow' && !p.sowOutput) {
     await genSOW();
   }
@@ -1253,7 +1205,7 @@ function back() {
 // ── RENDER ─────────────────────────────────────────────────────────────────
 function renderStage() {
   const id = STAGES[currentStage].id;
-  const fns = { files:rFiles, req:rReq, brief:rBrief, skill:rSkill, estimate:rEstimate, proposal:rProposal, sow:rSOW, setup:rSetup };
+  const fns = { files:rFiles, req:rReq, brief:rBrief, skill:rSkill, estimate:rEstimate, sow:rSOW, setup:rSetup };
   $('stage-content').innerHTML = fns[id]();
   setNextAction(id);
   // Show bleed warning on Files stage if project already has data
@@ -1685,7 +1637,6 @@ async function preGenerateAll() {
   try {
     if (!p.briefOutput) await preGen('brief');
     if (!p.estimateOutput) await preGen('estimate');
-    if (!p.proposalOutput) await preGen('proposal');
     if (!p.sowOutput) await preGen('sow');
     // Show ready banner if still on Files stage
     const banner = document.getElementById('pregen-banner');
@@ -1728,46 +1679,6 @@ NOTES: [1-2 sentences on budget fit and key assumptions]
 
 Use realistic Cyphr day rates (Strategy Lead £950/day, Tech Lead £700/day, Producer £500/day, Developer Mid £200/day, Developer Senior £300/day). Make phases and roles specific to the project type.`, conf));
     saveProjectData({ estimateOutput: out });
-  } else if (stage === 'proposal') {
-    const fresh = gp();
-    out = await callGeminiBackground(assumptionPrompt(`You are a senior consultant at Cyphr. Write a complete commercial proposal from the brief and resource plan below.
-Client: ${fresh.clientName} | Sector: ${fresh.sector} | Budget: £${fresh.budget} | Timeline: ${fresh.timeline}
-Brief: ${fresh.briefOutput}
-Resource plan: ${fresh.estimateOutput}
-
-Structure your output EXACTLY using these slide markers — the backend PPTX builder depends on them:
-
-SLIDE 1 — COVER
-[Leave blank — auto-generated]
-
-SLIDE 2 — EXECUTIVE SUMMARY
-[2-3 sentences: what Cyphr will do, for whom, and why it matters. Specific to this client and project.]
-
-SLIDE 3 — THE ASK
-[The client's core problem or opportunity in 1-2 sentences, then 3-4 bullet points on Cyphr's approach]
-
-SLIDE 4 — SCOPE + SERVICES
-[4 service categories relevant to this project, each with 3-4 specific items, format: Category: item, item, item]
-
-SLIDE 5 — DETAILED DELIVERABLES
-[5-7 specific deliverables]
-[Milestones: 4-5 timeline entries, format: Week N — milestone name]
-
-SLIDE 6 — COST BREAKDOWN
-[Phase name: £amount]
-Tasks: task1, task2, task3
-Team: role names
-Duration: X weeks
-[Repeat per phase]
-TOTAL: £[grand total]
-- [Assumption 1]
-- [Assumption 2]
-
-SLIDE 7 — WHY CYPHR
-[2-3 sentences: specific reasons this client should choose Cyphr — reference their sector, the project type, Cyphr's relevant expertise. Sharp, no fluff.]
-
-Sharp, confident, specific to ${fresh.clientName}. No generic filler.`, conf));
-    saveProjectData({ proposalOutput: out });
   } else if (stage === 'sow') {
     const fresh = gp();
     out = await callGeminiBackground(assumptionPrompt(`You are a project director at Cyphr. Write a complete, ready-to-sign Statement of Work from the brief and resource plan below.
@@ -2131,24 +2042,6 @@ async function downloadBriefPdf() {
   catch(e) { toast('Download failed — check Railway API is running'); }
 }
 
-async function downloadProposalPptx() {
-  const p = gp();
-  const btn = document.getElementById('btn-dl-pptx-prop');
-  const loader = document.getElementById('pptx-prop-load');
-  if (btn) btn.disabled = true;
-  if (loader) loader.style.display = 'flex';
-  try {
-    const slug = (p.clientName||'project').toLowerCase().replace(/\s+/g,'-');
-    await generateTextDoc(p, slug, 'proposal');
-    toast('Proposal deck downloaded', 'success');
-  } catch(e) {
-    toast('Download failed — check Railway API is running', 'error');
-  } finally {
-    if (btn) btn.disabled = false;
-    if (loader) loader.style.display = 'none';
-  }
-}
-
 // ── STAGE: SKILL ──────────────────────────────────────────────────────────
 function rSkill() {
   const p = gp();
@@ -2195,27 +2088,7 @@ function rSkillDetail(id) {
   const s = SKILLS.find(x=>x.id===id); if (!s) return '';
   const p = gp();
   let projectCtx;
-  if (s.id === 'proposal-deck') {
-    projectCtx = [
-      `${s.prompt} ${p.clientName}.`,
-      ``,
-      `CLIENT: ${p.clientName||'—'}`,
-      `PROJECT: ${p.projectName||'—'}`,
-      `SECTOR: ${p.sector||'—'}`,
-      `BUDGET: £${p.budget||'—'}`,
-      `TIMELINE: ${p.timeline||'—'}`,
-      ``,
-      `BRIEF:`,
-      (p.briefOutput||'No brief yet — use the project context above to make reasonable assumptions.').substring(0, 1200),
-      ``,
-      `ESTIMATE:`,
-      (p.estimateOutput||'No estimate yet.').substring(0, 800),
-      p.proposalNotes ? `\nEXTRA NOTES:\n${p.proposalNotes}` : '',
-      p.skillOutputNotes ? `\nSKILL NOTES:\n${p.skillOutputNotes}` : '',
-    ].filter(l => l !== undefined).join('\n');
-  } else {
-    projectCtx = `${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`;
-  }
+  projectCtx = `${s.prompt} for ${p.clientName}.\n\nProject context:\nClient: ${p.clientName}\nSector: ${p.sector||'—'}\nBudget: £${p.budget}\nTimeline: ${p.timeline}\nBrief: ${(p.briefOutput||'').substring(0,400)}\n\nPlease end your response with a clearly labelled SUMMARY block that can be pasted back into the project tool.`;
   const projectUrl = `https://claude.ai/project/019dd912-c7e8-7151-a30f-0957e4b5da7e`;
   window._skillLaunchCtx = projectCtx;
   return `<div class="skill-detail">
@@ -2257,34 +2130,6 @@ function launchSkill() {
   toast(copied ? 'Context copied — paste it into Claude and press Send' : 'Project opened — copy context manually', copied ? 'success' : 'warn');
 }
 
-function launchProposalSkill() {
-  const p = gp();
-  const lines = [
-    `CLIENT: ${p.clientName||'—'}`,
-    `PROJECT: ${p.projectName||'—'}`,
-    `SECTOR: ${p.sector||'—'}`,
-    `BUDGET: £${p.budget||'—'}`,
-    `TIMELINE: ${p.timeline||'—'}`,
-    ``,
-    `BRIEF:`,
-    (p.briefOutput||'No brief generated yet.').substring(0, 1200),
-    ``,
-    `ESTIMATE:`,
-    (p.estimateOutput||'No estimate generated yet.').substring(0, 800),
-  ];
-  if (p.proposalNotes) lines.push(``, `EXTRA NOTES:`, p.proposalNotes);
-  if (p.skillOutputNotes) lines.push(``, `SKILL NOTES:`, p.skillOutputNotes);
-  lines.push(``, `---`, `Build a complete Cyphr branded proposal deck for this client using the template skill instructions. Follow the SLIDE N — TITLE output format exactly.`);
-  const ctx = lines.join('\n');
-  navigator.clipboard.writeText(ctx).then(() => {
-    toast('Context copied to clipboard — paste into Claude ✓', 'success');
-    window.open('https://claude.ai/project/019ee034-8328-7313-ad9a-56d5f06e1657', '_blank');
-  }).catch(() => {
-    window.open('https://claude.ai/project/019ee034-8328-7313-ad9a-56d5f06e1657', '_blank');
-    toast('Open Claude and paste your project context manually');
-  });
-}
-
 // ── STAGE: ESTIMATE ───────────────────────────────────────────────────────
 function rEstimate() {
   const p = gp();
@@ -2308,7 +2153,7 @@ function rEstimate() {
       <span class="btn-timing">~10 seconds · uses your brief and day rate</span>
     </div>
   </div>
-  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveEstimate();advance()">Next → auto-generate proposal</button></div>`;
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveEstimate();advance()">Next → SOW</button></div>`;
 }
 
 async function genEstimate(forceRefresh) {
@@ -2341,65 +2186,6 @@ Output: phase name, roles, days, cost per phase, total. Note if budget is tight 
 
 function saveEstimate() { saveProjectData({ rate:sv('f-rate'), days:sv('f-days'), roles:sv('f-roles') }); }
 
-// ── STAGE: PROPOSAL ───────────────────────────────────────────────────────
-function rProposal() {
-  const p = gp();
-  return `<div class="card">
-    <div class="card-title">Proposal document</div>
-    <div class="card-sub">Generate proposal narrative ready for your template.</div>
-    <div class="field-group"><label class="field-label">Extra notes</label><textarea id="f-pnotes" placeholder="Tone, sections to emphasise, key selling points…">${p.proposalNotes||''}</textarea></div>
-    <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
-      Proposal output
-      ${p.proposalOutput ? '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono)">✎ Editable</span>' : ''}
-    </div>
-    <textarea class="output-editable" id="prop-out" placeholder="Click generate." oninput="saveProjectData({proposalOutput:this.value})">${p.proposalOutput||''}</textarea>
-    <div id="prop-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Writing proposal…</span></div>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-ai" id="btn-gen-prop" onclick="genProposal()">${p.proposalOutput ? "↺ Regenerate proposal" : "✦ Generate proposal"}</button>
-      <span class="btn-timing">~10 seconds · uses your brief and estimate</span>
-    </div>
-  </div>
-  ${p.clientName ? `<div class="card" style="margin-top:12px">
-    <div class="card-title">Cost proposal deck</div>
-    <div class="card-sub">Download a branded PPTX pre-filled with your project data.</div>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-primary" id="btn-dl-pptx-prop" onclick="downloadProposalPptx()">⬇ Download PPTX</button>
-      <div id="pptx-prop-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Building deck…</span></div>
-    </div>
-  </div>` : ''}
-  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveProposal();advance()">Next → auto-generate SOW</button></div>`;
-}
-
-async function genProposal(forceRefresh) {
-  if (busy) return; busy=true;
-  const p=gp(); const notes=sv('f-pnotes'); saveProjectData({proposalNotes:notes});
-  const conf = p.contextConfidence || contextConfidence(p);
-  const cacheKey = geminiCacheKey(p.id, 'proposal', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput, proposalNotes:notes, selectedSkill:p.selectedSkill, skillOutputNotes:p.skillOutputNotes });
-  if (!forceRefresh) {
-    const cached = getCached(cacheKey);
-    if (cached) {
-      saveProjectData({ proposalOutput: cached });
-      $('prop-out').value = cached;
-      if($('prop-load'))$('prop-load').style.display='none'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=false; busy=false; return;
-    }
-  }
-  $('prop-load').style.display='flex'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=true;
-  const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
-  const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write proposal copy.
-Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
-Brief: ${p.briefOutput}
-${skillCtx}
-Resource plan: ${p.estimateOutput}
-Extra notes: ${notes}
-Write: (1) Executive summary (2) Our approach (3) What we deliver (4) Why Cyphr. Sharp, confident, no fluff.`, conf));
-  setCached(cacheKey, out);
-  saveProjectData({ proposalOutput:out });
-  $('prop-out').value=out;
-  if($('prop-load'))$('prop-load').style.display='none'; if($('btn-gen-prop'))$('btn-gen-prop').disabled=false; busy=false;
-}
-
-function saveProposal() { saveProjectData({ proposalNotes:sv('f-pnotes') }); }
-
 // ── STAGE: SOW ────────────────────────────────────────────────────────────
 function rSOW() {
   const p = gp();
@@ -2414,7 +2200,7 @@ function rSOW() {
     <div id="sow-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Drafting SOW…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-gen-sow" onclick="genSOW()">${p.sowOutput ? "↺ Regenerate SOW" : "✦ Generate SOW"}</button>
-      <span class="btn-timing">~10 seconds · uses your brief, estimate and proposal</span>
+      <span class="btn-timing">~10 seconds · uses your brief and estimate</span>
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: project setup →</button></div>`;
@@ -2424,7 +2210,7 @@ async function genSOW(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp();
   const conf = p.contextConfidence || contextConfidence(p);
-  const cacheKey = geminiCacheKey(p.id, 'sow', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput, proposalOutput:p.proposalOutput });
+  const cacheKey = geminiCacheKey(p.id, 'sow', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput });
   if (!forceRefresh) {
     const cached = getCached(cacheKey);
     if (cached) {
@@ -2438,7 +2224,6 @@ async function genSOW(forceRefresh) {
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Brief: ${p.briefOutput}
 Resource plan: ${p.estimateOutput}
-Proposal: ${p.proposalOutput}
 Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`, conf));
   setCached(cacheKey, out);
   saveProjectData({ sowOutput:out });
@@ -2462,7 +2247,6 @@ function rSetup() {
   const outputs = [
     ['Brief', p.briefOutput, '📋'],
     ['Estimate', p.estimateOutput, '📊'],
-    ['Proposal', p.proposalOutput, '📝'],
     ['SOW', p.sowOutput, '📄'],
   ].filter(([,v])=>v);
 
@@ -2523,7 +2307,6 @@ function rSetup() {
       <button class="action-btn" id="btn-dl-brief" onclick="generateFile('brief')">📋 Brief (.docx)</button>
       <button class="action-btn" id="btn-dl-estimate" onclick="generateFile('estimate')">📊 Estimate (.xlsx)</button>
       <button class="action-btn" id="btn-dl-sow" onclick="generateFile('sow')">📄 SOW (.docx)</button>
-      <button class="action-btn" id="btn-dl-proposal" onclick="generateFile('proposal')">📊 Proposal (.pptx)</button>
       <button class="action-btn" id="btn-dl-gantt" onclick="generateFile('gantt')">📅 Gantt (.xlsx)</button>
       <button class="action-btn" id="btn-dl-status" onclick="generateStatusSheet()">📋 Status sheet (.xlsx)</button>
     </div>
@@ -2844,7 +2627,7 @@ async function generateTextDoc(p, slug, type) {
 }
 
 async function generateAllFiles() {
-  for (const type of ['brief','estimate','sow','proposal','gantt']) {
+  for (const type of ['brief','estimate','sow','gantt']) {
     try {
       await generateFile(type);
       await new Promise(r => setTimeout(r, 800));
@@ -2978,10 +2761,10 @@ function renderDashboard() {
       <div class="empty-sub" style="margin-bottom:24px">Paste meeting notes, upload files, or pull emails — we extract the key details and generate a brief, estimate, proposal and SOW in minutes.</div>
       <button class="btn btn-primary next-action" style="margin:0 auto 28px;display:inline-flex" onclick="newProject()">+ Start new project →</button>
       <div style="display:flex;justify-content:center;gap:0;flex-wrap:wrap;margin-top:4px">
-        ${['Files','Requirements','Brief','Skill','Estimate','Proposal','SOW','Setup'].map((s,i)=>`
+        ${['Files','Requirements','Brief','Skill','Estimate','SOW','Setup'].map((s,i)=>`
           <div style="display:flex;align-items:center;gap:0">
             <div style="font-size:10px;font-weight:700;color:var(--ink3);white-space:nowrap;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--paper)">${i+1}. ${s}</div>
-            ${i<7?'<div style="font-size:10px;color:var(--ink3);padding:0 2px">›</div>':''}
+            ${i<6?'<div style="font-size:10px;color:var(--ink3);padding:0 2px">›</div>':''}
           </div>`).join('')}
       </div>
     </div>`;
