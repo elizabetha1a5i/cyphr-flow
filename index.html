@@ -2482,7 +2482,9 @@ async function genEstimate(forceRefresh) {
     if (cached) {
       saveProjectData({ estimateOutput: cached, rate, days, roles });
       $('est-out').value = cached;
-      if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false; busy=false; return;
+      if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false;
+      if($('btn-est-xlsx')){$('btn-est-xlsx').disabled=false;$('btn-est-xlsx').style.opacity='1';}
+      busy=false; return;
     }
   }
   $('est-load').style.display='flex'; if($('btn-gen-est'))$('btn-gen-est').disabled=true;
@@ -2496,7 +2498,9 @@ Output: phase name, roles, days, cost per phase, total. Note if budget is tight 
   setCached(cacheKey, out);
   saveProjectData({ estimateOutput:out, rate, days, roles });
   $('est-out').value=out;
-  if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false; busy=false;
+  if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false;
+  if($('btn-est-xlsx')){$('btn-est-xlsx').disabled=false;$('btn-est-xlsx').style.opacity='1';}
+  busy=false;
 }
 
 function saveEstimate() { saveProjectData({ rate:sv('f-rate'), days:sv('f-days'), roles:sv('f-roles') }); }
@@ -2533,7 +2537,9 @@ async function genSOW(forceRefresh) {
     if (cached) {
       saveProjectData({ sowOutput: cached });
       $('sow-out').value = cached;
-      if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false; busy=false; return;
+      if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false;
+      if($('btn-sow-docx')){$('btn-sow-docx').disabled=false;$('btn-sow-docx').style.opacity='1';}
+      busy=false; return;
     }
   }
   $('sow-load').style.display='flex'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=true;
@@ -2545,7 +2551,9 @@ Include: scope, deliverables, timeline, commercial terms (fee, payment milestone
   setCached(cacheKey, out);
   saveProjectData({ sowOutput:out });
   $('sow-out').value=out;
-  if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false; busy=false;
+  if($('sow-load'))$('sow-load').style.display='none'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=false;
+  if($('btn-sow-docx')){$('btn-sow-docx').disabled=false;$('btn-sow-docx').style.opacity='1';}
+  busy=false;
   const p2=gp();
   await slackNotify(`📄 *SOW ready* — ${p2.clientName}${p2.projectName?' / '+p2.projectName:''}\nAll documents ready to generate. Budget: £${Number(p2.budget||0).toLocaleString()}`);
 }
