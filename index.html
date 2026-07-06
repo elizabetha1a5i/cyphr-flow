@@ -2165,6 +2165,15 @@ function rReq() {
       <textarea id="f-bg" placeholder="Decision makers, objections, context…" oninput="saveReqField('bgNotes',this.value);renderReqBanner()">${p.bgNotes||''}</textarea>
       ${!fBg.filled ? `<div class="field-hint-text error">Recommended — improves proposal accuracy</div>` : `<div class="field-hint-text ok">✓ Looks good</div>`}
     </div>
+    <div class="field-section-label">SOW details <span style="font-size:10px;color:var(--ink3);font-weight:400">· optional now, needed for Statement of Work</span></div>
+    <div class="field-group">
+      <label class="field-label">Stakeholders</label>
+      <input id="f-stk" value="${p.stakeholders||''}" placeholder="e.g. Sarah (CEO), James (Head of Product)" oninput="saveReqField('stakeholders',this.value)"/>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Risks & open questions</label>
+      <textarea id="f-rsk" style="min-height:60px" placeholder="e.g. Budget not confirmed, legal sign-off needed, API access TBC…" oninput="saveReqField('risksAndOpenQuestions',this.value)">${p.risksAndOpenQuestions||''}</textarea>
+    </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" id="btn-req-next" onclick="saveReq();advance()">Next → auto-generate brief</button></div>`;
 }
@@ -2174,6 +2183,7 @@ function saveReq() {
     clientName:sv('f-cn'), projectName:sv('f-pn'), budget:sv('f-bud'),
     timeline:sv('f-tl'), sector:sv('f-sec'), startDate:sv('f-sd'),
     requirements:sv('f-req'), bgNotes:sv('f-bg'),
+    stakeholders:sv('f-stk'), risksAndOpenQuestions:sv('f-rsk'),
   });
 }
 
