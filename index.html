@@ -761,23 +761,23 @@ const GAP_PLACEHOLDERS = {
 
 const STAGE_REQUIREMENTS = {
   brief: [
-    { field: 'clientName',   label: 'Client name',  weight: 1, test: p => !!(p.clientName||'').trim() },
-    { field: 'sector',       label: 'Sector',        weight: 1, test: p => !!(p.sector||'').trim() },
-    { field: 'requirements', label: 'Requirements',  weight: 2, test: p => (p.requirements||'').trim().length > 80 },
-    { field: 'bgNotes',      label: 'Background',    weight: 2, test: p => (p.bgNotes||'').trim().length > 80 },
+    { field: 'clientName',   label: 'Client name',  weight: 1, test: p => !!toStr(p.clientName).trim() },
+    { field: 'sector',       label: 'Sector',        weight: 1, test: p => !!toStr(p.sector).trim() },
+    { field: 'requirements', label: 'Requirements',  weight: 2, test: p => toStr(p.requirements).trim().length > 80 },
+    { field: 'bgNotes',      label: 'Background',    weight: 2, test: p => toStr(p.bgNotes).trim().length > 80 },
   ],
   estimate: [
-    { field: 'briefOutput',  label: 'Brief',         weight: 2, test: p => (p.briefOutput||'').trim().length > 50 },
+    { field: 'briefOutput',  label: 'Brief',         weight: 2, test: p => toStr(p.briefOutput).trim().length > 50 },
     { field: 'budget',       label: 'Budget',        weight: 2, test: p => !!(p.budget) && p.budget !== '0' },
-    { field: 'timeline',     label: 'Timeline',      weight: 1, test: p => !!(p.timeline||'').trim() },
+    { field: 'timeline',     label: 'Timeline',      weight: 1, test: p => !!toStr(p.timeline).trim() },
   ],
   sow: [
-    { field: 'briefOutput',  label: 'Brief',         weight: 1, test: p => (p.briefOutput||'').trim().length > 50 },
-    { field: 'estimateOutput',label:'Estimate',      weight: 1, test: p => (p.estimateOutput||'').trim().length > 50 },
+    { field: 'briefOutput',  label: 'Brief',         weight: 1, test: p => toStr(p.briefOutput).trim().length > 50 },
+    { field: 'estimateOutput',label:'Estimate',      weight: 1, test: p => toStr(p.estimateOutput).trim().length > 50 },
     { field: 'budget',       label: 'Budget',        weight: 1, test: p => !!(p.budget) && p.budget !== '0' },
-    { field: 'timeline',     label: 'Timeline',      weight: 1, test: p => !!(p.timeline||'').trim() },
-    { field: 'stakeholders', label: 'Stakeholders',  weight: 1, test: p => !!(p.stakeholders||'').trim() },
-    { field: 'risksAndOpenQuestions', label: 'Risks & questions', weight: 1, test: p => !!(p.risksAndOpenQuestions||'').trim() },
+    { field: 'timeline',     label: 'Timeline',      weight: 1, test: p => !!toStr(p.timeline).trim() },
+    { field: 'stakeholders', label: 'Stakeholders',  weight: 1, test: p => !!toStr(p.stakeholders).trim() },
+    { field: 'risksAndOpenQuestions', label: 'Risks & questions', weight: 1, test: p => !!toStr(p.risksAndOpenQuestions).trim() },
   ],
 };
 
@@ -882,17 +882,19 @@ function renderStageConfBadge(stageId) {
 }
 
 // ── CONTEXT CONFIDENCE ────────────────────────────────────────────────────
+function toStr(v) { return Array.isArray(v) ? v.join(' ') : String(v||''); }
+
 function contextConfidence(p) {
   const gaps = [];
   let score = 0;
   const checks = [
-    { field: 'clientName',   label: 'Client name',  weight: 1, ok: !!(p.clientName||'').trim() },
-    { field: 'sector',       label: 'Sector',        weight: 1, ok: !!(p.sector||'').trim() },
+    { field: 'clientName',   label: 'Client name',  weight: 1, ok: !!toStr(p.clientName).trim() },
+    { field: 'sector',       label: 'Sector',        weight: 1, ok: !!toStr(p.sector).trim() },
     { field: 'budget',       label: 'Budget',        weight: 1, ok: !!(p.budget) && p.budget !== '0' },
-    { field: 'timeline',     label: 'Timeline',      weight: 1, ok: !!(p.timeline||'').trim() },
-    { field: 'requirements', label: 'Requirements',  weight: 2, ok: (p.requirements||'').trim().length > 80 },
-    { field: 'bgNotes',      label: 'Background',    weight: 2, ok: (p.bgNotes||'').trim().length > 80 },
-    { field: 'stakeholders', label: 'Stakeholders',  weight: 1, ok: !!(p.stakeholders||'').trim() },
+    { field: 'timeline',     label: 'Timeline',      weight: 1, ok: !!toStr(p.timeline).trim() },
+    { field: 'requirements', label: 'Requirements',  weight: 2, ok: toStr(p.requirements).trim().length > 80 },
+    { field: 'bgNotes',      label: 'Background',    weight: 2, ok: toStr(p.bgNotes).trim().length > 80 },
+    { field: 'stakeholders', label: 'Stakeholders',  weight: 1, ok: !!toStr(p.stakeholders).trim() },
   ];
   const max = checks.reduce((a, c) => a + c.weight, 0);
   checks.forEach(c => { if (c.ok) score += c.weight; else gaps.push(c); });
@@ -1679,7 +1681,8 @@ ${textToUse}`;
     const jsonMatch = out.match(/\{[\s\S]*\}/);
     const clean = jsonMatch ? jsonMatch[0] : out.replace(/```json\s*|```\s*/g,'').replace(/^["']?json\s*/i,'').trim();
     const parsed = JSON.parse(clean);
-    const fields = {clientName:parsed.clientName,projectName:parsed.projectName,sector:parsed.sector,budget:parsed.budget,timeline:parsed.timeline,requirements:parsed.requirements,bgNotes:parsed.bgNotes,stakeholders:parsed.stakeholders,otherOpportunities:parsed.otherOpportunities,risksAndOpenQuestions:parsed.risksAndOpenQuestions,nextSteps:parsed.nextSteps};
+    const nf = v => Array.isArray(v) ? v.map(i => typeof i === 'object' ? JSON.stringify(i) : String(i)).join('\n') : v;
+    const fields = {clientName:parsed.clientName,projectName:parsed.projectName,sector:parsed.sector,budget:parsed.budget,timeline:parsed.timeline,requirements:nf(parsed.requirements),bgNotes:nf(parsed.bgNotes),stakeholders:nf(parsed.stakeholders),otherOpportunities:nf(parsed.otherOpportunities),risksAndOpenQuestions:nf(parsed.risksAndOpenQuestions),nextSteps:nf(parsed.nextSteps)};
     const sources = {clientNameSource:parsed.clientNameSource,projectNameSource:parsed.projectNameSource,sectorSource:parsed.sectorSource,budgetSource:parsed.budgetSource,timelineSource:parsed.timelineSource,requirementsSource:parsed.requirementsSource,bgNotesSource:parsed.bgNotesSource,stakeholdersSource:parsed.stakeholdersSource,otherOpportunitiesSource:parsed.otherOpportunitiesSource,risksAndOpenQuestionsSource:parsed.risksAndOpenQuestionsSource,nextStepsSource:parsed.nextStepsSource};
     saveProjectData({...fields,...sources, contextConfidence: null});
     const p = gp();
