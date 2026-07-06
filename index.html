@@ -2113,34 +2113,10 @@ function rReq() {
   const fBudget   = reqFieldState(p.budget, 1);
   const fTimeline = reqFieldState(p.timeline, 2);
 
-  // Context quality banner
-  const missing = [
-    !fSector.filled   && 'Sector',
-    !fReqs.filled     && 'Requirements',
-    !fBg.filled       && 'Background',
-    !fBudget.filled   && 'Budget',
-    !fTimeline.filled && 'Timeline',
-  ].filter(Boolean);
-
-  let banner = '';
-  if (missing.length >= 3) {
-    banner = `<div class="ctx-banner error">
-      <span style="font-size:16px">⚠</span>
-      <div><strong>Low context — documents will be heavily assumed.</strong><br>Missing: ${missing.join(', ')}. Fill what you can or use the <strong>Assumption</strong> buttons to let AI fill the gaps.</div>
-    </div>`;
-  } else if (missing.length > 0) {
-    banner = `<div class="ctx-banner warn">
-      <span style="font-size:16px">◐</span>
-      <div><strong>Some fields missing.</strong> Missing: ${missing.join(', ')}. Fill them in or click <strong>Assumption</strong> to auto-fill from your context.</div>
-    </div>`;
-  } else {
-    banner = `<div class="ctx-banner ok"><span style="font-size:16px">✓</span><div><strong>Good context</strong> — all key fields are filled. Documents will be specific to this project.</div></div>`;
-  }
-
   return `<div class="card">
     <div class="card-title">Requirements</div>
     <div class="card-sub">${extracted ? 'Pre-filled from your files — review and edit.' : 'Enter the project basics.'}</div>
-    ${banner}
+    <div id="ctx-readiness">${buildContextReadiness(p)}</div>
     <div class="field-section-label">Project identity</div>
     <div class="two-col">
       <div class="field-group"><label class="field-label">Client name${fieldHint(p.clientName,'clientNameSource')}</label><input id="f-cn" value="${p.clientName||''}" placeholder="e.g. Currys" oninput="saveReqField('clientName',this.value)"/></div>
@@ -2203,25 +2179,88 @@ function saveReq() {
 
 function saveReqField(key, value) {
   saveProjectData({ [key]: value });
+  renderReqBanner();
 }
 
 function renderReqBanner() {
-  // Re-render just the banner without losing field focus
-  const p = gp();
-  const { score, max, level, gaps } = contextConfidence(p);
-  const missing = gaps.map(g => g.label);
-  const banner = document.querySelector('.ctx-banner');
-  if (!banner) return;
-  if (level === 'low') {
-    banner.className = 'ctx-banner error';
-    banner.innerHTML = `<span style="font-size:16px">⚠</span><div><strong>Context score: ${score}/${max} — Low context.</strong> Documents will be heavily assumed.<br>Missing: ${missing.join(', ')}. Fill what you can or use the <strong>Assumption</strong> buttons.</div>`;
-  } else if (level === 'medium') {
-    banner.className = 'ctx-banner warn';
-    banner.innerHTML = `<span style="font-size:16px">◐</span><div><strong>Context score: ${score}/${max} — Medium context.</strong> Some fields missing: ${missing.join(', ')}. Fill them in or click <strong>Assumption</strong> to auto-fill.</div>`;
-  } else {
-    banner.className = 'ctx-banner ok';
-    banner.innerHTML = `<span style="font-size:16px">✓</span><div><strong>Context score: ${score}/${max} — Strong context.</strong> All key fields filled. Documents will be specific to this project.</div>`;
-  }
+  const el = document.getElementById('ctx-readiness');
+  if (!el) return;
+  el.innerHTML = buildContextReadiness(gp());
+}
+
+function buildContextReadiness(p) {
+  // All input fields (user-fillable on this stage)
+  const INPUT_FIELDS = [
+    { field: 'clientName',            label: 'Client name',         test: p => !!String(p.clientName||'').trim(),                           stages: ['Brief'] },
+    { field: 'sector',                label: 'Sector',               test: p => !!String(p.sector||'').trim(),                               stages: ['Brief'] },
+    { field: 'requirements',          label: 'Requirements',         test: p => String(p.requirements||'').trim().length > 80,               stages: ['Brief'] },
+    { field: 'bgNotes',               label: 'Background notes',     test: p => String(p.bgNotes||'').trim().length > 80,                    stages: ['Brief'] },
+    { field: 'budget',                label: 'Budget',               test: p => !!(p.budget) && p.budget !== '0',                            stages: ['Estimate', 'SOW'] },
+    { field: 'timeline',              label: 'Timeline',             test: p => !!String(p.timeline||'').trim(),                             stages: ['Estimate', 'SOW'] },
+    { field: 'stakeholders',          label: 'Stakeholders',         test: p => !!String(p.stakeholders||'').trim(),                         stages: ['SOW'] },
+    { field: 'risksAndOpenQuestions', label: 'Risks & open questions', test: p => !!String(p.risksAndOpenQuestions||'').trim(),              stages: ['SOW'] },
+  ];
+
+  const filled   = INPUT_FIELDS.filter(f => f.test(p));
+  const missing  = INPUT_FIELDS.filter(f => !f.test(p));
+  const total    = INPUT_FIELDS.length;
+  const score    = filled.length;
+  const pct      = Math.round(score / total * 100);
+  const level    = pct >= 85 ? 'high' : pct >= 50 ? 'medium' : 'low';
+  const barColour = level === 'high' ? '#22c55e' : level === 'medium' ? '#f59e0b' : '#ef4444';
+  const label    = level === 'high' ? 'All context ready' : level === 'medium' ? 'Mostly ready' : 'Missing context';
+
+  // Generated fields — shown separately as "auto-generated"
+  const GEN_FIELDS = [
+    { label: 'Brief output',    field: 'briefOutput',    stages: ['Estimate', 'SOW'], done: String(p.briefOutput||'').length > 50 },
+    { label: 'Estimate output', field: 'estimateOutput', stages: ['SOW'],             done: String(p.estimateOutput||'').length > 50 },
+  ];
+
+  const fieldRow = (f, done) => {
+    const stageTag = `<span style="font-size:9px;color:var(--ink3);font-family:var(--mono);margin-left:4px">${f.stages.join(' · ')}</span>`;
+    return done
+      ? `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+           <span style="color:#22c55e;font-size:13px;flex-shrink:0">✓</span>
+           <span style="font-size:12px;color:var(--ink2)">${f.label}</span>${stageTag}
+         </div>`
+      : `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+           <span style="color:#ef4444;font-size:13px;flex-shrink:0">✗</span>
+           <span style="font-size:12px;color:var(--ink1);font-weight:500">${f.label}</span>${stageTag}
+         </div>`;
+  };
+
+  const genRow = g => {
+    const stageTag = `<span style="font-size:9px;color:var(--ink3);font-family:var(--mono);margin-left:4px">${g.stages.join(' · ')}</span>`;
+    return g.done
+      ? `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+           <span style="color:#22c55e;font-size:13px;flex-shrink:0">✓</span>
+           <span style="font-size:12px;color:var(--ink2)">${g.label}</span>${stageTag}
+         </div>`
+      : `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+           <span style="color:var(--ink3);font-size:13px;flex-shrink:0">⏳</span>
+           <span style="font-size:12px;color:var(--ink3)">${g.label}</span>
+           <span style="font-size:9px;color:var(--ink3);font-family:var(--mono);margin-left:4px">auto-generated next</span>${stageTag}
+         </div>`;
+  };
+
+  const missingRows = missing.map(f => fieldRow(f, false)).join('');
+  const filledRows  = filled.map(f => fieldRow(f, true)).join('');
+  const genRows     = GEN_FIELDS.map(g => genRow(g)).join('');
+
+  return `
+    <div style="border:1px solid ${barColour}33;border-left:3px solid ${barColour};border-radius:6px;padding:12px 14px;margin-bottom:16px;background:var(--paper)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${barColour};border-radius:3px;transition:width 0.3s"></div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:${barColour};white-space:nowrap">${label} · ${score}/${total} fields</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);font-family:var(--mono);margin-bottom:6px">What each document needs</div>
+      ${missingRows}
+      ${filledRows}
+      ${genRows}
+      ${missing.length === 0 ? '<div style="font-size:11px;color:#22c55e;margin-top:6px;font-weight:600">✓ All input fields filled — ready to generate all documents</div>' : ''}
+    </div>`;
 }
 
 async function assumeField(field, btn) {
