@@ -2036,7 +2036,7 @@ Cyphr: [responsibility 1], [responsibility 2]
 ${fresh.clientName}: [responsibility 1], [responsibility 2]
 
 FEE:
-[Fee statement with total amount and payment schedule]
+Total project fee: £[extract the TOTAL figure from the resource plan above — do not leave blank]. Payment schedule: [e.g. 50% on signing, 25% at midpoint, 25% on completion].
 
 Professional, specific, no placeholders except for client contact details.`, conf));
     saveProjectData({ sowOutput: out });
@@ -2312,9 +2312,46 @@ function refreshUsageBadge() {
   if (el) el.textContent = '£' + cost.toFixed(2);
 }
 
+// ── CONFIDENCE GATE ───────────────────────────────────────────────────────
+// Returns true if generation should proceed, false if gaps were surfaced.
+// On false: renders the stage conf panel with a "generate anyway" option.
+function confGate(stageId, forceRefresh) {
+  if (forceRefresh) return true;
+  const p = gp();
+  const conf = stageConfidence(stageId, p);
+  if (!conf || conf.level === 'high') return true;
+
+  // Surface the panel with a proceed-anyway button
+  const el = document.getElementById('stage-conf-panel-' + stageId);
+  if (!el) return true; // panel not in DOM, just proceed
+
+  renderStageConfPanel(stageId);
+
+  // Inject a "generate anyway" button into the badge
+  const badge = el.querySelector('.stage-conf-badge');
+  if (badge && !badge.querySelector('.conf-proceed-btn')) {
+    const pct = Math.round(conf.score / conf.max * 100);
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:11px;color:var(--ink3);margin-top:4px';
+    msg.innerHTML = `Context is <strong>${conf.level}</strong> (${pct}%) — fill the gaps above for a better output, or <button class="conf-proceed-btn btn btn-ghost" style="font-size:11px;padding:2px 8px;display:inline-flex" onclick="confProceed('${stageId}')">generate anyway →</button>`;
+    badge.appendChild(msg);
+  }
+  return false;
+}
+
+const _confProceedFns = {};
+function confProceed(stageId) {
+  const fn = _confProceedFns[stageId];
+  if (fn) fn();
+}
+
 async function genBrief(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp();
+  if (!confGate('brief', forceRefresh)) {
+    _confProceedFns['brief'] = () => genBrief(true);
+    busy=false; return;
+  }
   const { level: conf } = contextConfidence(p);
   const cacheKey = geminiCacheKey(p.id, 'brief', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, requirements:p.requirements, bgNotes:p.bgNotes });
   if (!forceRefresh) {
@@ -2473,6 +2510,10 @@ function rEstimate() {
 
 async function genEstimate(forceRefresh) {
   if (busy) return; busy=true;
+  if (!confGate('estimate', forceRefresh)) {
+    _confProceedFns['estimate'] = () => genEstimate(true);
+    busy=false; return;
+  }
   const p=gp(); const rate=sv('f-rate')||850; const days=sv('f-days'); const roles=sv('f-roles');
   const { level: conf } = contextConfidence(p);
   saveProjectData({rate,days,roles});
@@ -2529,6 +2570,10 @@ function rSOW() {
 
 async function genSOW(forceRefresh) {
   if (busy) return; busy=true;
+  if (!confGate('sow', forceRefresh)) {
+    _confProceedFns['sow'] = () => genSOW(true);
+    busy=false; return;
+  }
   const p=gp();
   const { level: conf } = contextConfidence(p);
   const cacheKey = geminiCacheKey(p.id, 'sow', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput });
@@ -2543,11 +2588,46 @@ async function genSOW(forceRefresh) {
     }
   }
   $('sow-load').style.display='flex'; if($('btn-gen-sow'))$('btn-gen-sow').disabled=true;
-  const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Write a Statement of Work.
+  const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Write a complete, ready-to-sign Statement of Work.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
 Brief: ${p.briefOutput}
 Resource plan: ${p.estimateOutput}
-Include: scope, deliverables, timeline, commercial terms (fee, payment milestones), assumptions, out of scope. Professional, unambiguous, ready to send.`, conf));
+
+Structure your output EXACTLY using these section headers:
+
+SUMMARY:
+[2-3 sentences describing what Cyphr will deliver and for whom]
+
+OBJECTIVES:
+- [objective 1]
+- [objective 2]
+- [objective 3]
+
+SCOPE:
+- [in-scope item 1]
+- [in-scope item 2]
+- [out of scope: item]
+
+DELIVERABLES:
+- [deliverable 1]
+- [deliverable 2]
+
+MILESTONES:
+- [Milestone name — Week N / specific date]
+- [Milestone name — Week N / specific date]
+
+ASSUMPTIONS:
+- [assumption 1]
+- [assumption 2]
+
+RESPONSIBILITIES:
+Cyphr: [responsibility 1], [responsibility 2]
+${p.clientName}: [responsibility 1], [responsibility 2]
+
+FEE:
+Total project fee: £[extract the TOTAL figure from the resource plan above — do not leave blank]. Payment schedule: [e.g. 50% on signing, 25% at midpoint, 25% on completion].
+
+Professional, specific, no placeholders except for client contact details.`, conf));
   setCached(cacheKey, out);
   saveProjectData({ sowOutput:out });
   $('sow-out').value=out;
