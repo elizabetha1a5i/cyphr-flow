@@ -526,6 +526,13 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="usage-detail" style="font-size:12px;color:var(--ink2);line-height:1.8"></div>
     <div style="font-size:11px;color:var(--ink3);margin-top:6px;margin-bottom:4px">Resets 1st of each month · Covers this browser only · Estimate based on June 2026 pricing</div>
 
+    <div class="settings-section">Presentation deck</div>
+    <div class="field-group">
+      <label class="field-label">Apps Script Web App URL</label>
+      <input type="url" id="s-deck-url" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveSetting('deckWebAppUrl',this.value)">
+      <div class="field-hint-text">Paste your Google Apps Script Web App URL here to enable deck generation.</div>
+    </div>
+
     <div class="settings-section">Danger zone</div>
     <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="clearAllData()">Clear all project data</button>
   </div>
@@ -798,6 +805,7 @@ function loadSettings() {
   $('s-slack').value   = settings.slackWebhook || '';
   $('s-slackchan').value = settings.slackChannel || '';
   $('s-name').value    = settings.userName     || '';
+  $('s-deck-url').value = settings.deckWebAppUrl || '';
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
@@ -2509,6 +2517,20 @@ function rSetup() {
   </div>
 
   <div class="card">
+    <div class="card-title">Presentation deck</div>
+    <div class="card-sub">Generate a branded Cyphr Slides deck from this project.</div>
+    <div id="deck-gen-out" style="display:none;margin-bottom:10px"></div>
+    <div id="deck-gen-load" class="loading-row" style="display:none">
+      <div class="spinner"></div>
+      <span>Generating deck…</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btn-gen-deck" onclick="generateDeck()" ${!settings.deckWebAppUrl ? 'disabled style="opacity:0.5"' : ''}>✦ Generate Slides deck</button>
+      ${!settings.deckWebAppUrl ? '<span style="font-size:11px;color:var(--ink3)">Add Apps Script URL in Settings to enable</span>' : ''}
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title" style="margin-bottom:12px">Next steps</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
       <button class="action-btn" onclick="generateJiraCSV()">🗂 Download Jira CSV</button>
@@ -2519,6 +2541,47 @@ function rSetup() {
     <button class="btn btn-ghost" onclick="back()">← Back</button>
     <button class="btn btn-primary" onclick="completeProject()">✓ Mark complete</button>
   </div>`;
+}
+
+async function generateDeck() {
+  const p = gp();
+  const url = settings.deckWebAppUrl;
+  if (!url) { toast('Add your Apps Script Web App URL in Settings first'); return; }
+  const btn = document.getElementById('btn-gen-deck');
+  const load = document.getElementById('deck-gen-load');
+  const out = document.getElementById('deck-gen-out');
+  if (btn) btn.disabled = true;
+  if (load) load.style.display = 'flex';
+  if (out) out.style.display = 'none';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName: p.clientName || '',
+        projectName: p.projectName || '',
+        sector: p.sector || '',
+        budget: p.budget || '',
+        timeline: p.timeline || '',
+        requirements: p.requirements || '',
+        bgNotes: p.bgNotes || '',
+        stakeholders: p.stakeholders || '',
+        nextSteps: p.nextSteps || '',
+        briefOutput: p.briefOutput || ''
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (out) {
+      out.innerHTML = `<a href="${data.deckUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none;display:inline-flex">↗ Open deck — ${esc(data.deckName || 'View deck')}</a>`;
+      out.style.display = 'block';
+    }
+    toast('Deck generated ✓', 'success');
+  } catch(err) {
+    toast('Deck generation failed: ' + err.message);
+  }
+  if (load) load.style.display = 'none';
+  if (btn) btn.disabled = false;
 }
 
 function toggleIntel() {
