@@ -1835,7 +1835,7 @@ function rReq() {
           ${!fSector.filled ? assumeBtn('sector') : ''}
         </label>
         <select id="f-sec" onchange="saveReqField('sector',this.value);renderReqBanner()">
-          ${SECTORS.map(s=>`<option ${p.sector===s?'selected':''}>${s}</option>`).join('')}
+          ${(p.sector && !SECTORS.includes(p.sector) ? [SECTORS[0], p.sector, ...SECTORS.slice(1)] : SECTORS).map(s=>`<option ${p.sector===s?'selected':''}>${s}</option>`).join('')}
         </select>
         ${!fSector.filled ? `<div class="field-hint-text error">Required — affects document tone and recommendations</div>` : ''}
       </div>
