@@ -2366,7 +2366,7 @@ async function genBrief(forceRefresh) {
     }
   }
   if($('brief-load'))$('brief-load').style.display='flex'; if($('btn-gen-brief'))$('btn-gen-brief').disabled=true; if($('brief-out'))$('brief-out').textContent='';
-  const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.`, conf));
+  const out = await callGemini(assumptionPrompt(`You are a senior consultant at Cyphr. Write a structured response to brief.\nClient: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}\nRequirements: ${p.requirements}\nBackground: ${p.bgNotes}\nCover: client context, the problem, the opportunity, what success looks like, key constraints. Tight and commercially sharp. No fluff.\nIMPORTANT: Do NOT use markdown tables (no | pipe characters). Use bullet points for lists. Do NOT use --- dividers.`, conf), { maxTokens: 2500 });
   setCached(cacheKey, out);
   saveProjectData({ briefOutput: out, contextConfidence: conf });
   if($('brief-out'))$('brief-out').value=out;
@@ -2605,9 +2605,9 @@ ${skillCtx}
 Rate card (use these exact rates — do not invent others):
 ${rateCardText}
 
-Output format — for each phase:
+Output format — for each phase (use EXACTLY this format — no variation):
 Phase [N]: [Name]
-- [Role (Name if known)]: [X] days × £[rate]/day = £[subtotal]
+- [Role (Name if known)] — [X] days @ £[rate]/day = £[subtotal]
 Phase subtotal: £[amount]
 
 Then:
@@ -2615,7 +2615,7 @@ TOTAL: £[grand total]
 BUDGET STATUS: [Tight / On budget / Within budget] — [one sentence]
 ASSUMPTIONS: [flag any assumptions made, e.g. "Assumed 60% strategy / 40% delivery split"]
 
-Be specific to the project type. Use only roles from the rate card. If budget is tight, say so clearly.`, conf));
+Be specific to the project type. Use only roles from the rate card. If budget is tight, say so clearly.`, conf), { maxTokens: 2000 });
   setCached(cacheKey, out);
   saveProjectData({ estimateOutput: out });
   $('est-out').value = out;
@@ -2707,7 +2707,7 @@ ${p.clientName}: [responsibility 1], [responsibility 2]
 FEE:
 Total project fee: £[extract the TOTAL figure from the resource plan above — do not leave blank]. Payment schedule: [e.g. 50% on signing, 25% at midpoint, 25% on completion].
 
-Professional, specific, no placeholders except for client contact details.`, conf));
+Professional, specific, no placeholders except for client contact details.`, conf), { maxTokens: 3000 });
   setCached(cacheKey, out);
   saveProjectData({ sowOutput:out });
   $('sow-out').value=out;
