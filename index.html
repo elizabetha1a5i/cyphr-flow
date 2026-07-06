@@ -571,6 +571,24 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 .gen-status-label{font-size:13px;font-weight:600;color:var(--ink1)}
 .gen-status-desc{font-size:11px;color:var(--ink3);font-family:var(--mono,monospace)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.conf-panel { margin-bottom: 12px; }
+.conf-score-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.conf-score-bar { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.conf-score-fill { height:100%; border-radius:3px; transition:width 0.3s; }
+.conf-score-fill.high { background:#22c55e; }
+.conf-score-fill.medium { background:#f59e0b; }
+.conf-score-fill.low { background:#ef4444; }
+.conf-score-label { font-size:12px; font-weight:600; white-space:nowrap; color:var(--ink2); }
+.conf-gap-list { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+.conf-gap-row { display:flex; align-items:center; gap:8px; }
+.conf-gap-label { font-size:12px; font-weight:600; color:var(--ink2); min-width:110px; }
+.conf-gap-input { flex:1; font-size:12px; padding:5px 8px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--ink1); font-family:var(--sans); }
+.conf-gap-input:focus { outline:none; border-color:var(--accent); }
+.conf-qa-row { display:flex; gap:8px; align-items:center; margin-top:6px; }
+.conf-qa-panel { display:flex; flex-direction:column; gap:10px; }
+.conf-qa-question { font-size:13px; font-weight:600; color:var(--ink1); margin-bottom:3px; }
+.conf-qa-input { width:100%; font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--ink1); font-family:var(--sans); box-sizing:border-box; }
+.conf-qa-input:focus { outline:none; border-color:var(--accent); }
 </style>
 
 <script>
@@ -595,7 +613,7 @@ function setGenProgress(pct, label) {
 
 async function preGenerateAll() {
   const p = gp(); if(!p) return;
-  const conf = contextConfidence(p);
+  const { level: conf } = contextConfidence(p);
   if (conf !== 'high') saveProjectData({ contextConfidence: conf });
   showGenOverlay();
   // Show amber working-assumptions banner inside overlay if context is thin
@@ -713,6 +731,25 @@ const SKILLS = [
 
 const SECTORS = ['','Health / Public Health','Health / eLearning','Pharma / Clinical Trials','Consumer electronics','Beauty & wellness','Fashion','Grocery','Home & furniture','Automotive','Hospitality','Financial services','Travel','Education','Other'];
 
+const GAP_HINTS = {
+  clientName:   'Who is the client?',
+  sector:       'What industry are they in?',
+  budget:       'Do you have a rough budget figure?',
+  timeline:     'When does this need to be delivered?',
+  requirements: 'What does the project need to deliver?',
+  bgNotes:      'What\'s the background — why does this matter?',
+  stakeholders: 'Who are the key people involved?',
+};
+const GAP_PLACEHOLDERS = {
+  clientName:   'e.g. Acme Corp',
+  sector:       'e.g. Health / eLearning',
+  budget:       'e.g. 50000',
+  timeline:     'e.g. 3 months from September',
+  requirements: 'e.g. A mobile app for field sales teams…',
+  bgNotes:      'e.g. The client is expanding into new markets and needs…',
+  stakeholders: 'e.g. Sarah (CEO), James (Head of Product)',
+};
+
 let projects = JSON.parse(localStorage.getItem('cyphr_projects') || '[]');
 let settings = JSON.parse(localStorage.getItem('cyphr_settings') || '{}');
 // Hardcoded defaults — no setup needed for new users
@@ -787,12 +824,22 @@ async function callClaude(prompt) {
 
 // ── CONTEXT CONFIDENCE ────────────────────────────────────────────────────
 function contextConfidence(p) {
-  const words = (p.rawText || '').trim().split(/\s+/).filter(Boolean).length;
-  const hasReqs = (p.requirements || '').trim().length > 30;
-  const hasBg   = (p.bgNotes || '').trim().length > 20;
-  if (words < 80 && !hasReqs && !hasBg) return 'low';
-  if (words < 200 || (!hasReqs && !hasBg)) return 'medium';
-  return 'high';
+  const gaps = [];
+  let score = 0;
+  const checks = [
+    { field: 'clientName',   label: 'Client name',  weight: 1, ok: !!(p.clientName||'').trim() },
+    { field: 'sector',       label: 'Sector',        weight: 1, ok: !!(p.sector||'').trim() },
+    { field: 'budget',       label: 'Budget',        weight: 1, ok: !!(p.budget) && p.budget !== '0' },
+    { field: 'timeline',     label: 'Timeline',      weight: 1, ok: !!(p.timeline||'').trim() },
+    { field: 'requirements', label: 'Requirements',  weight: 2, ok: (p.requirements||'').trim().length > 80 },
+    { field: 'bgNotes',      label: 'Background',    weight: 2, ok: (p.bgNotes||'').trim().length > 80 },
+    { field: 'stakeholders', label: 'Stakeholders',  weight: 1, ok: !!(p.stakeholders||'').trim() },
+  ];
+  const max = checks.reduce((a, c) => a + c.weight, 0);
+  checks.forEach(c => { if (c.ok) score += c.weight; else gaps.push(c); });
+  const pct = score / max;
+  const level = pct >= 0.85 ? 'high' : pct >= 0.55 ? 'medium' : 'low';
+  return { score, max, level, gaps };
 }
 
 function assumptionPrompt(basePrompt, conf) {
@@ -1215,6 +1262,7 @@ function renderStage() {
       const warn = document.getElementById('reuse-warn');
       if (warn) warn.style.display = 'block';
     }
+    renderConfPanel();
   }
 }
 
@@ -1269,6 +1317,7 @@ function rFiles() {
       <div id="ext-out" class="ext-kv"></div>
     </div>
     <div id="ext-disambiguation"></div>
+    <div id="conf-panel" style="display:none"></div>
     <div id="ext-load" class="loading-row" style="display:none">
       <div class="cyphr-spinner">
         <svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:22px;height:22px;animation:spin 1s linear infinite">
@@ -1621,12 +1670,105 @@ ${textToUse}`;
       }
     }
     toast('Context extracted ✓', 'success');
+    renderConfPanel();
     renderDisambiguationPanel();
   } catch(e) {
     $('ext-out').textContent = out; $('ext-out').style.display='block';
     toast('Could not parse — check the output above');
   }
   $('ext-load').style.display='none'; $('btn-ext').disabled=false; busy=false;
+}
+
+// ── CONFIDENCE PANEL ──────────────────────────────────────────────────────
+function renderConfPanel() {
+  const panel = document.getElementById('conf-panel');
+  if (!panel) return;
+  const p = gp();
+  if (!p.extractedContext) { panel.style.display='none'; return; }
+  const { score, max, level, gaps } = contextConfidence(p);
+  const pct = Math.round(score / max * 100);
+  const levelLabel = level === 'high' ? 'Strong context' : level === 'medium' ? 'Good context' : 'Thin context';
+  const gapRows = gaps.map(g => `
+    <div class="conf-gap-row">
+      <span class="conf-gap-label">${GAP_HINTS[g.field]}</span>
+      <input class="conf-gap-input" placeholder="${GAP_PLACEHOLDERS[g.field]||''}" onchange="fillGap('${g.field}',this.value)">
+    </div>`).join('');
+  panel.innerHTML = `
+    <div class="conf-score-row">
+      <div class="conf-score-bar"><div class="conf-score-fill ${level}" style="width:${pct}%"></div></div>
+      <span class="conf-score-label">${score}/${max} — ${levelLabel}</span>
+    </div>
+    ${gaps.length ? `<div class="conf-gap-list">${gapRows}</div>` : ''}
+    ${gaps.length ? `<div class="conf-qa-row"><button class="btn btn-ghost" style="font-size:12px" onclick="startQA()">✦ Ask me questions instead</button></div>` : ''}
+  `;
+  panel.style.display = 'block';
+}
+
+function fillGap(field, value) {
+  if (!value.trim()) return;
+  saveProjectData({ [field]: value });
+  renderConfPanel();
+}
+
+async function startQA() {
+  const panel = document.getElementById('conf-panel');
+  if (!panel) return;
+  const p = gp();
+  const { gaps } = contextConfidence(p);
+  if (!gaps.length) return;
+  panel.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 0"><div class="cyphr-spinner" style="transform:scale(0.7)"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span style="font-size:13px;color:var(--ink2)">Generating questions…</span></div>';
+  const gapList = gaps.map(g => g.label).join(', ');
+  const prompt = `You are helping a consulting studio fill in missing project information.
+
+Current project context:
+Client: ${p.clientName || 'unknown'}
+Sector: ${p.sector || 'unknown'}
+Budget: ${p.budget || 'unknown'}
+Requirements: ${(p.requirements||'').slice(0,400) || 'not provided'}
+Background: ${(p.bgNotes||'').slice(0,400) || 'not provided'}
+
+Missing fields: ${gapList}
+
+Generate exactly 3 to 5 short, conversational questions to fill the missing fields. Be specific to this project context, not generic. Return ONLY a JSON array with no markdown:
+[{"field":"fieldName","question":"...","placeholder":"short example answer"}]
+Valid field names: clientName, sector, budget, timeline, requirements, bgNotes, stakeholders`;
+  const out = await callGemini(prompt, { maxTokens: 600, responseMimeType: 'application/json' });
+  try {
+    const questions = JSON.parse(out);
+    renderQAPanel(questions);
+  } catch {
+    renderConfPanel();
+  }
+}
+
+let _qaQuestions = [];
+function renderQAPanel(questions) {
+  _qaQuestions = questions;
+  const panel = document.getElementById('conf-panel');
+  if (!panel) return;
+  const rows = questions.map((q, i) => `
+    <div>
+      <div class="conf-qa-question">${esc(q.question)}</div>
+      <input class="conf-qa-input" id="qa-ans-${i}" placeholder="${esc(q.placeholder||'')}">
+    </div>`).join('');
+  panel.innerHTML = `
+    <div class="conf-qa-panel">
+      ${rows}
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-primary" style="font-size:12px" onclick="submitQAAnswers()">Save answers</button>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="renderConfPanel()">← Back</button>
+      </div>
+    </div>`;
+}
+
+function submitQAAnswers() {
+  const updates = {};
+  _qaQuestions.forEach((q, i) => {
+    const el = document.getElementById(`qa-ans-${i}`);
+    if (el && el.value.trim()) updates[q.field] = el.value.trim();
+  });
+  if (Object.keys(updates).length) saveProjectData(updates);
+  renderConfPanel();
 }
 
 // Pre-generate all stages silently in background after context extraction
@@ -1649,7 +1791,7 @@ async function preGenerateAll() {
 
 async function preGen(stage) {
   const p = gp();
-  const conf = contextConfidence(p);
+  const { level: conf } = contextConfidence(p);
   let out;
   if (stage === 'brief') {
     out = await callGeminiBackground(assumptionPrompt(`You are a senior consultant at Cyphr. Write a structured response to brief.
@@ -1890,24 +2032,19 @@ function saveReqField(key, value) {
 function renderReqBanner() {
   // Re-render just the banner without losing field focus
   const p = gp();
-  const missing = [
-    !p.sector                              && 'Sector',
-    (p.requirements||'').trim().length < 30 && 'Requirements',
-    (p.bgNotes||'').trim().length < 20      && 'Background',
-    !p.budget                              && 'Budget',
-    (p.timeline||'').trim().length < 2     && 'Timeline',
-  ].filter(Boolean);
+  const { score, max, level, gaps } = contextConfidence(p);
+  const missing = gaps.map(g => g.label);
   const banner = document.querySelector('.ctx-banner');
   if (!banner) return;
-  if (missing.length >= 3) {
+  if (level === 'low') {
     banner.className = 'ctx-banner error';
-    banner.innerHTML = `<span style="font-size:16px">⚠</span><div><strong>Low context — documents will be heavily assumed.</strong><br>Missing: ${missing.join(', ')}. Fill what you can or use the <strong>Assumption</strong> buttons.</div>`;
-  } else if (missing.length > 0) {
+    banner.innerHTML = `<span style="font-size:16px">⚠</span><div><strong>Context score: ${score}/${max} — Low context.</strong> Documents will be heavily assumed.<br>Missing: ${missing.join(', ')}. Fill what you can or use the <strong>Assumption</strong> buttons.</div>`;
+  } else if (level === 'medium') {
     banner.className = 'ctx-banner warn';
-    banner.innerHTML = `<span style="font-size:16px">◐</span><div><strong>Some fields missing.</strong> Missing: ${missing.join(', ')}. Fill them in or click <strong>Assumption</strong> to auto-fill.</div>`;
+    banner.innerHTML = `<span style="font-size:16px">◐</span><div><strong>Context score: ${score}/${max} — Medium context.</strong> Some fields missing: ${missing.join(', ')}. Fill them in or click <strong>Assumption</strong> to auto-fill.</div>`;
   } else {
     banner.className = 'ctx-banner ok';
-    banner.innerHTML = `<span style="font-size:16px">✓</span><div><strong>Good context</strong> — all key fields filled. Documents will be specific to this project.</div>`;
+    banner.innerHTML = `<span style="font-size:16px">✓</span><div><strong>Context score: ${score}/${max} — Strong context.</strong> All key fields filled. Documents will be specific to this project.</div>`;
   }
 }
 
@@ -2001,7 +2138,7 @@ function refreshUsageBadge() {
 async function genBrief(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp();
-  const conf = contextConfidence(p);
+  const { level: conf } = contextConfidence(p);
   const cacheKey = geminiCacheKey(p.id, 'brief', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, requirements:p.requirements, bgNotes:p.bgNotes });
   if (!forceRefresh) {
     const cached = getCached(cacheKey);
@@ -2159,7 +2296,7 @@ function rEstimate() {
 async function genEstimate(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp(); const rate=sv('f-rate')||850; const days=sv('f-days'); const roles=sv('f-roles');
-  const conf = p.contextConfidence || contextConfidence(p);
+  const { level: conf } = contextConfidence(p);
   saveProjectData({rate,days,roles});
   const cacheKey = geminiCacheKey(p.id, 'estimate', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, rate, days, roles, selectedSkill:p.selectedSkill, skillOutputNotes:p.skillOutputNotes });
   if (!forceRefresh) {
@@ -2210,7 +2347,7 @@ function rSOW() {
 async function genSOW(forceRefresh) {
   if (busy) return; busy=true;
   const p=gp();
-  const conf = p.contextConfidence || contextConfidence(p);
+  const { level: conf } = contextConfidence(p);
   const cacheKey = geminiCacheKey(p.id, 'sow', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, estimateOutput:p.estimateOutput });
   if (!forceRefresh) {
     const cached = getCached(cacheKey);
