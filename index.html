@@ -741,22 +741,26 @@ const SKILLS = [
 const SECTORS = ['','Health / Public Health','Health / eLearning','Pharma / Clinical Trials','Consumer electronics','Beauty & wellness','Fashion','Grocery','Home & furniture','Automotive','Hospitality','Financial services','Travel','Education','Other'];
 
 const GAP_HINTS = {
-  clientName:   'Who is the client?',
-  sector:       'What industry are they in?',
-  budget:       'Do you have a rough budget figure?',
-  timeline:     'When does this need to be delivered?',
-  requirements: 'What does the project need to deliver?',
-  bgNotes:      'What\'s the background — why does this matter?',
-  stakeholders: 'Who are the key people involved?',
+  clientName:            'Who is the client?',
+  sector:                'What industry are they in?',
+  budget:                'Do you have a rough budget figure?',
+  timeline:              'When does this need to be delivered?',
+  requirements:          'What does the project need to deliver?',
+  bgNotes:               'What\'s the background — why does this matter?',
+  stakeholders:          'Who are the key people involved?',
+  briefOutput:           'Run the Brief stage first to generate a brief.',
+  estimateOutput:        'Run the Estimate stage first to generate an estimate.',
+  risksAndOpenQuestions: 'Any known risks or open questions?',
 };
 const GAP_PLACEHOLDERS = {
-  clientName:   'e.g. Acme Corp',
-  sector:       'e.g. Health / eLearning',
-  budget:       'e.g. 50000',
-  timeline:     'e.g. 3 months from September',
-  requirements: 'e.g. A mobile app for field sales teams…',
-  bgNotes:      'e.g. The client is expanding into new markets and needs…',
-  stakeholders: 'e.g. Sarah (CEO), James (Head of Product)',
+  clientName:            'e.g. Acme Corp',
+  sector:                'e.g. Health / eLearning',
+  budget:                'e.g. 50000',
+  timeline:              'e.g. 3 months from September',
+  requirements:          'e.g. A mobile app for field sales teams…',
+  bgNotes:               'e.g. The client is expanding into new markets and needs…',
+  stakeholders:          'e.g. Sarah (CEO), James (Head of Product)',
+  risksAndOpenQuestions: 'e.g. Budget not confirmed, legal sign-off needed…',
 };
 
 const STAGE_REQUIREMENTS = {
@@ -868,18 +872,122 @@ function stageConfidence(stageId, p) {
   return { score, max, level, gaps, pct };
 }
 
+// Returns a placeholder div; call renderStageConfPanel(stageId) after mount to fill it
 function renderStageConfBadge(stageId) {
+  return `<div id="stage-conf-panel-${stageId}"></div>`;
+}
+
+function renderStageConfPanel(stageId) {
+  const el = document.getElementById('stage-conf-panel-' + stageId);
+  if (!el) return;
   const p = gp();
   const conf = stageConfidence(stageId, p);
-  if (!conf) return '';
+  if (!conf) return;
   const { score, max, level, gaps } = conf;
   const colour = level === 'high' ? '#22c55e' : level === 'medium' ? '#f59e0b' : '#ef4444';
-  const label = level === 'high' ? 'Ready' : level === 'medium' ? 'Mostly ready' : 'Missing context';
-  const missingText = gaps.length ? ` — missing: ${gaps.map(g => g.label).join(', ')}` : '';
-  return `<div class="stage-conf-badge" style="border-left:3px solid ${colour}">
-    <span style="color:${colour};font-weight:700">${label}</span>
-    <span class="stage-conf-detail">${score}/${max} fields${missingText}</span>
-  </div>`;
+  const label  = level === 'high' ? 'Ready' : level === 'medium' ? 'Mostly ready' : 'Missing context';
+  const pct    = Math.round(score / max * 100);
+
+  // Fields that are generated outputs (can't be typed in — must run the stage)
+  const outputFields = new Set(['briefOutput', 'estimateOutput']);
+
+  const fillableGaps  = gaps.filter(g => !outputFields.has(g.field));
+  const blockerGaps   = gaps.filter(g =>  outputFields.has(g.field));
+
+  const gapRows = fillableGaps.map(g => `
+    <div class="conf-gap-row">
+      <span class="conf-gap-label">${GAP_HINTS[g.field] || g.label}</span>
+      <input class="conf-gap-input" placeholder="${GAP_PLACEHOLDERS[g.field]||''}"
+        onchange="fillStageGap('${stageId}','${g.field}',this.value)">
+    </div>`).join('');
+
+  const blockerRow = blockerGaps.length ? `
+    <div style="font-size:11px;color:var(--ink3);margin-top:4px">
+      ${blockerGaps.map(g => `⚠ ${GAP_HINTS[g.field]}`).join(' &nbsp;·&nbsp; ')}
+    </div>` : '';
+
+  el.innerHTML = `
+    <div class="stage-conf-badge" style="border-left:3px solid ${colour};flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="conf-score-bar" style="flex:1"><div class="conf-score-fill ${level}" style="width:${pct}%"></div></div>
+        <span style="color:${colour};font-weight:700;font-size:12px;white-space:nowrap">${label} · ${score}/${max}</span>
+      </div>
+      ${gapRows ? `<div class="conf-gap-list" style="margin:0">${gapRows}</div>` : ''}
+      ${blockerRow}
+      ${fillableGaps.length ? `<div class="conf-qa-row"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="startStageQA('${stageId}')">✦ Ask me instead</button></div>` : ''}
+    </div>`;
+}
+
+function fillStageGap(stageId, field, value) {
+  if (!value.trim()) return;
+  saveProjectData({ [field]: value });
+  renderStageConfPanel(stageId);
+}
+
+async function startStageQA(stageId) {
+  const el = document.getElementById('stage-conf-panel-' + stageId);
+  if (!el) return;
+  const p = gp();
+  const { gaps } = stageConfidence(stageId, p);
+  const outputFields = new Set(['briefOutput', 'estimateOutput']);
+  const fillable = gaps.filter(g => !outputFields.has(g.field));
+  if (!fillable.length) return;
+
+  el.querySelector('.stage-conf-badge').innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg><span style="font-size:12px;color:var(--ink2)">Generating questions…</span></div>';
+
+  const gapList = fillable.map(g => g.label).join(', ');
+  const prompt = `You are helping a consulting studio fill in missing project information before generating a ${stageId}.
+
+Project so far:
+Client: ${p.clientName || 'unknown'}
+Sector: ${p.sector || 'unknown'}
+Budget: ${p.budget || 'unknown'}
+Timeline: ${p.timeline || 'unknown'}
+Requirements: ${(p.requirements||'').slice(0,300) || 'not provided'}
+
+Missing fields for this stage: ${gapList}
+
+Write ${fillable.length <= 2 ? fillable.length : '3'} short, conversational questions to gather the missing info. Be specific to this project, not generic. Return ONLY a JSON array:
+[{"field":"fieldName","question":"...","placeholder":"short example answer"}]
+Valid field names: ${fillable.map(g=>g.field).join(', ')}`;
+
+  const out = await callGemini(prompt, { maxTokens: 500, responseMimeType: 'application/json' });
+  try {
+    const questions = JSON.parse(out);
+    renderStageQAPanel(stageId, questions);
+  } catch {
+    renderStageConfPanel(stageId);
+  }
+}
+
+const _stageQA = {};
+function renderStageQAPanel(stageId, questions) {
+  _stageQA[stageId] = questions;
+  const el = document.getElementById('stage-conf-panel-' + stageId);
+  if (!el) return;
+  const rows = questions.map((q, i) => `
+    <div>
+      <div class="conf-qa-question">${esc(q.question)}</div>
+      <input class="conf-qa-input" id="stage-qa-ans-${stageId}-${i}" placeholder="${esc(q.placeholder||'')}">
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="stage-conf-badge" style="flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px;border-left:3px solid var(--accent)">
+      <div class="conf-qa-panel">${rows}</div>
+      <div style="display:flex;gap:8px;margin-top:2px">
+        <button class="btn btn-primary" style="font-size:12px" onclick="submitStageQAAnswers('${stageId}')">Save answers</button>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="renderStageConfPanel('${stageId}')">← Back</button>
+      </div>
+    </div>`;
+}
+
+function submitStageQAAnswers(stageId) {
+  const updates = {};
+  (_stageQA[stageId] || []).forEach((q, i) => {
+    const el = document.getElementById(`stage-qa-ans-${stageId}-${i}`);
+    if (el && el.value.trim()) updates[q.field] = el.value.trim();
+  });
+  if (Object.keys(updates).length) saveProjectData(updates);
+  renderStageConfPanel(stageId);
 }
 
 // ── CONTEXT CONFIDENCE ────────────────────────────────────────────────────
@@ -1317,7 +1425,6 @@ function renderStage() {
   const fns = { files:rFiles, req:rReq, brief:rBrief, skill:rSkill, estimate:rEstimate, sow:rSOW, setup:rSetup };
   $('stage-content').innerHTML = fns[id]();
   setNextAction(id);
-  // Show bleed warning on Files stage if project already has data
   if (id === 'files') {
     const p = gp();
     if (p && (p.clientName || p.briefOutput || p.sowOutput || p.extractedContext)) {
@@ -1326,6 +1433,9 @@ function renderStage() {
     }
     renderConfPanel();
   }
+  if (id === 'brief')    renderStageConfPanel('brief');
+  if (id === 'estimate') renderStageConfPanel('estimate');
+  if (id === 'sow')      renderStageConfPanel('sow');
 }
 
 // ── STAGE: FILES ──────────────────────────────────────────────────────────
