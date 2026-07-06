@@ -2793,7 +2793,7 @@ function rSetup() {
       <button class="action-btn" id="btn-dl-estimate" onclick="generateFile('estimate')">📊 Estimate (.xlsx)</button>
       <button class="action-btn" id="btn-dl-sow" onclick="generateFile('sow')">📄 SOW (.docx)</button>
       <button class="action-btn" id="btn-dl-gantt" onclick="generateFile('gantt')">📅 Gantt (.xlsx)</button>
-      <button class="action-btn" id="btn-dl-status" onclick="generateStatusSheet()">📋 Status sheet (.xlsx)</button>
+      <button class="action-btn" disabled style="opacity:0.45;cursor:default" title="Project board integrations (Trello / HubSpot / Miro) coming soon">🔗 Project board — coming soon</button>
     </div>
     <button class="btn btn-primary" id="btn-dl-all" style="width:100%;margin-top:10px;justify-content:center" onclick="generateAllFiles()">↓ Download all files</button>
   </div>
@@ -3092,52 +3092,74 @@ async function generateEstimateXLSX(p, slug) {
 }
 
 async function generateGanttXLSX(p, slug) {
+  // Ask Gemini to extract real tasks from the estimate
+  const prompt = `You are a project planner. Extract a Gantt chart from the resource plan below.
+Project: ${p.clientName||''} | Timeline: ${p.timeline||''}
+Resource plan:
+${p.estimateOutput||p.briefOutput||''}
+
+Return ONLY a JSON array — no markdown, no commentary:
+[{"phase":"Phase name","task":"Task description","owner":"Role name","weekStart":1,"weekEnd":2}]
+
+Rules:
+- weekStart and weekEnd are integers from 1 to the total number of weeks in the timeline (estimate based on the timeline string)
+- Each phase should have 2-4 tasks
+- owner should be a role from the resource plan (e.g. "Strategy Lead", "Tech Lead")
+- Be specific to this project — no generic placeholders
+- Maximum 16 tasks total`;
+
+  let tasks = [];
+  try {
+    const raw = await callGemini(prompt, { maxTokens: 1200, responseMimeType: 'application/json' });
+    tasks = JSON.parse(raw);
+  } catch(e) {
+    // fallback to minimal structure if Gemini fails
+    tasks = [
+      {phase:'Discovery', task:'Project kickoff & requirements', owner:'Strategy Lead', weekStart:1, weekEnd:2},
+      {phase:'Delivery',  task:'Core build & integration',       owner:'Tech Lead',     weekStart:3, weekEnd:8},
+      {phase:'Launch',    task:'QA, UAT & go live',              owner:'Producer',      weekStart:9, weekEnd:10},
+    ];
+  }
+
+  const totalWeeks = Math.max(...tasks.map(t => t.weekEnd), 12);
   const wb = XLSX.utils.book_new();
   const ws = {};
-  const client = p.clientName || 'CLIENT';
-  const project = p.projectName || 'PROJECT';
-  const hStyle = { fill:{fgColor:{rgb:'6D9EEB'}}, font:{color:{rgb:'FFFFFF'},bold:true} };
+  const hStyle = { fill:{fgColor:{rgb:'070809'}}, font:{color:{rgb:'FFFFFF'},bold:true,sz:9} };
+  const barStyle = { fill:{fgColor:{rgb:'2323CC'}}, font:{color:{rgb:'2323CC'}} };
 
-  ws['A1']={v:`${client.toUpperCase()} / ${project.toUpperCase()} — PROJECT GANTT`,t:'s',s:{font:{bold:true,sz:13}}};
-  ws['A2']={v:`Timeline: ${p.timeline||'TBC'}`,t:'s'};
-  ['#','Phase','Task','Owner','Status','Done'].forEach((h,i)=>{ ws[String.fromCharCode(65+i)+'4']={v:h,t:'s',s:hStyle}; });
-  for(let w=0;w<12;w++){ ws[String.fromCharCode(71+w)+'4']={v:`W${w+1}`,t:'s',s:hStyle}; }
+  ws['A1'] = {v:`${(p.clientName||'CLIENT').toUpperCase()} — GANTT`, t:'s', s:{font:{bold:true,sz:13}}};
+  ws['A2'] = {v:`Timeline: ${p.timeline||'TBC'}`, t:'s', s:{font:{sz:10,color:{rgb:'666666'}}}};
 
-  const tasks=[
-    ['Discovery','Project kickoff & stakeholder alignment',1,2],
-    ['Discovery','Requirements & brief finalisation',1,3],
-    ['Discovery','Technical architecture',2,4],
-    ['Design','Wireframes — core user journeys',3,5],
-    ['Design','UI design & brand application',4,6],
-    ['Build','Core platform scaffolding',5,8],
-    ['Build','AI / API integration',6,9],
-    ['Build','Content & data integration',7,9],
-    ['QA','End-to-end QA testing',9,11],
-    ['QA','UAT with client',10,11],
-    ['Launch','Production deployment',11,12],
-    ['Launch','Go live & handover',12,12],
-  ];
+  const headers = ['#','Phase','Task','Owner','Status'];
+  headers.forEach((h,i) => { ws[String.fromCharCode(65+i)+'4'] = {v:h, t:'s', s:hStyle}; });
+  for (let w=1; w<=totalWeeks; w++) {
+    ws[String.fromCharCode(64+5+w)+'4'] = {v:`W${w}`, t:'s', s:hStyle};
+  }
 
-  let row=5;
-  tasks.forEach(([phase,task,s,e],i)=>{
-    ws['A'+row]={v:i+1,t:'n'};
-    ws['B'+row]={v:phase,t:'s'};
-    ws['C'+row]={v:task,t:'s'};
-    ws['D'+row]={v:'',t:'s'};
-    ws['E'+row]={v:'Planned',t:'s'};
-    ws['F'+row]={v:'',t:'s'};
-    for(let w=s;w<=Math.min(e,12);w++){ ws[String.fromCharCode(71+w-1)+row]={v:'█',t:'s',s:{fill:{fgColor:{rgb:'6D9EEB'}},font:{color:{rgb:'6D9EEB'}}}}; }
+  let row = 5;
+  tasks.forEach((t, i) => {
+    ws['A'+row] = {v:i+1, t:'n'};
+    ws['B'+row] = {v:t.phase||'', t:'s'};
+    ws['C'+row] = {v:t.task||'', t:'s'};
+    ws['D'+row] = {v:t.owner||'', t:'s'};
+    ws['E'+row] = {v:'Planned', t:'s'};
+    const s = Math.max(1, t.weekStart||1);
+    const e = Math.min(totalWeeks, t.weekEnd||s);
+    for (let w=s; w<=e; w++) {
+      ws[String.fromCharCode(64+5+w)+row] = {v:'█', t:'s', s:barStyle};
+    }
     row++;
   });
-  ws['!ref']=`A1:S${row}`;
-  ws['!cols']=[{wch:3},{wch:14},{wch:36},{wch:14},{wch:9},{wch:5},...Array(12).fill({wch:4})];
+
+  ws['!ref'] = `A1:${String.fromCharCode(64+5+totalWeeks)}${row}`;
+  ws['!cols'] = [{wch:3},{wch:16},{wch:38},{wch:16},{wch:9},...Array(totalWeeks).fill({wch:4})];
   XLSX.utils.book_append_sheet(wb, ws, 'Gantt');
 
-  const dl=XLSX.utils.aoa_to_sheet([['Date','Decision','Owner','Status'],['','','','']]);
+  const dl = XLSX.utils.aoa_to_sheet([['Date','Decision / Update','Owner','Status'],['','','','']]);
   XLSX.utils.book_append_sheet(wb, dl, 'Decision Log');
 
-  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx',cellStyles:true});
-  downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${slug}_gantt.xlsx`);
+  const buf = XLSX.write(wb, {type:'array', bookType:'xlsx', cellStyles:true});
+  downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), `${slug}_gantt.xlsx`);
 }
 
 async function generateTextDoc(p, slug, type) {
@@ -3177,7 +3199,6 @@ async function generateAllFiles() {
       console.warn(`Failed to generate ${type}:`, e);
     }
   }
-  await generateStatusSheet();
 }
 
 function copyOutput(field, label) {
