@@ -526,14 +526,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="usage-detail" style="font-size:12px;color:var(--ink2);line-height:1.8"></div>
     <div style="font-size:11px;color:var(--ink3);margin-top:6px;margin-bottom:4px">Resets 1st of each month · Covers this browser only · Estimate based on June 2026 pricing</div>
 
-    <div class="settings-section">Presentation deck</div>
-    <div class="field-group">
-      <label class="field-label">Apps Script Web App URL</label>
-      <input type="url" id="s-deck-url" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveSetting('deckWebAppUrl',this.value)">
-      <div class="field-hint-text">Paste your Google Apps Script Web App URL here to enable deck generation.</div>
-    </div>
-
-    <div class="settings-section">Danger zone</div>
+<div class="settings-section">Danger zone</div>
     <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="clearAllData()">Clear all project data</button>
   </div>
 </div>
@@ -790,7 +783,6 @@ let settings = JSON.parse(localStorage.getItem('cyphr_settings') || '{}');
 // Hardcoded defaults — no setup needed for new users
 if (!settings.proxyUrl) settings.proxyUrl = 'https://cyphr-proxy.elizabeth-537.workers.dev';
 if (!settings.fileApiUrl) settings.fileApiUrl = 'https://cyphr-api-production.up.railway.app';
-if (!settings.deckWebAppUrl) settings.deckWebAppUrl = 'https://script.google.com/macros/s/AKfycbyB6-xSreSe3-h3kzve-tJkwy4LNKI9o5_9a2sNdeUO4ii6ePU8i8z_q8QTDSrYJQh9LA/exec';
 let activeProjectId = null;
 let currentStage = 0;
 let doneStages = new Set();
@@ -2856,7 +2848,7 @@ function rSetup() {
       <span>Generating deck…</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-primary" id="btn-gen-deck" onclick="generateDeck()" ${!settings.deckWebAppUrl ? 'disabled style="opacity:0.5"' : ''}>✦ Generate Slides deck</button>
+      <button class="btn btn-primary" id="btn-gen-deck" onclick="generateDeck()">✦ Generate Slides deck</button>
       ${!settings.deckWebAppUrl ? '<span style="font-size:11px;color:var(--ink3)">Add Apps Script URL in Settings to enable</span>' : ''}
     </div>
   </div>
@@ -2876,8 +2868,7 @@ function rSetup() {
 
 async function generateDeck() {
   const p = gp();
-  const url = settings.deckWebAppUrl;
-  if (!url) { toast('Add your Apps Script Web App URL in Settings first'); return; }
+  const url = 'https://script.google.com/macros/s/AKfycbyB6-xSreSe3-h3kzve-tJkwy4LNKI9o5_9a2sNdeUO4ii6ePU8i8z_q8QTDSrYJQh9LA/exec';
   const btn = document.getElementById('btn-gen-deck');
   const load = document.getElementById('deck-gen-load');
   const out = document.getElementById('deck-gen-out');
