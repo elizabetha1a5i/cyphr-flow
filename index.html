@@ -1956,7 +1956,6 @@ function rBrief() {
       <button class="btn btn-ai" id="btn-gen-brief" onclick="genBrief()">${hasContent ? '↺ Regenerate brief' : '✦ Generate brief'}</button>
       <span class="btn-timing">~10 seconds · uses your requirements and background notes</span>
       <button class="btn btn-ghost" id="btn-brief-docx" onclick="generateFile('brief')" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .docx</button>
-      <button class="btn btn-ghost" id="btn-brief-pdf" onclick="generateFile('brief-pdf')" ${hasContent ? '' : 'disabled'} style="${hasContent ? '' : 'opacity:0.4'}">⬇ Download .pdf</button>
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: skill →</button></div>`;
@@ -2151,6 +2150,7 @@ function rEstimate() {
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-gen-est" onclick="genEstimate()">✦ Generate resource plan</button>
       <span class="btn-timing">~10 seconds · uses your brief and day rate</span>
+      <button class="btn btn-ghost" id="btn-est-xlsx" onclick="generateFile('estimate')" ${p.estimateOutput ? '' : 'disabled'} style="${p.estimateOutput ? '' : 'opacity:0.4'}">⬇ Download .xlsx</button>
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveEstimate();advance()">Next → SOW</button></div>`;
@@ -2201,6 +2201,7 @@ function rSOW() {
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ai" id="btn-gen-sow" onclick="genSOW()">${p.sowOutput ? "↺ Regenerate SOW" : "✦ Generate SOW"}</button>
       <span class="btn-timing">~10 seconds · uses your brief and estimate</span>
+      <button class="btn btn-ghost" id="btn-sow-docx" onclick="generateFile('sow')" ${p.sowOutput ? '' : 'disabled'} style="${p.sowOutput ? '' : 'opacity:0.4'}">⬇ Download .docx</button>
     </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="advance()">Next: project setup →</button></div>`;
