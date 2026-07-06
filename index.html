@@ -1434,7 +1434,7 @@ function renderStage() {
     renderConfPanel();
   }
   if (id === 'brief')    renderStageConfPanel('brief');
-  if (id === 'estimate') renderStageConfPanel('estimate');
+  if (id === 'estimate') { renderStageConfPanel('estimate'); renderRateCardTable(); }
   if (id === 'sow')      renderStageConfPanel('sow');
 }
 
@@ -2480,32 +2480,99 @@ function launchSkill() {
   toast(copied ? 'Context copied — paste it into Claude and press Send' : 'Project opened — copy context manually', copied ? 'success' : 'warn');
 }
 
+// ── RATE CARD ─────────────────────────────────────────────────────────────
+const DEFAULT_RATE_CARD = [
+  { role: 'Strategy Lead',    name: '',  rate: 950 },
+  { role: 'Producer',         name: '',  rate: 500 },
+  { role: 'Tech Lead',        name: '',  rate: 700 },
+  { role: 'Developer Senior', name: '',  rate: 300 },
+  { role: 'Developer Mid',    name: '',  rate: 200 },
+  { role: 'QA',               name: '',  rate: 450 },
+];
+
+function getRateCard() {
+  return settings.rateCard && settings.rateCard.length ? settings.rateCard : JSON.parse(JSON.stringify(DEFAULT_RATE_CARD));
+}
+
+function saveRateCard() {
+  const rows = document.querySelectorAll('.rc-row');
+  const card = [];
+  rows.forEach(row => {
+    const role = row.querySelector('.rc-role').value.trim();
+    const name = row.querySelector('.rc-name').value.trim();
+    const rate = Number(row.querySelector('.rc-rate').value) || 0;
+    if (role) card.push({ role, name, rate });
+  });
+  settings.rateCard = card;
+  localStorage.setItem('cyphr_settings', JSON.stringify(settings));
+}
+
+function addRateCardRow(role='', name='', rate='') {
+  const tbody = document.getElementById('rc-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.className = 'rc-row';
+  tr.innerHTML = `
+    <td><input class="rc-role" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--sans);background:var(--surface)" value="${esc(role)}" placeholder="Role"></td>
+    <td><input class="rc-name" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--sans);background:var(--surface)" value="${esc(name)}" placeholder="Name (optional)"></td>
+    <td><input class="rc-rate" type="number" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--sans);background:var(--surface);text-align:right" value="${rate}" placeholder="0"></td>
+    <td style="text-align:center"><button onclick="this.closest('tr').remove();saveRateCard()" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:0 4px" title="Remove">×</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function renderRateCardTable() {
+  const card = getRateCard();
+  const tbody = document.getElementById('rc-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  card.forEach(r => addRateCardRow(r.role, r.name, r.rate));
+}
+
+function rateCardToPromptText() {
+  const card = getRateCard();
+  return card.map(r => `${r.role}${r.name ? ' ('+r.name+')' : ''}: £${r.rate}/day`).join(', ');
+}
+
 // ── STAGE: ESTIMATE ───────────────────────────────────────────────────────
 function rEstimate() {
   const p = gp();
-  const auto = p.budget && p.rate ? Math.round(Number(p.budget)/Number(p.rate)) : '';
   return `<div class="card">
     ${renderStageConfBadge('estimate')}
     <div class="card-title">Cost estimate</div>
-    <div class="card-sub">Build the resource plan from budget and skill outputs.</div>
-    <div class="two-col">
-      <div class="field-group"><label class="field-label">Day rate (£)</label><input type="number" id="f-rate" value="${p.rate||850}"/></div>
-      <div class="field-group"><label class="field-label">Total days</label><input type="number" id="f-days" value="${p.days||auto}"/></div>
+    <div class="card-sub">Build the resource plan from your rate card and brief.</div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span class="field-label" style="margin:0">Rate card</span>
+      <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="addRateCardRow();saveRateCard()">+ Add role</button>
     </div>
-    <div class="field-group"><label class="field-label">Roles / resource split</label><textarea id="f-roles" placeholder="e.g. 5 days strategy, 10 days design, 8 days build…">${p.roles||''}</textarea></div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 6px;color:var(--ink3);font-weight:600;font-family:var(--mono);font-size:10px;text-transform:uppercase">Role</th>
+          <th style="text-align:left;padding:4px 6px;color:var(--ink3);font-weight:600;font-family:var(--mono);font-size:10px;text-transform:uppercase">Name</th>
+          <th style="text-align:right;padding:4px 6px;color:var(--ink3);font-weight:600;font-family:var(--mono);font-size:10px;text-transform:uppercase">Day rate (£)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rc-tbody"></tbody>
+    </table>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-ghost" style="font-size:11px" onclick="saveRateCard();toast('Rate card saved','success')">Save rate card</button>
+    </div>
+
     <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
       Estimate output
       ${p.estimateOutput ? '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono)">✎ Editable</span>' : ''}
     </div>
-    <textarea class="output-editable" id="est-out" placeholder="Fill in above and click generate." oninput="saveProjectData({estimateOutput:this.value})">${p.estimateOutput||''}</textarea>
+    <textarea class="output-editable" id="est-out" placeholder="Click generate to build a resource plan from your brief and rate card." oninput="saveProjectData({estimateOutput:this.value})">${p.estimateOutput||''}</textarea>
     <div id="est-load" class="loading-row" style="display:none"><div class="cyphr-spinner"><svg viewBox="0 0 302 452" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;animation:spin 1s linear infinite"><path fill-rule="evenodd" clip-rule="evenodd" d="M238.4 373.27C262.866 336.57 278.733 284.569 278.733 226C278.733 167.431 262.866 115.43 238.4 78.7301C213.828 41.8726 182.365 22.6 150.667 22.6C118.969 22.6 87.5052 41.8726 62.9336 78.7301C38.4673 115.43 22.6 167.431 22.6 226C22.6 284.569 38.4673 336.57 62.9336 373.27C87.5052 410.127 118.969 429.4 150.667 429.4C182.365 429.4 213.828 410.127 238.4 373.27ZM150.667 452C233.878 452 301.333 350.816 301.333 226C301.333 101.184 233.878 0 150.667 0C67.4558 0 0 101.184 0 226C0 350.816 67.4558 452 150.667 452Z" fill="var(--accent)"/></svg></div><span>Building estimate…</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-ai" id="btn-gen-est" onclick="genEstimate()">✦ Generate resource plan</button>
-      <span class="btn-timing">~10 seconds · uses your brief and day rate</span>
+      <button class="btn btn-ai" id="btn-gen-est" onclick="saveRateCard();genEstimate()">✦ Generate resource plan</button>
+      <span class="btn-timing">~10 seconds · uses your brief and rate card</span>
       <button class="btn btn-ghost" id="btn-est-xlsx" onclick="generateFile('estimate')" ${p.estimateOutput ? '' : 'disabled'} style="${p.estimateOutput ? '' : 'opacity:0.4'}">⬇ Download .xlsx</button>
     </div>
   </div>
-  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveEstimate();advance()">Next → SOW</button></div>`;
+  <div class="nav-row"><button class="btn btn-ghost" onclick="back()">← Back</button><button class="btn btn-primary" onclick="saveRateCard();advance()">Next → SOW</button></div>`;
 }
 
 async function genEstimate(forceRefresh) {
@@ -2514,14 +2581,14 @@ async function genEstimate(forceRefresh) {
     _confProceedFns['estimate'] = () => genEstimate(true);
     busy=false; return;
   }
-  const p=gp(); const rate=sv('f-rate')||850; const days=sv('f-days'); const roles=sv('f-roles');
+  const p = gp();
+  const rateCardText = rateCardToPromptText();
   const { level: conf } = contextConfidence(p);
-  saveProjectData({rate,days,roles});
-  const cacheKey = geminiCacheKey(p.id, 'estimate', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, rate, days, roles, selectedSkill:p.selectedSkill, skillOutputNotes:p.skillOutputNotes });
+  const cacheKey = geminiCacheKey(p.id, 'estimate', { clientName:p.clientName, sector:p.sector, budget:p.budget, timeline:p.timeline, briefOutput:p.briefOutput, rateCardText, selectedSkill:p.selectedSkill, skillOutputNotes:p.skillOutputNotes });
   if (!forceRefresh) {
     const cached = getCached(cacheKey);
     if (cached) {
-      saveProjectData({ estimateOutput: cached, rate, days, roles });
+      saveProjectData({ estimateOutput: cached });
       $('est-out').value = cached;
       if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false;
       if($('btn-est-xlsx')){$('btn-est-xlsx').disabled=false;$('btn-est-xlsx').style.opacity='1';}
@@ -2530,21 +2597,34 @@ async function genEstimate(forceRefresh) {
   }
   $('est-load').style.display='flex'; if($('btn-gen-est'))$('btn-gen-est').disabled=true;
   const skillCtx = p.selectedSkill ? `Skill: ${SKILLS.find(x=>x.id===p.selectedSkill)?.name}. Outputs: ${p.skillOutputNotes}` : '';
-  const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Create a concise resource plan.
+  const out = await callGemini(assumptionPrompt(`You are a project director at Cyphr. Create a detailed resource plan using the rate card below.
 Client: ${p.clientName} | Sector: ${p.sector} | Budget: £${p.budget} | Timeline: ${p.timeline}
-Day rate: £${rate} | Total days: ${days} | Roles: ${roles}
 Brief: ${p.briefOutput}
 ${skillCtx}
-Output: phase name, roles, days, cost per phase, total. Note if budget is tight or generous. Be direct.`, conf));
+
+Rate card (use these exact rates — do not invent others):
+${rateCardText}
+
+Output format — for each phase:
+Phase [N]: [Name]
+- [Role (Name if known)]: [X] days × £[rate]/day = £[subtotal]
+Phase subtotal: £[amount]
+
+Then:
+TOTAL: £[grand total]
+BUDGET STATUS: [Tight / On budget / Within budget] — [one sentence]
+ASSUMPTIONS: [flag any assumptions made, e.g. "Assumed 60% strategy / 40% delivery split"]
+
+Be specific to the project type. Use only roles from the rate card. If budget is tight, say so clearly.`, conf));
   setCached(cacheKey, out);
-  saveProjectData({ estimateOutput:out, rate, days, roles });
-  $('est-out').value=out;
+  saveProjectData({ estimateOutput: out });
+  $('est-out').value = out;
   if($('est-load'))$('est-load').style.display='none'; if($('btn-gen-est'))$('btn-gen-est').disabled=false;
   if($('btn-est-xlsx')){$('btn-est-xlsx').disabled=false;$('btn-est-xlsx').style.opacity='1';}
   busy=false;
 }
 
-function saveEstimate() { saveProjectData({ rate:sv('f-rate'), days:sv('f-days'), roles:sv('f-roles') }); }
+function saveEstimate() {}
 
 // ── STAGE: SOW ────────────────────────────────────────────────────────────
 function rSOW() {
