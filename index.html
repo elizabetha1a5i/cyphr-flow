@@ -2668,9 +2668,10 @@ async function generateDeck() {
   if (load) load.style.display = 'flex';
   if (out) out.style.display = 'none';
   try {
+    // text/plain avoids CORS preflight — Apps Script still receives e.postData.contents
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         clientName: p.clientName || '',
         projectName: p.projectName || '',
@@ -2681,7 +2682,8 @@ async function generateDeck() {
         bgNotes: p.bgNotes || '',
         stakeholders: p.stakeholders || '',
         nextSteps: p.nextSteps || '',
-        briefOutput: p.briefOutput || ''
+        briefOutput: p.briefOutput || '',
+        estimateOutput: p.estimateOutput || ''
       })
     });
     const data = await res.json();
