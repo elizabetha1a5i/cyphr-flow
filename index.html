@@ -2891,31 +2891,40 @@ async function generateDeck() {
       'Estimate Output: '  + (p.estimateOutput || ''),
     ].join('\n');
 
-    const geminiPrompt = `You are a professional copywriter for Cyphr, a creative strategy and innovation studio.
-Distil the raw project data below into polished, concise slide copy for a client-facing deck.
-Return ONLY a single valid JSON object — no markdown, no code fences, no commentary.
+    const geminiPrompt = `You are a senior strategist at Cyphr, a creative strategy and innovation studio. You are writing a client-facing proposal deck. Write with authority, intelligence and creative confidence — no filler, no hedging, no corporate speak.
 
-The JSON must contain exactly these keys:
-  Client_Name          — string, the client name
-  Project_Title        — string, a punchy 4–8 word project title
-  Sector               — string, the industry / sector in 2–4 words
-  Key_Takeaway         — string, exactly 3 punchy insights, each on its own line, max 20 words each, no bullets
-  Project_Milestones   — string, 3–5 key milestones, each on its own line as "Phase Name: one-sentence description"
-  Project_Timeline     — string, a short paragraph (3–5 sentences) covering phases, durations, key dates
-  Cost_Breakdown       — string, line items one per line as "Item name — £X,XXX", final line "TOTAL — £XX,XXX"
-  Next_Steps           — string, 2–4 sentences on immediate next actions
-  Stakeholders         — string, key stakeholders and their roles, one per line
+Return ONLY a valid JSON object. No markdown, no code fences, no commentary outside the JSON.
 
-Rules:
-- Write in Cyphr's voice: confident, direct, intelligent, no fluff.
-- If a value is unknown, write "TBC" for short fields or "To be confirmed following scoping." for longer fields.
-- Do not invent specific numbers, names, or dates not present in the source data.
-- Keep all values as flat strings (no nested objects or arrays).
+JSON keys and what to write for each:
+
+"Client_Name": The client's name exactly as given.
+
+"Project_Title": A bold, memorable 4–7 word title that captures the ambition of this project. Not descriptive — provocative. Think campaign title, not project name.
+
+"Sector": 2–4 words. The industry or space this sits in.
+
+"Key_Takeaway": This is the most important slide. Write 3 powerful statements that make the case for this project — why it matters, what's at stake, what Cyphr uniquely brings. Each statement on its own line. No bullets, no numbering. Write like a manifesto, not a list. Each line max 20 words. These should make the client feel understood and excited.
+
+"Project_Milestones": 4–5 milestones that tell the story of how this project gets done. Each on its own line, format: "Phase name — what happens and why it matters". Be specific to this project, not generic.
+
+"Project_Timeline": A confident, clear paragraph (3–4 sentences) covering the overall arc — when it starts, how long each phase takes, when the client sees results. If exact dates are unknown, frame it relationally (e.g. "From kickoff, Phase 1 runs four weeks...").
+
+"Cost_Breakdown": Clean line-item breakdown. One item per line: "Role or deliverable — £X,XXX". Final line: "TOTAL — £XX,XXX". Pull figures from the estimate output if available. If not, use the budget figure as the total and note it as an estimate.
+
+"Next_Steps": 2–3 sentences. What happens after the client says yes — first call, kickoff, first deliverable. Concrete and action-oriented.
+
+"Stakeholders": Key people involved and their roles, one per line. Include client-side and Cyphr-side if known.
+
+Voice rules:
+- Cyphr's tone: direct, sharp, no waffle. Short sentences land harder than long ones.
+- Never write "TBC" or placeholder text — if something is unknown, make a smart inference or leave it out entirely.
+- Do not invent specific numbers or names not in the source data.
+- All values must be flat strings — no nested objects or arrays.
 
 Raw project data:
 ${rawContext}`;
 
-    const slideData = await callGemini(geminiPrompt, { maxTokens: 1500, responseMimeType: 'application/json' });
+    const slideData = await callGemini(geminiPrompt, { maxTokens: 2500, responseMimeType: 'application/json' });
 
     let parsed;
     try { parsed = JSON.parse(slideData); }
