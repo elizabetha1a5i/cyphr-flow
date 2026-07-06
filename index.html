@@ -2868,7 +2868,7 @@ function rSetup() {
 
 async function generateDeck() {
   const p = gp();
-  const url = 'https://script.google.com/macros/s/AKfycbyB6-xSreSe3-h3kzve-tJkwy4LNKI9o5_9a2sNdeUO4ii6ePU8i8z_q8QTDSrYJQh9LA/exec';
+  const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyB6-xSreSe3-h3kzve-tJkwy4LNKI9o5_9a2sNdeUO4ii6ePU8i8z_q8QTDSrYJQh9LA/exec';
   const btn = document.getElementById('btn-gen-deck');
   const load = document.getElementById('deck-gen-load');
   const out = document.getElementById('deck-gen-out');
@@ -2876,25 +2876,57 @@ async function generateDeck() {
   if (load) load.style.display = 'flex';
   if (out) out.style.display = 'none';
   try {
-    // Route through Railway to avoid CORS — server-to-server has no restrictions
+    // Step 1: call Gemini here (frontend) to compress project data into slide copy
+    const rawContext = [
+      'Client Name: '      + (p.clientName    || ''),
+      'Project Name: '     + (p.projectName   || ''),
+      'Sector: '           + (p.sector         || ''),
+      'Budget: '           + (p.budget         || ''),
+      'Timeline: '         + (p.timeline       || ''),
+      'Requirements: '     + (p.requirements   || ''),
+      'Background Notes: ' + (p.bgNotes        || ''),
+      'Stakeholders: '     + (p.stakeholders   || ''),
+      'Next Steps: '       + (p.nextSteps      || ''),
+      'AI Brief Output: '  + (p.briefOutput    || ''),
+      'Estimate Output: '  + (p.estimateOutput || ''),
+    ].join('\n');
+
+    const geminiPrompt = `You are a professional copywriter for Cyphr, a creative strategy and innovation studio.
+Distil the raw project data below into polished, concise slide copy for a client-facing deck.
+Return ONLY a single valid JSON object — no markdown, no code fences, no commentary.
+
+The JSON must contain exactly these keys:
+  Client_Name          — string, the client name
+  Project_Title        — string, a punchy 4–8 word project title
+  Sector               — string, the industry / sector in 2–4 words
+  Key_Takeaway         — string, exactly 3 punchy insights, each on its own line, max 20 words each, no bullets
+  Project_Milestones   — string, 3–5 key milestones, each on its own line as "Phase Name: one-sentence description"
+  Project_Timeline     — string, a short paragraph (3–5 sentences) covering phases, durations, key dates
+  Cost_Breakdown       — string, line items one per line as "Item name — £X,XXX", final line "TOTAL — £XX,XXX"
+  Next_Steps           — string, 2–4 sentences on immediate next actions
+  Stakeholders         — string, key stakeholders and their roles, one per line
+
+Rules:
+- Write in Cyphr's voice: confident, direct, intelligent, no fluff.
+- If a value is unknown, write "TBC" for short fields or "To be confirmed following scoping." for longer fields.
+- Do not invent specific numbers, names, or dates not present in the source data.
+- Keep all values as flat strings (no nested objects or arrays).
+
+Raw project data:
+${rawContext}`;
+
+    const slideData = await callGemini(geminiPrompt, { maxTokens: 1500, responseMimeType: 'application/json' });
+
+    let parsed;
+    try { parsed = JSON.parse(slideData); }
+    catch(e) { throw new Error('Gemini returned invalid JSON for slide copy'); }
+
+    // Step 2: send pre-processed slide copy to Apps Script via Railway proxy
     const railwayUrl = settings.fileApiUrl || 'https://cyphr-api-production.up.railway.app';
     const res = await fetch(railwayUrl + '/proxy-deck', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deckWebAppUrl: url,
-        clientName: p.clientName || '',
-        projectName: p.projectName || '',
-        sector: p.sector || '',
-        budget: p.budget || '',
-        timeline: p.timeline || '',
-        requirements: p.requirements || '',
-        bgNotes: p.bgNotes || '',
-        stakeholders: p.stakeholders || '',
-        nextSteps: p.nextSteps || '',
-        briefOutput: p.briefOutput || '',
-        estimateOutput: p.estimateOutput || ''
-      })
+      body: JSON.stringify({ deckWebAppUrl: appsScriptUrl, ...parsed })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
