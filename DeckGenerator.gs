@@ -2,67 +2,47 @@
 // CYPHR DECK GENERATOR — Google Apps Script Web App
 // ═══════════════════════════════════════════════════════════════════════
 //
-// HOW TO DEPLOY:
-//   1. Open https://script.google.com and create a new project.
-//   2. Paste this entire file into the editor (replace any existing code).
-//   3. Set the two constants below:
-//        TEMPLATE_SLIDE_ID — the file ID of your Cyphr Slides template
-//        OUTPUT_FOLDER_ID  — the Google Drive folder ID where decks are saved
-//   4. Click Deploy > New Deployment.
-//        - Type: Web App
-//        - Execute as: Me
-//        - Who has access: Anyone
-//   5. Copy the Web App URL — paste it into Cyphr Flow Settings as the Deck Generator URL.
+// Template setup: each content text box contains a tiny invisible marker
+// in 1pt white text. The script finds each marker, clears the box, and
+// inserts real content at the correct font size.
 //
-// NOTE: No Gemini API key needed — the caller (Cyphr Flow) sends pre-processed
-//       slide copy. This script only does Slides manipulation.
+// Markers → slots:
+//   [[title]]      Slide 1 — project title
+//   [[date]]       Slide 1 — month/year date
+//   [[sector]]     Slide 2 — sector / industry
+//   [[takeaway]]   Slide 3 — 3 key statements (one per line)
+//   [[milestones]] Slide 4 — 4–5 milestones
+//   [[timeline]]   Slide 5 — timeline paragraph
+//   [[cost]]       Slide 6 — cost breakdown line items
 //
-// INCOMING POST BODY (JSON) — all values are flat strings:
-//   {
-//     Client_Name, Project_Title, Sector, Date,
-//     Key_Takeaway,          (3 lines, one per line)
-//     Project_Milestones,    (3–5 lines formatted "Phase: description")
-//     Project_Timeline,      (short paragraph)
-//     Cost_Breakdown,        (line items "Item — £X,XXX" + "TOTAL — £XX,XXX")
-//     Next_Steps,
-//     Stakeholders
-//   }
-//
-// TEMPLATE SLIDE TAGS (must match exactly):
-//   Slide 1 (Cover):    {{Client_Name}}, {{Project_Title}}, {{Sector}}, {{Date}}
-//   Slide 2:            {{Key_Takeaway}}
-//   Slide 3:            {{Project_Milestones}}
-//   Slide 4:            {{Project_Timeline}}
-//   Slide 5:            {{Cost_Breakdown}}
-//   Slide 6 (Closing):  {{Next_Steps}}, {{Stakeholders}}
-//
-// RESPONSE (JSON):
-//   Success: { deckUrl, deckName }
-//   Error:   { error: "message" }
+// Deploy as: Web App / Execute as Me / Who has access: Anyone
 // ═══════════════════════════════════════════════════════════════════════
-
 
 var TEMPLATE_SLIDE_ID = '1SYcTXUmcg3ci2pg8kWrexzwiTgHdRrF0BCAwca5dBZ0';
 var OUTPUT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
 
+// Font sizes per slot. Font family inherits from the text box style in the template.
+var SLOT_STYLES = {
+  '[[title]]':      { fontSize: 60, bold: true  },
+  '[[date]]':       { fontSize: 20, bold: false },
+  '[[sector]]':     { fontSize: 60, bold: true  },
+  '[[takeaway]]':   { fontSize: 34, bold: false },
+  '[[milestones]]': { fontSize: 22, bold: false },
+  '[[timeline]]':   { fontSize: 22, bold: false },
+  '[[cost]]':       { fontSize: 22, bold: false },
+};
 
-/**
- * Entry point for the Web App.
- * Expects a JSON body with pre-processed slide copy — no Gemini call here.
- */
+
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
       throw new Error('No POST body received.');
     }
-
     const data = JSON.parse(e.postData.contents);
     const result = buildDeck(data);
-
     return ContentService
       .createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-
   } catch (err) {
     return ContentService
       .createTextOutput(JSON.stringify({ error: err.message || String(err) }))
@@ -71,37 +51,85 @@ function doPost(e) {
 }
 
 
-/**
- * Copies the Slides template, replaces all {{tags}}, saves, returns the URL.
- */
 function buildDeck(data) {
-  if (!TEMPLATE_SLIDE_ID) throw new Error('TEMPLATE_SLIDE_ID is not set.');
-  if (!OUTPUT_FOLDER_ID)  throw new Error('OUTPUT_FOLDER_ID is not set.');
+  var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 
-  // Inject current month/year if not provided
-  if (!data.Date) {
-    data.Date = Utilities.formatDate(
-      new Date(),
-      Session.getScriptTimeZone(),
-      'MMMM yyyy'
-    );
-  }
+  // Map markers to their content
+  var content = {
+    '[[title]]':      data.Project_Title  || '',
+    '[[date]]':       date,
+    '[[sector]]':     data.Sector         || '',
+    '[[takeaway]]':   data.Key_Takeaway   || '',
+    '[[milestones]]': data.Project_Milestones || '',
+    '[[timeline]]':   data.Project_Timeline  || '',
+    '[[cost]]':       data.Cost_Breakdown    || '',
+  };
 
-  const clientName   = data.Client_Name   || 'Client';
-  const projectTitle = data.Project_Title || 'Deck';
-  const deckName     = clientName + ' — ' + projectTitle;
+  var clientName   = data.Client_Name   || 'Client';
+  var projectTitle = data.Project_Title || 'Deck';
+  var deckName     = clientName + ' — ' + projectTitle; // em dash
 
-  const newFile = DriveApp.getFileById(TEMPLATE_SLIDE_ID)
+  var newFile = DriveApp.getFileById(TEMPLATE_SLIDE_ID)
     .makeCopy(deckName, DriveApp.getFolderById(OUTPUT_FOLDER_ID));
 
-  const deck = SlidesApp.openById(newFile.getId());
+  var deck   = SlidesApp.openById(newFile.getId());
+  var slides = deck.getSlides();
 
-  for (var key in data) {
-    if (Object.prototype.hasOwnProperty.call(data, key)) {
-      var value = (data[key] !== null && data[key] !== undefined)
-        ? String(data[key])
-        : '—';
-      deck.replaceAllText('{{' + key + '}}', value);
+  for (var i = 0; i < slides.length; i++) {
+    var shapes = slides[i].getShapes();
+    for (var j = 0; j < shapes.length; j++) {
+      var shape = shapes[j];
+      if (!shape.getText) continue;
+      var raw = shape.getText().asString().trim();
+
+      if (content.hasOwnProperty(raw)) {
+        var text    = content[raw];
+        var style   = SLOT_STYLES[raw];
+        var tf      = shape.getText();
+
+        tf.clear();
+
+        if (raw === '[[milestones]]') {
+          // Bold phase name, regular description — split on " — "
+          var lines = text.split('\n');
+          for (var l = 0; l < lines.length; l++) {
+            if (l > 0) tf.appendText('\n');
+            var parts = lines[l].split(' — ');
+            if (parts.length >= 2) {
+              var boldPart = tf.appendText(parts[0] + ' — ');
+              boldPart.getTextStyle().setBold(true).setFontSize(style.fontSize);
+              var regularPart = tf.appendText(parts.slice(1).join(' — '));
+              regularPart.getTextStyle().setBold(false).setFontSize(style.fontSize - 2);
+            } else {
+              var plain = tf.appendText(lines[l]);
+              plain.getTextStyle().setBold(false).setFontSize(style.fontSize);
+            }
+          }
+        } else if (raw === '[[cost]]') {
+          // Regular line items, bold TOTAL line
+          var costLines = text.split('\n');
+          for (var c = 0; c < costLines.length; c++) {
+            if (c > 0) tf.appendText('\n');
+            var isTotal = costLines[c].toUpperCase().indexOf('TOTAL') === 0;
+            var costRange = tf.appendText(costLines[c]);
+            costRange.getTextStyle()
+              .setBold(isTotal)
+              .setFontSize(isTotal ? style.fontSize + 4 : style.fontSize);
+          }
+        } else if (raw === '[[takeaway]]') {
+          // Each statement on its own line with extra spacing
+          var statements = text.split('\n');
+          for (var s = 0; s < statements.length; s++) {
+            if (s > 0) tf.appendText('\n\n');
+            var stRange = tf.appendText(statements[s]);
+            stRange.getTextStyle().setBold(false).setFontSize(style.fontSize);
+          }
+        } else {
+          // Default: insert as-is
+          var range = tf.appendText(text);
+          range.getTextStyle().setBold(style.bold).setFontSize(style.fontSize);
+        }
+      }
     }
   }
 
