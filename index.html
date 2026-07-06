@@ -2885,11 +2885,13 @@ async function generateDeck() {
   if (load) load.style.display = 'flex';
   if (out) out.style.display = 'none';
   try {
-    // text/plain avoids CORS preflight — Apps Script still receives e.postData.contents
-    const res = await fetch(url, {
+    // Route through Railway to avoid CORS — server-to-server has no restrictions
+    const railwayUrl = settings.fileApiUrl || 'https://cyphr-api-production.up.railway.app';
+    const res = await fetch(railwayUrl + '/proxy-deck', {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        deckWebAppUrl: url,
         clientName: p.clientName || '',
         projectName: p.projectName || '',
         sector: p.sector || '',
