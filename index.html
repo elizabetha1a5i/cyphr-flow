@@ -589,6 +589,8 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 .conf-qa-question { font-size:13px; font-weight:600; color:var(--ink1); margin-bottom:3px; }
 .conf-qa-input { width:100%; font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--ink1); font-family:var(--sans); box-sizing:border-box; }
 .conf-qa-input:focus { outline:none; border-color:var(--accent); }
+.stage-conf-badge { display:flex; align-items:baseline; gap:8px; padding:6px 10px; background:var(--surface2,#f8f8f8); border-radius:4px; margin-bottom:12px; font-size:12px; }
+.stage-conf-detail { color:var(--ink3); font-size:11px; }
 </style>
 
 <script>
@@ -750,6 +752,28 @@ const GAP_PLACEHOLDERS = {
   stakeholders: 'e.g. Sarah (CEO), James (Head of Product)',
 };
 
+const STAGE_REQUIREMENTS = {
+  brief: [
+    { field: 'clientName',   label: 'Client name',  weight: 1, test: p => !!(p.clientName||'').trim() },
+    { field: 'sector',       label: 'Sector',        weight: 1, test: p => !!(p.sector||'').trim() },
+    { field: 'requirements', label: 'Requirements',  weight: 2, test: p => (p.requirements||'').trim().length > 80 },
+    { field: 'bgNotes',      label: 'Background',    weight: 2, test: p => (p.bgNotes||'').trim().length > 80 },
+  ],
+  estimate: [
+    { field: 'briefOutput',  label: 'Brief',         weight: 2, test: p => (p.briefOutput||'').trim().length > 50 },
+    { field: 'budget',       label: 'Budget',        weight: 2, test: p => !!(p.budget) && p.budget !== '0' },
+    { field: 'timeline',     label: 'Timeline',      weight: 1, test: p => !!(p.timeline||'').trim() },
+  ],
+  sow: [
+    { field: 'briefOutput',  label: 'Brief',         weight: 1, test: p => (p.briefOutput||'').trim().length > 50 },
+    { field: 'estimateOutput',label:'Estimate',      weight: 1, test: p => (p.estimateOutput||'').trim().length > 50 },
+    { field: 'budget',       label: 'Budget',        weight: 1, test: p => !!(p.budget) && p.budget !== '0' },
+    { field: 'timeline',     label: 'Timeline',      weight: 1, test: p => !!(p.timeline||'').trim() },
+    { field: 'stakeholders', label: 'Stakeholders',  weight: 1, test: p => !!(p.stakeholders||'').trim() },
+    { field: 'risksAndOpenQuestions', label: 'Risks & questions', weight: 1, test: p => !!(p.risksAndOpenQuestions||'').trim() },
+  ],
+};
+
 let projects = JSON.parse(localStorage.getItem('cyphr_projects') || '[]');
 let settings = JSON.parse(localStorage.getItem('cyphr_settings') || '{}');
 // Hardcoded defaults — no setup needed for new users
@@ -820,6 +844,33 @@ async function callClaude(prompt) {
   } catch(e) {
     return `Error: ${e.message}`;
   }
+}
+
+// ── STAGE CONFIDENCE ──────────────────────────────────────────────────────
+function stageConfidence(stageId, p) {
+  const checks = STAGE_REQUIREMENTS[stageId];
+  if (!checks) return null;
+  let score = 0;
+  const gaps = [];
+  const max = checks.reduce((a, c) => a + c.weight, 0);
+  checks.forEach(c => { if (c.test(p)) score += c.weight; else gaps.push(c); });
+  const pct = score / max;
+  const level = pct >= 0.85 ? 'high' : pct >= 0.5 ? 'medium' : 'low';
+  return { score, max, level, gaps, pct };
+}
+
+function renderStageConfBadge(stageId) {
+  const p = gp();
+  const conf = stageConfidence(stageId, p);
+  if (!conf) return '';
+  const { score, max, level, gaps } = conf;
+  const colour = level === 'high' ? '#22c55e' : level === 'medium' ? '#f59e0b' : '#ef4444';
+  const label = level === 'high' ? 'Ready' : level === 'medium' ? 'Mostly ready' : 'Missing context';
+  const missingText = gaps.length ? ` — missing: ${gaps.map(g => g.label).join(', ')}` : '';
+  return `<div class="stage-conf-badge" style="border-left:3px solid ${colour}">
+    <span style="color:${colour};font-weight:700">${label}</span>
+    <span class="stage-conf-detail">${score}/${max} fields${missingText}</span>
+  </div>`;
 }
 
 // ── CONTEXT CONFIDENCE ────────────────────────────────────────────────────
@@ -1687,9 +1738,10 @@ function renderConfPanel() {
   if (!panel) return;
   const p = gp();
   if (!p.extractedContext) { panel.style.display='none'; return; }
-  const { score, max, level, gaps } = contextConfidence(p);
+  const conf = stageConfidence('brief', p);
+  const { score, max, level, gaps } = conf;
   const pct = Math.round(score / max * 100);
-  const levelLabel = level === 'high' ? 'Strong context' : level === 'medium' ? 'Good context' : 'Thin context';
+  const levelLabel = level === 'high' ? 'Ready for brief' : level === 'medium' ? 'Mostly ready' : 'Thin context';
   const gapRows = gaps.map(g => `
     <div class="conf-gap-row">
       <span class="conf-gap-label">${GAP_HINTS[g.field]}</span>
@@ -1698,7 +1750,7 @@ function renderConfPanel() {
   panel.innerHTML = `
     <div class="conf-score-row">
       <div class="conf-score-bar"><div class="conf-score-fill ${level}" style="width:${pct}%"></div></div>
-      <span class="conf-score-label">${score}/${max} — ${levelLabel}</span>
+      <span class="conf-score-label">Ready for brief: ${score}/${max}</span>
     </div>
     ${gaps.length ? `<div class="conf-gap-list">${gapRows}</div>` : ''}
     ${gaps.length ? `<div class="conf-qa-row"><button class="btn btn-ghost" style="font-size:12px" onclick="startQA()">✦ Ask me questions instead</button></div>` : ''}
@@ -2081,6 +2133,7 @@ function rBrief() {
   const p = gp();
   const hasContent = !!p.briefOutput;
   return `<div class="card">
+    ${renderStageConfBadge('brief')}
     <div class="card-title">Brief</div>
     <div class="card-sub">${hasContent ? 'Pre-generated from your context — review and edit directly, then download.' : 'Turn requirements into a structured response to brief.'}</div>
     <div class="output-label">Client</div>
@@ -2273,6 +2326,7 @@ function rEstimate() {
   const p = gp();
   const auto = p.budget && p.rate ? Math.round(Number(p.budget)/Number(p.rate)) : '';
   return `<div class="card">
+    ${renderStageConfBadge('estimate')}
     <div class="card-title">Cost estimate</div>
     <div class="card-sub">Build the resource plan from budget and skill outputs.</div>
     <div class="two-col">
@@ -2329,6 +2383,7 @@ function saveEstimate() { saveProjectData({ rate:sv('f-rate'), days:sv('f-days')
 function rSOW() {
   const p = gp();
   return `<div class="card">
+    ${renderStageConfBadge('sow')}
     <div class="card-title">Statement of work</div>
     <div class="card-sub">Generate SOW from everything captured so far.</div>
     <div class="output-label" style="display:flex;align-items:center;justify-content:space-between">
