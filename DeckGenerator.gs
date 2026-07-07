@@ -92,7 +92,7 @@ function buildDeck(data) {
   while (slides.length - 2 < contentItems.length) {
     slides[1].duplicate();
     slides = deck.getSlides();
-    slides[slides.length - 1].move(slides.length - 2);
+    slides[slides.length - 1].move(slides.length - 1);
     slides = deck.getSlides();
   }
   slides = deck.getSlides();
