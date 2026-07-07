@@ -25,11 +25,11 @@ var OUTPUT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
 var SLOT_STYLES = {
   '[[title]]':      { fontSize: 60, bold: true  },
   '[[date]]':       { fontSize: 20, bold: false },
-  '[[sector]]':     { fontSize: 60, bold: true  },
-  '[[takeaway]]':   { fontSize: 34, bold: false },
-  '[[milestones]]': { fontSize: 22, bold: false },
-  '[[timeline]]':   { fontSize: 22, bold: false },
-  '[[cost]]':       { fontSize: 22, bold: false },
+  '{{sector}}':     { fontSize: 60, bold: true  },
+  '{{Takeaway}}':   { fontSize: 34, bold: false },
+  '{{Milestones}}': { fontSize: 22, bold: false },
+  '{{Timeine}}':    { fontSize: 22, bold: false },
+  '{{Cost}}':       { fontSize: 22, bold: false },
 };
 
 
@@ -54,15 +54,15 @@ function doPost(e) {
 function buildDeck(data) {
   var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 
-  // Map markers to their content
+  // Map markers to their content — matches exact text in template (after trim)
   var content = {
-    '[[title]]':      data.Project_Title  || '',
-    '[[date]]':       date,
-    '[[sector]]':     data.Sector         || '',
-    '[[takeaway]]':   data.Key_Takeaway   || '',
-    '[[milestones]]': data.Project_Milestones || '',
-    '[[timeline]]':   data.Project_Timeline  || '',
-    '[[cost]]':       data.Cost_Breakdown    || '',
+    '[[title]]':       data.Project_Title       || '',
+    '[[date]]':        date,
+    '{{sector}}':      data.Sector              || '',
+    '{{Takeaway}}':    data.Key_Takeaway        || '',
+    '{{Milestones}}':  data.Project_Milestones  || '',
+    '{{Timeine}}':     data.Project_Timeline    || '',  // typo in template — do not fix here
+    '{{Cost}}':        data.Cost_Breakdown      || '',
   };
 
   var clientName   = data.Client_Name   || 'Client';
@@ -89,7 +89,7 @@ function buildDeck(data) {
 
         tf.clear();
 
-        if (raw === '[[milestones]]') {
+        if (raw === '{{Milestones}}') {
           // Bold phase name, regular description — split on " — "
           var lines = text.split('\n');
           for (var l = 0; l < lines.length; l++) {
@@ -105,7 +105,7 @@ function buildDeck(data) {
               plain.getTextStyle().setBold(false).setFontSize(style.fontSize);
             }
           }
-        } else if (raw === '[[cost]]') {
+        } else if (raw === '{{Cost}}') {
           // Regular line items, bold TOTAL line
           var costLines = text.split('\n');
           for (var c = 0; c < costLines.length; c++) {
@@ -116,7 +116,7 @@ function buildDeck(data) {
               .setBold(isTotal)
               .setFontSize(isTotal ? style.fontSize + 4 : style.fontSize);
           }
-        } else if (raw === '[[takeaway]]') {
+        } else if (raw === '{{Takeaway}}') {
           // Each statement on its own line with extra spacing
           var statements = text.split('\n');
           for (var s = 0; s < statements.length; s++) {
