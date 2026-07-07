@@ -2992,9 +2992,16 @@ Return a JSON object with exactly these keys — all values are flat strings (no
 "Next_Steps" — what happens after sign-off, concrete steps
 "Stakeholders" — people and roles, one per line separated by \\n
 
+Also include these speaker notes keys — written for the presenter, not the audience. What to say, what to emphasise, what NOT to read off the slide. Two to four sentences each:
+
+"Speaker_Notes_Insight" — notes for the Key_Takeaway slide: what story to tell, why these three statements matter, what reaction to watch for
+"Speaker_Notes_Milestones" — notes for the Milestones slide: how to walk through the phases, what makes this approach different, what to emphasise
+"Speaker_Notes_Timeline" — notes for the Timeline slide: how to present the timeline with confidence, what to say about pace and delivery
+"Speaker_Notes_Cost" — notes for the Investment slide: how to frame the cost, how to handle the moment when they see the number, what the investment actually unlocks
+
 Return ONLY the JSON object. No markdown, no code fences, no explanation outside the JSON.`;
 
-    const slideData = await callGemini(geminiPrompt, { maxTokens: 2500, responseMimeType: 'application/json' });
+    const slideData = await callGemini(geminiPrompt, { maxTokens: 4000, responseMimeType: 'application/json' });
 
     let parsed;
     try { parsed = JSON.parse(slideData); }

@@ -140,6 +140,23 @@ function buildDeck(data) {
     }
   }
 
+  // Write speaker notes to slide notes panels (slide index → content type)
+  var speakerNotes = {
+    2: data.Speaker_Notes_Insight    || '',
+    3: data.Speaker_Notes_Milestones || '',
+    4: data.Speaker_Notes_Timeline   || '',
+    5: data.Speaker_Notes_Cost       || '',
+  };
+  for (var idx in speakerNotes) {
+    var noteText = speakerNotes[idx];
+    if (!noteText) continue;
+    var slideIdx = parseInt(idx, 10);
+    if (slideIdx >= slides.length) continue;
+    try {
+      slides[slideIdx].getNotesPage().getSpeakerNotesShape().getText().setText(noteText);
+    } catch(e) { /* notes panel unavailable on this slide — skip */ }
+  }
+
   deck.saveAndClose();
 
   return {
