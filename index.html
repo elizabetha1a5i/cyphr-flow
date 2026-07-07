@@ -2952,22 +2952,32 @@ Now write the deck as a complete narrative. You decide how many slides (3–6 co
 
 LAYOUT TYPES — pick the one that fits the content of each slide:
 
-statement-trio — three bold standalone statements (best for the insight/reframe slide)
-item-list       — phase name — description, one per line (process, approach, milestones)
-timeline-list   — Months X-Y: Phase name, one per line (chronological plan)
-cost-table      — line items with amounts, last line starts TOTAL (investment breakdown)
-stat-callout    — one large number or stat + short description beside it (data-led slide)
-two-column      — two columns of items, e.g. before/after or comparison
-next-steps      — numbered action items (what happens after sign-off)
+statement-trio — three bold standalone statements (32pt). Best for insight/reframe slides. No bullets, no prose — fragments that hit.
+item-list       — heading + line items "Phase name — description" (20pt/18pt). For process, approach, milestones.
+timeline-list   — heading + dated entries "Q1: Phase name" with left border bars (16pt label + 18pt text). For chronological plans.
+cost-table      — heading + rows "Item — £amount" with right-aligned amounts, divider line, TOTAL row (18pt, TOTAL 24pt). For investment breakdowns.
+stat-callout    — left column: heading (48pt) + context items (18pt). Right column: one giant stat (120pt) + label (18pt). For problem + data slides.
+two-stat        — two large numbers side by side (90pt each) with descriptions (20pt). For evidence/proof slides with two data points.
+two-column      — heading (32pt) + two equal columns each with title (26pt) + items (18pt). For comparisons, before/after, two audiences.
+next-steps      — large heading (48pt) + numbered steps "1. action" (22pt number + 20pt text). For what happens after sign-off.
+
+For two-stat, return a "stats" array instead of "lines":
+  "stats": [{"value": "3x", "label": "description"}, {"value": "73%", "label": "description"}]
+
+For two-column, return a "columns" array instead of "lines":
+  "columns": [{"title": "Column A", "items": ["item 1", "item 2"]}, {"title": "Column B", "items": ["item 1", "item 2"]}]
+
+For stat-callout, add "stat" and "stat_label" fields:
+  "stat": "-40%", "stat_label": "description of the stat", "lines": ["left col item 1", "left col item 2"]
 
 WRITING RULES:
 
 - Each slide has a heading: 2–4 words, specific to this project. Not a generic label. "What's actually true." / "Seven months." / "£77,600." are headings. "Milestones" / "Timeline" / "Cost" are not.
-- lines[] contains the content items — each line is one item, no paragraph prose, no full sentences unless they are statements
-- The insight slide (statement-trio) must shift how the client thinks, not just inform them. Three fragments that hit.
+- The insight slide (statement-trio) must shift how the client thinks, not just inform. Three fragments that hit.
 - The cost slide heading should use the actual total figure if available.
-- speaker_note is written for the presenter — what to say, what NOT to read off the slide, what reaction to watch for. Two to four sentences.
-- Do not invent numbers or names not in the project data. If something is missing, infer or leave it out.
+- speaker_note is written for the presenter — what to say, what NOT to read off the slide, what reaction to watch for. 2–4 sentences.
+- Do not invent numbers or names not in the project data. If something is missing, infer intelligently or leave it out.
+- Vary the layouts — do not use item-list for every slide. A strong deck uses 3–4 different layout types.
 
 Voice: Direct and sharp. Short sentences. No hedging. No corporate language. Match the tone in the brief if given.
 
@@ -2981,12 +2991,33 @@ Return a JSON object with this exact structure:
     {
       "heading": "2–4 word slide heading",
       "layout": "one of the layout types above",
-      "lines": ["line 1", "line 2", "line 3"],
+      "lines": ["line 1", "line 2"],
       "speaker_note": "presenter notes, 2–4 sentences"
+    },
+    {
+      "heading": "stat slide heading",
+      "layout": "stat-callout",
+      "stat": "-40%",
+      "stat_label": "description of the stat",
+      "lines": ["left col item 1", "left col item 2"]
+    },
+    {
+      "heading": "evidence heading",
+      "layout": "two-stat",
+      "stats": [{"value": "3x", "label": "description"}, {"value": "73%", "label": "description"}],
+      "speaker_note": "..."
+    },
+    {
+      "heading": "comparison heading",
+      "layout": "two-column",
+      "columns": [{"title": "Column A", "items": ["item 1", "item 2"]}, {"title": "Column B", "items": ["item 1", "item 2"]}],
+      "speaker_note": "..."
     }
   ],
   "Next_Steps": "what happens after sign-off, concrete steps, one per line separated by \\n"
 }
+
+Only include the fields relevant to each layout type. Every slide needs heading, layout, and speaker_note. Use lines[] for statement-trio, item-list, timeline-list, cost-table, next-steps. Use stats[] for two-stat. Use columns[] for two-column. Use stat + stat_label + lines[] for stat-callout.
 Return ONLY the JSON object. No markdown, no code fences, no explanation outside the JSON.`;
 
     const slideData = await callGemini(geminiPrompt, { maxTokens: 6000, responseMimeType: 'application/json' });
