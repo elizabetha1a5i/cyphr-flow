@@ -6,14 +6,17 @@
 // in 1pt white text. The script finds each marker, clears the box, and
 // inserts real content at the correct font size.
 //
+// Slide dimensions: 720pt wide × 405pt tall (standard 16:9)
+// Content area (below header rule): top=58, left=25, width=670, height=332
+//
 // Markers → slots:
 //   [[title]]      Slide 1 — project title
 //   [[date]]       Slide 1 — month/year date
-//   [[sector]]     Slide 2 — sector / industry
-//   [[takeaway]]   Slide 3 — 3 key statements (one per line)
-//   [[milestones]] Slide 4 — 4–5 milestones
-//   [[timeline]]   Slide 5 — timeline paragraph
-//   [[cost]]       Slide 6 — cost breakdown line items
+//   {{sector}}     Slide 2 — sector / industry
+//   {{Takeaway}}   Slide 3 — 3 key statements (one per line)
+//   {{Milestones}} Slide 4 — 4–5 milestones
+//   {{Timeine}}    Slide 5 — timeline (typo in template, do not fix)
+//   {{Cost }}      Slide 6 — cost breakdown line items
 //
 // Deploy as: Web App / Execute as Me / Who has access: Anyone
 // ═══════════════════════════════════════════════════════════════════════
@@ -21,7 +24,7 @@
 var TEMPLATE_SLIDE_ID = '1SYcTXUmcg3ci2pg8kWrexzwiTgHdRrF0BCAwca5dBZ0';
 var OUTPUT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
 
-// Font sizes per slot. Font family inherits from the text box style in the template.
+// Font sizes per slot
 var SLOT_STYLES = {
   '[[title]]':      { fontSize: 60, bold: true  },
   '[[date]]':       { fontSize: 20, bold: false },
@@ -30,6 +33,18 @@ var SLOT_STYLES = {
   '{{Milestones}}': { fontSize: 22, bold: false },
   '{{Timeine}}':    { fontSize: 22, bold: false },
   '{{Cost }}':      { fontSize: 22, bold: false },
+};
+
+// Layout per slot — repositions and resizes the shape to fill the content area.
+// Content area on a 720×405pt slide below the header rule: top≈58, left=25, width=670, height=332
+var SLOT_LAYOUT = {
+  '[[title]]':      { left: 25,  top: 80,  width: 670, height: 200 },
+  '[[date]]':       null, // keep date in its template position
+  '{{sector}}':     { left: 25,  top: 120, width: 670, height: 220 },
+  '{{Takeaway}}':   { left: 25,  top: 65,  width: 670, height: 320 },
+  '{{Milestones}}': { left: 25,  top: 58,  width: 670, height: 332 },
+  '{{Timeine}}':    { left: 25,  top: 58,  width: 670, height: 332 },
+  '{{Cost }}':      { left: 25,  top: 58,  width: 670, height: 332 },
 };
 
 
@@ -67,7 +82,6 @@ function smartSplit(text) {
 function buildDeck(data) {
   var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 
-  // Map markers to their content — matches exact text in template (after trim)
   var content = {
     '[[title]]':       data.Project_Title       || '',
     '[[date]]':        date,
@@ -80,7 +94,7 @@ function buildDeck(data) {
 
   var clientName   = data.Client_Name   || 'Client';
   var projectTitle = data.Project_Title || 'Deck';
-  var deckName     = clientName + ' — ' + projectTitle; // em dash
+  var deckName     = clientName + ' — ' + projectTitle;
 
   var newFile = DriveApp.getFileById(TEMPLATE_SLIDE_ID)
     .makeCopy(deckName, DriveApp.getFolderById(OUTPUT_FOLDER_ID));
@@ -98,14 +112,13 @@ function buildDeck(data) {
       var matchedKey = null;
       for (var k in content) {
         if (raw === k) { matchedKey = k; break; }
-        // contains-fallback for [[bracket]] markers that may have extra whitespace in template
         if (k.indexOf('[[') === 0 && raw.indexOf(k) !== -1) { matchedKey = k; break; }
       }
 
       if (matchedKey !== null) {
-        var text    = content[matchedKey];
-        var style   = SLOT_STYLES[matchedKey];
-        var tf      = shape.getText();
+        var text  = content[matchedKey];
+        var style = SLOT_STYLES[matchedKey];
+        var tf    = shape.getText();
 
         tf.clear();
 
@@ -143,15 +156,25 @@ function buildDeck(data) {
             stRange.getTextStyle().setBold(false).setFontSize(style.fontSize);
           }
         } else {
-          // Default: insert as-is
           var range = tf.appendText(text);
           range.getTextStyle().setBold(style.bold).setFontSize(style.fontSize);
+        }
+
+        // Resize and reposition the shape to fill the content area
+        var layout = SLOT_LAYOUT[matchedKey];
+        if (layout) {
+          try {
+            shape.setLeft(layout.left);
+            shape.setTop(layout.top);
+            shape.setWidth(layout.width);
+            shape.setHeight(layout.height);
+          } catch(e) { /* shape locked or grouped — skip resize */ }
         }
       }
     }
   }
 
-  // Write speaker notes to slide notes panels (slide index → content type)
+  // Write speaker notes to slide notes panels
   var speakerNotes = {
     2: data.Speaker_Notes_Insight    || '',
     3: data.Speaker_Notes_Milestones || '',
