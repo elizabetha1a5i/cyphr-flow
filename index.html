@@ -2958,9 +2958,13 @@ Each slide has a job in the story. Write for that job — not just for the infor
 
 **Insight slide — key takeaway (the most important slide):** Three statements that show the client you understand their situation at a deeper level than they expected. These are not selling points. They are observations about the problem, the gap, or what's really at stake. Each statement stands alone — short, sharp, no hedging. If the deck has a biggest objection, address it here: name the tension, then reframe it. Write each statement so it could sit on a wall by itself.
 
+Also write a slide heading for this slide (Heading_Insight) — 2–4 words that frame what the audience is about to read. Not "Key Takeaway". Something that earns attention: "What's actually true." / "The real problem." / "Three things we know." — short, specific, surprising.
+
 Layout shape for Key_Takeaway: Three lines, each a standalone statement. Not bullets. Not full sentences with dependent clauses. Fragments that hit.
 
 **Milestones slide:** Four to five phases — each a real stage of work, not generic project management language. What actually happens in each phase and why it moves the project forward.
+
+Also write a slide heading for this slide (Heading_Milestones) — 2–4 words. Not "Milestones". Something that describes the shape of the work: "How we get there." / "The build sequence." / "Five phases." — specific to this project.
 
 Layout shape for Milestones: Each phase on a separate line. Format each as "Phase name — brief description". Use actual line breaks between phases. No paragraph text. Example:
 Phase 1 — Discovery & strategy
@@ -2970,6 +2974,8 @@ When you return Project_Milestones in JSON, separate each phase with a newline c
 
 **Timeline slide:** Process flow showing when each phase happens. One phase per line, with duration.
 
+Also write a slide heading for this slide (Heading_Timeline) — 2–4 words. Not "Timeline". Something that conveys pace or confidence: "The plan." / "Seven months." / "When it lands." — specific to this project's actual duration.
+
 Layout shape for Timeline: Each phase on a separate line. Format: "Months X-Y: Phase name". Separate each line with a newline character (\\n). Example:
 Months 1-2: Discovery & strategy
 Months 3-4: Persona & platform design
@@ -2977,6 +2983,8 @@ Months 5-6: Avatar development & testing
 When you return Project_Timeline in JSON, separate each phase with a newline character (\\n).
 
 **Investment slide — cost breakdown:** Line items showing what the investment covers — roles, deliverables, or phases — with figures from the estimate data. End with TOTAL. No decoration, no justification prose.
+
+Also write a slide heading for this slide (Heading_Cost) — 2–4 words. Not "Cost" or "Budget". Something that frames the number positively: "The investment." / "What it costs." / "£77,600." — use the actual total if you have it.
 
 Layout shape for Cost_Breakdown: Each item on a separate line. Format: "Phase name — £amount". Separate each line with a newline character (\\n). End with a line that starts with "TOTAL — " followed by the sum. Example:
 Phase 1 — £14200
@@ -2997,9 +3005,13 @@ Return a JSON object with exactly these keys — all values are flat strings (no
 "Client_Name" — the client name exactly as given
 "Project_Title" — the deck title
 "Sector" — sector / industry, two to four words
+"Heading_Insight" — 2–4 word slide heading for the insight/takeaway slide. Not "Key Takeaway".
 "Key_Takeaway" — three insight statements, each on its own line, separated by \\n. Short, standalone, no bullets.
+"Heading_Milestones" — 2–4 word slide heading for the milestones slide. Not "Milestones".
 "Project_Milestones" — each phase on its own line, format: "Phase name — what happens". Separated by \\n
+"Heading_Timeline" — 2–4 word slide heading for the timeline slide. Not "Timeline".
 "Project_Timeline" — timeline as a short process-flow paragraph or phased list
+"Heading_Cost" — 2–4 word slide heading for the investment slide. Not "Cost" or "Budget".
 "Cost_Breakdown" — line items one per line, final line starting TOTAL. Separated by \\n
 "Next_Steps" — what happens after sign-off, concrete steps
 "Stakeholders" — people and roles, one per line separated by \\n

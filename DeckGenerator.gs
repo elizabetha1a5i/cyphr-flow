@@ -26,25 +26,33 @@ var OUTPUT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
 
 // Font sizes per slot
 var SLOT_STYLES = {
-  '[[title]]':      { fontSize: 60, bold: true  },
-  '[[date]]':       { fontSize: 20, bold: false },
-  '{{sector}}':     { fontSize: 60, bold: true  },
-  '{{Takeaway}}':   { fontSize: 34, bold: false },
-  '{{Milestones}}': { fontSize: 22, bold: false },
-  '{{Timeine}}':    { fontSize: 22, bold: false },
-  '{{Cost }}':      { fontSize: 22, bold: false },
+  '[[title]]':           { fontSize: 60, bold: true  },
+  '[[date]]':            { fontSize: 20, bold: false },
+  '{{sector}}':          { fontSize: 60, bold: true  },
+  '{{Heading_Insight}}': { fontSize: 28, bold: true  },
+  '{{Takeaway}}':        { fontSize: 34, bold: false },
+  '{{Heading_Milestones}}': { fontSize: 28, bold: true },
+  '{{Milestones}}':      { fontSize: 22, bold: false },
+  '{{Heading_Timeline}}':   { fontSize: 28, bold: true },
+  '{{Timeine}}':         { fontSize: 22, bold: false },
+  '{{Heading_Cost}}':    { fontSize: 28, bold: true  },
+  '{{Cost }}':           { fontSize: 22, bold: false },
 };
 
 // Layout per slot — repositions and resizes the shape to fill the content area.
 // Content area on a 720×405pt slide below the header rule: top≈58, left=25, width=670, height=332
 var SLOT_LAYOUT = {
-  '[[title]]':      { left: 25,  top: 80,  width: 670, height: 200 },
-  '[[date]]':       null, // keep date in its template position
-  '{{sector}}':     { left: 25,  top: 120, width: 670, height: 220 },
-  '{{Takeaway}}':   { left: 25,  top: 65,  width: 670, height: 320 },
-  '{{Milestones}}': { left: 25,  top: 58,  width: 670, height: 332 },
-  '{{Timeine}}':    { left: 25,  top: 58,  width: 670, height: 332 },
-  '{{Cost }}':      { left: 25,  top: 58,  width: 670, height: 332 },
+  '[[title]]':           { left: 25, top: 80,  width: 670, height: 200 },
+  '[[date]]':            null,
+  '{{sector}}':          { left: 25, top: 120, width: 670, height: 220 },
+  '{{Heading_Insight}}': { left: 25, top: 58,  width: 670, height: 45  },
+  '{{Takeaway}}':        { left: 25, top: 110, width: 670, height: 280 },
+  '{{Heading_Milestones}}': { left: 25, top: 58, width: 670, height: 45 },
+  '{{Milestones}}':      { left: 25, top: 110, width: 670, height: 280 },
+  '{{Heading_Timeline}}':   { left: 25, top: 58, width: 670, height: 45 },
+  '{{Timeine}}':         { left: 25, top: 110, width: 670, height: 280 },
+  '{{Heading_Cost}}':    { left: 25, top: 58,  width: 670, height: 45  },
+  '{{Cost }}':           { left: 25, top: 110, width: 670, height: 280 },
 };
 
 
@@ -83,13 +91,17 @@ function buildDeck(data) {
   var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 
   var content = {
-    '[[title]]':       data.Project_Title       || '',
-    '[[date]]':        date,
-    '{{sector}}':      data.Sector              || '',
-    '{{Takeaway}}':    data.Key_Takeaway        || '',
-    '{{Milestones}}':  data.Project_Milestones  || '',
-    '{{Timeine}}':     data.Project_Timeline    || '',  // typo in template — do not fix here
-    '{{Cost }}':       data.Cost_Breakdown      || '',
+    '[[title]]':              data.Project_Title       || '',
+    '[[date]]':               date,
+    '{{sector}}':             data.Sector              || '',
+    '{{Heading_Insight}}':    data.Heading_Insight     || '',
+    '{{Takeaway}}':           data.Key_Takeaway        || '',
+    '{{Heading_Milestones}}': data.Heading_Milestones  || '',
+    '{{Milestones}}':         data.Project_Milestones  || '',
+    '{{Heading_Timeline}}':   data.Heading_Timeline    || '',
+    '{{Timeine}}':            data.Project_Timeline    || '',  // typo in template — do not fix here
+    '{{Heading_Cost}}':       data.Heading_Cost        || '',
+    '{{Cost }}':              data.Cost_Breakdown      || '',
   };
 
   var clientName   = data.Client_Name   || 'Client';
