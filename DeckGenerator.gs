@@ -157,7 +157,7 @@ function addHeading(slide, text, d) {
 function addDivider(slide, y, d) {
   var line = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, d.MARGIN, y, d.CONTENT_W, 1);
   line.getFill().setSolidFill('#000000');
-  line.getBorder().setWeight(0);
+  line.getBorder().setTransparent();
 }
 
 
@@ -213,7 +213,7 @@ function layoutTimelineList(slide, item, d) {
     // Left border bar
     var bar = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, d.MARGIN, top, barW, itemH);
     bar.getFill().setSolidFill('#000000');
-    bar.getBorder().setWeight(0);
+    bar.getBorder().setTransparent();
     // Text: period label bold + description regular
     var colonIdx = lines[i].indexOf(':');
     var tb = slide.insertTextBox('', d.MARGIN + padL, top, d.CONTENT_W - padL, itemH);
