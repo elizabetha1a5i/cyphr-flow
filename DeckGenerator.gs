@@ -51,6 +51,19 @@ function doPost(e) {
 }
 
 
+function smartSplit(text) {
+  if (text.indexOf('\n') !== -1) {
+    return text.split('\n').filter(function(line) { return line.trim() !== ''; });
+  }
+  var delimiters = ['. ', '; ', ' | '];
+  for (var i = 0; i < delimiters.length; i++) {
+    if (text.indexOf(delimiters[i]) !== -1) {
+      return text.split(delimiters[i]).filter(function(line) { return line.trim() !== ''; });
+    }
+  }
+  return [text];
+}
+
 function buildDeck(data) {
   var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 
@@ -97,38 +110,36 @@ function buildDeck(data) {
         tf.clear();
 
         if (matchedKey === '{{Milestones}}') {
-          // Bold phase name, regular description — split on " — "
-          var lines = text.split('\n');
+          var lines = smartSplit(text);
           for (var l = 0; l < lines.length; l++) {
             if (l > 0) tf.appendText('\n');
-            var parts = lines[l].split(' — ');
+            var parts = lines[l].trim().split(' — ');
             if (parts.length >= 2) {
               var boldPart = tf.appendText(parts[0] + ' — ');
               boldPart.getTextStyle().setBold(true).setFontSize(style.fontSize);
               var regularPart = tf.appendText(parts.slice(1).join(' — '));
               regularPart.getTextStyle().setBold(false).setFontSize(style.fontSize - 2);
             } else {
-              var plain = tf.appendText(lines[l]);
+              var plain = tf.appendText(lines[l].trim());
               plain.getTextStyle().setBold(false).setFontSize(style.fontSize);
             }
           }
         } else if (matchedKey === '{{Cost }}') {
-          // Regular line items, bold TOTAL line
-          var costLines = text.split('\n');
+          var costLines = smartSplit(text);
           for (var c = 0; c < costLines.length; c++) {
             if (c > 0) tf.appendText('\n');
-            var isTotal = costLines[c].toUpperCase().indexOf('TOTAL') === 0;
-            var costRange = tf.appendText(costLines[c]);
+            var costLine = costLines[c].trim();
+            var isTotal = costLine.toUpperCase().indexOf('TOTAL') === 0;
+            var costRange = tf.appendText(costLine);
             costRange.getTextStyle()
               .setBold(isTotal)
               .setFontSize(isTotal ? style.fontSize + 4 : style.fontSize);
           }
         } else if (matchedKey === '{{Takeaway}}') {
-          // Each statement on its own line with extra spacing
-          var statements = text.split('\n');
+          var statements = smartSplit(text);
           for (var s = 0; s < statements.length; s++) {
             if (s > 0) tf.appendText('\n\n');
-            var stRange = tf.appendText(statements[s]);
+            var stRange = tf.appendText(statements[s].trim());
             stRange.getTextStyle().setBold(false).setFontSize(style.fontSize);
           }
         } else {

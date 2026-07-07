@@ -2962,15 +2962,27 @@ Layout shape for Key_Takeaway: Three lines, each a standalone statement. Not bul
 
 **Milestones slide:** Four to five phases — each a real stage of work, not generic project management language. What actually happens in each phase and why it moves the project forward.
 
-Layout shape for Milestones: Each line formatted as "Phase name — what happens". One line per phase. No paragraph text.
+Layout shape for Milestones: Each phase on a separate line. Format each as "Phase name — brief description". Use actual line breaks between phases. No paragraph text. Example:
+Phase 1 — Discovery & strategy
+Phase 2 — Persona development
+Phase 3 — AI & platform build
+When you return Project_Milestones in JSON, separate each phase with a newline character (\\n). Do not use periods. No decorative text.
 
-**Timeline slide:** A clear, confident account of when things happen. Phase names, durations, key dates. Specific — write it like the project has already started.
+**Timeline slide:** Process flow showing when each phase happens. One phase per line, with duration.
 
-Layout shape for Timeline: Process flow. Short phase labels with durations. Not a paragraph.
+Layout shape for Timeline: Each phase on a separate line. Format: "Months X-Y: Phase name". Separate each line with a newline character (\\n). Example:
+Months 1-2: Discovery & strategy
+Months 3-4: Persona & platform design
+Months 5-6: Avatar development & testing
+When you return Project_Timeline in JSON, separate each phase with a newline character (\\n).
 
 **Investment slide — cost breakdown:** Line items showing what the investment covers — roles, deliverables, or phases — with figures from the estimate data. End with TOTAL. No decoration, no justification prose.
 
-Layout shape for Cost_Breakdown: One line item per line. Final line must start with TOTAL.
+Layout shape for Cost_Breakdown: Each item on a separate line. Format: "Phase name — £amount". Separate each line with a newline character (\\n). End with a line that starts with "TOTAL — " followed by the sum. Example:
+Phase 1 — £14200
+Phase 2 — £12800
+TOTAL — £27000
+When you return Cost_Breakdown in JSON, separate each item with a newline character (\\n). Do not use commas or decorative text.
 
 **Next steps slide:** After the client says yes, what happens first. Concrete and specific — not "we'll be in touch". Three to four steps maximum.
 
