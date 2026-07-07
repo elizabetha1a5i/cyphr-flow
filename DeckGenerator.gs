@@ -29,7 +29,7 @@ var SLOT_STYLES = {
   '{{Takeaway}}':   { fontSize: 34, bold: false },
   '{{Milestones}}': { fontSize: 22, bold: false },
   '{{Timeine}}':    { fontSize: 22, bold: false },
-  '{{Cost}}':       { fontSize: 22, bold: false },
+  '{{Cost }}':      { fontSize: 22, bold: false },
 };
 
 
@@ -62,7 +62,7 @@ function buildDeck(data) {
     '{{Takeaway}}':    data.Key_Takeaway        || '',
     '{{Milestones}}':  data.Project_Milestones  || '',
     '{{Timeine}}':     data.Project_Timeline    || '',  // typo in template — do not fix here
-    '{{Cost}}':        data.Cost_Breakdown      || '',
+    '{{Cost }}':       data.Cost_Breakdown      || '',
   };
 
   var clientName   = data.Client_Name   || 'Client';
@@ -82,14 +82,21 @@ function buildDeck(data) {
       if (!shape.getText) continue;
       var raw = shape.getText().asString().trim();
 
-      if (content.hasOwnProperty(raw)) {
-        var text    = content[raw];
-        var style   = SLOT_STYLES[raw];
+      var matchedKey = null;
+      for (var k in content) {
+        if (raw === k) { matchedKey = k; break; }
+        // contains-fallback for [[bracket]] markers that may have extra whitespace in template
+        if (k.indexOf('[[') === 0 && raw.indexOf(k) !== -1) { matchedKey = k; break; }
+      }
+
+      if (matchedKey !== null) {
+        var text    = content[matchedKey];
+        var style   = SLOT_STYLES[matchedKey];
         var tf      = shape.getText();
 
         tf.clear();
 
-        if (raw === '{{Milestones}}') {
+        if (matchedKey === '{{Milestones}}') {
           // Bold phase name, regular description — split on " — "
           var lines = text.split('\n');
           for (var l = 0; l < lines.length; l++) {
@@ -105,7 +112,7 @@ function buildDeck(data) {
               plain.getTextStyle().setBold(false).setFontSize(style.fontSize);
             }
           }
-        } else if (raw === '{{Cost}}') {
+        } else if (matchedKey === '{{Cost }}') {
           // Regular line items, bold TOTAL line
           var costLines = text.split('\n');
           for (var c = 0; c < costLines.length; c++) {
@@ -116,7 +123,7 @@ function buildDeck(data) {
               .setBold(isTotal)
               .setFontSize(isTotal ? style.fontSize + 4 : style.fontSize);
           }
-        } else if (raw === '{{Takeaway}}') {
+        } else if (matchedKey === '{{Takeaway}}') {
           // Each statement on its own line with extra spacing
           var statements = text.split('\n');
           for (var s = 0; s < statements.length; s++) {

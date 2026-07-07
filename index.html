@@ -2891,38 +2891,49 @@ async function generateDeck() {
       'Estimate Output: '  + (p.estimateOutput || ''),
     ].join('\n');
 
-    const geminiPrompt = `You are a senior strategist at Cyphr, a creative strategy and innovation studio. You are writing a client-facing proposal deck. Write with authority, intelligence and creative confidence — no filler, no hedging, no corporate speak.
+    const geminiPrompt = `You are a strategist at Cyphr, an AI creative strategy studio. You have been briefed on a client project and your job is to write a proposal deck that will be sent directly to the client. This is real work — write it as if you are the person presenting it in the room.
 
-Return ONLY a valid JSON object. No markdown, no code fences, no commentary outside the JSON.
+Here is everything you know about the project:
 
-JSON keys and what to write for each:
+${rawContext}
 
-"Client_Name": The client's name exactly as given.
+Now write the deck. Think of it as a complete narrative with a beginning, middle, and end — not a form to fill in.
 
-"Project_Title": A bold, memorable 4–7 word title that captures the ambition of this project. Not descriptive — provocative. Think campaign title, not project name.
+The deck has these slides. For each one, think about what it needs to DO for the reader, not just what information goes there:
 
-"Sector": 2–4 words. The industry or space this sits in.
+**Cover slide — project title:** Name this project. Not a description of what it is — a name that gives it identity. Something the client will use when they talk about it internally. Campaign-style, memorable, specific to what this project is actually trying to achieve.
 
-"Key_Takeaway": This is the most important slide. Write 3 powerful statements that make the case for this project — why it matters, what's at stake, what Cyphr uniquely brings. Each statement on its own line. No bullets, no numbering. Write like a manifesto, not a list. Each line max 20 words. These should make the client feel understood and excited.
+**Industry slide — sector:** Two to four words that place this work in its context. Where does this project sit? What world does it belong to?
 
-"Project_Milestones": 4–5 milestones that tell the story of how this project gets done. Each on its own line, format: "Phase name — what happens and why it matters". Be specific to this project, not generic.
+**Insight slide — key takeaway:** This is the most important slide in the deck. Three statements that show the client you understand their situation at a deeper level than they expected. Not selling points. Not what Cyphr will do. Observations about the problem, the opportunity, or what's really at stake. Write each statement so it could stand alone on a wall. If they read nothing else, these three lines should make them feel understood and make them want to know more.
 
-"Project_Timeline": A confident, clear paragraph (3–4 sentences) covering the overall arc — when it starts, how long each phase takes, when the client sees results. If exact dates are unknown, frame it relationally (e.g. "From kickoff, Phase 1 runs four weeks...").
+**Milestones slide:** Tell the story of how this project gets done. Four to five phases — each one a real stage of the work, not generic project management language. What actually happens in each phase and why it moves the project forward.
 
-"Cost_Breakdown": Clean line-item breakdown. One item per line: "Role or deliverable — £X,XXX". Final line: "TOTAL — £XX,XXX". Pull figures from the estimate output if available. If not, use the budget figure as the total and note it as an estimate.
+**Timeline slide:** A clear, confident account of how this project runs from kickoff to completion. When does each phase happen, how long does it take, when does the client start seeing results. If exact dates aren't known, frame it from kickoff.
 
-"Next_Steps": 2–3 sentences. What happens after the client says yes — first call, kickoff, first deliverable. Concrete and action-oriented.
+**Investment slide — cost breakdown:** The financial picture. Line items showing what the investment covers — roles, deliverables, or phases — with figures pulled from the estimate data if available. End with the total. Write it so the client can see clearly what they are getting for what they are paying.
 
-"Stakeholders": Key people involved and their roles, one per line. Include client-side and Cyphr-side if known.
+**Next steps slide:** After the client says yes, what happens next. First conversation, kickoff, first thing they will see. Concrete and specific — not "we'll be in touch".
 
-Voice rules:
-- Cyphr's tone: direct, sharp, no waffle. Short sentences land harder than long ones.
-- Never write "TBC" or placeholder text — if something is unknown, make a smart inference or leave it out entirely.
-- Do not invent specific numbers or names not in the source data.
-- All values must be flat strings — no nested objects or arrays.
+**Stakeholders:** Who is involved on both sides. Client contacts and Cyphr team members, with their roles.
 
-Raw project data:
-${rawContext}`;
+Voice: Cyphr is direct and sharp. Short sentences. No hedging, no corporate language, no "leveraging synergies". Write like a person, not a document.
+
+One rule: do not invent numbers or names that are not in the project data. If something is missing, infer intelligently or leave it out — never write a placeholder.
+
+Your output gets placed into a branded slide template. Return it as a JSON object with exactly these keys — all values must be flat strings (no arrays, no nested objects):
+
+"Client_Name" — the client name exactly as given
+"Project_Title" — the deck title
+"Sector" — the sector / industry context
+"Key_Takeaway" — the three insight statements, each on its own line separated by \\n
+"Project_Milestones" — each milestone on its own line, format: "Phase name — what happens". Separated by \\n
+"Project_Timeline" — the timeline as a paragraph
+"Cost_Breakdown" — line items one per line, final line starting with TOTAL. Separated by \\n
+"Next_Steps" — what happens after sign-off
+"Stakeholders" — key people and roles, one per line separated by \\n
+
+Return ONLY the JSON object. No markdown, no code fences, no explanation outside the JSON.`;
 
     const slideData = await callGemini(geminiPrompt, { maxTokens: 2500, responseMimeType: 'application/json' });
 
