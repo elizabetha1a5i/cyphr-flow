@@ -2841,7 +2841,36 @@ function rSetup() {
 
   <div class="card">
     <div class="card-title">Presentation deck</div>
-    <div class="card-sub">Generate a branded Cyphr Slides deck from this project.</div>
+    <div class="card-sub">Brief the deck before generating — this shapes everything Gemini writes.</div>
+    <div style="display:grid;gap:10px;margin-bottom:14px">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Goal — what should the client do after this deck?</label>
+        <select id="deck-goal" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink1);font-size:13px">
+          <option value="">Select a goal…</option>
+          <option value="Fund it — approve budget or investment">Fund it (approve budget / investment)</option>
+          <option value="Approve it — sign off on the approach">Approve it (sign off on approach)</option>
+          <option value="Understand it — grasp the concept and buy in intellectually">Understand it (buy in intellectually)</option>
+          <option value="Align internally — get the team on the same page">Align internally (team alignment)</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Who's in the room?</label>
+        <input id="deck-audience" type="text" placeholder="e.g. Founder + Head of Product, both technical" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink1);font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Biggest objection — what could kill this?</label>
+        <input id="deck-risk" type="text" placeholder="e.g. They'll think it's too expensive" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink1);font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Tone</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Rigorous & data-driven" style="accent-color:var(--blue)"> Rigorous</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Energetic & visionary" style="accent-color:var(--blue)"> Energetic</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Matter-of-fact & grounded" style="accent-color:var(--blue)"> Matter-of-fact</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Consultative & collaborative" style="accent-color:var(--blue)"> Collaborative</label>
+        </div>
+      </div>
+    </div>
     <div id="deck-gen-out" style="display:none;margin-bottom:10px"></div>
     <div id="deck-gen-load" class="loading-row" style="display:none">
       <div class="spinner"></div>
@@ -2891,47 +2920,77 @@ async function generateDeck() {
       'Estimate Output: '  + (p.estimateOutput || ''),
     ].join('\n');
 
-    const geminiPrompt = `You are a strategist at Cyphr, an AI creative strategy studio. You have been briefed on a client project and your job is to write a proposal deck that will be sent directly to the client. This is real work — write it as if you are the person presenting it in the room.
+    const deckGoal     = (document.getElementById('deck-goal')?.value     || '').trim();
+    const deckAudience = (document.getElementById('deck-audience')?.value || '').trim();
+    const deckRisk     = (document.getElementById('deck-risk')?.value     || '').trim();
+    const deckTone     = (document.querySelector('input[name="deck-tone"]:checked')?.value || '').trim();
 
+    const briefBlock = (deckGoal || deckAudience || deckRisk || deckTone) ? `
+DECK BRIEF (use this to shape every word you write):
+${deckGoal     ? `Goal: ${deckGoal}`                                    : ''}
+${deckAudience ? `Audience: ${deckAudience}`                            : ''}
+${deckRisk     ? `Biggest objection to address: ${deckRisk}`            : ''}
+${deckTone     ? `Tone: ${deckTone}`                                    : ''}
+${deckRisk     ? `\nCritical: The objection above must be named and defanged in the Key_Takeaway slide — address it head-on, not defensively, not by ignoring it.` : ''}
+` : '';
+
+    const geminiPrompt = `You are a deck strategist at Cyphr, an AI creative strategy studio. Your job is to write a proposal deck that gets sent directly to the client. This is real work — write it as if you are the person presenting it in the room.
+${briefBlock}
 Here is everything you know about the project:
 
 ${rawContext}
 
-Now write the deck. Think of it as a complete narrative with a beginning, middle, and end — not a form to fill in.
+Before you write anything, work through this analysis of the project data. This shapes what you write — do not skip it:
 
-The deck has these slides. For each one, think about what it needs to DO for the reader, not just what information goes there:
+1. What is the core problem this project solves? (stated and implied)
+2. What is the urgency signal — why does this need to happen now?
+3. Who is the primary decision-maker and what do they most fear getting wrong?
+4. What is the strongest proof point available in this data?
+5. What is the biggest objection the client will have — and how do you defang it?
 
-**Cover slide — project title:** Name this project. Not a description of what it is — a name that gives it identity. Something the client will use when they talk about it internally. Campaign-style, memorable, specific to what this project is actually trying to achieve.
+Now write the deck. It is a complete narrative: beginning, middle, end. Not a form to fill in.
 
-**Industry slide — sector:** Two to four words that place this work in its context. Where does this project sit? What world does it belong to?
+Each slide has a job in the story. Write for that job — not just for the information:
 
-**Insight slide — key takeaway:** This is the most important slide in the deck. Three statements that show the client you understand their situation at a deeper level than they expected. Not selling points. Not what Cyphr will do. Observations about the problem, the opportunity, or what's really at stake. Write each statement so it could stand alone on a wall. If they read nothing else, these three lines should make them feel understood and make them want to know more.
+**Cover slide — project title (Key_Takeaway context):** Name this project. Not a description — a name that gives it identity. Something the client will say internally. Specific, direct, memorable.
 
-**Milestones slide:** Tell the story of how this project gets done. Four to five phases — each one a real stage of the work, not generic project management language. What actually happens in each phase and why it moves the project forward.
+**Industry slide — sector:** Two to four words that place this work in context. No jargon.
 
-**Timeline slide:** A clear, confident account of how this project runs from kickoff to completion. When does each phase happen, how long does it take, when does the client start seeing results. If exact dates aren't known, frame it from kickoff.
+**Insight slide — key takeaway (the most important slide):** Three statements that show the client you understand their situation at a deeper level than they expected. These are not selling points. They are observations about the problem, the gap, or what's really at stake. Each statement stands alone — short, sharp, no hedging. If the deck has a biggest objection, address it here: name the tension, then reframe it. Write each statement so it could sit on a wall by itself.
 
-**Investment slide — cost breakdown:** The financial picture. Line items showing what the investment covers — roles, deliverables, or phases — with figures pulled from the estimate data if available. End with the total. Write it so the client can see clearly what they are getting for what they are paying.
+Layout shape for Key_Takeaway: Three lines, each a standalone statement. Not bullets. Not full sentences with dependent clauses. Fragments that hit.
 
-**Next steps slide:** After the client says yes, what happens next. First conversation, kickoff, first thing they will see. Concrete and specific — not "we'll be in touch".
+**Milestones slide:** Four to five phases — each a real stage of work, not generic project management language. What actually happens in each phase and why it moves the project forward.
 
-**Stakeholders:** Who is involved on both sides. Client contacts and Cyphr team members, with their roles.
+Layout shape for Milestones: Each line formatted as "Phase name — what happens". One line per phase. No paragraph text.
 
-Voice: Cyphr is direct and sharp. Short sentences. No hedging, no corporate language, no "leveraging synergies". Write like a person, not a document.
+**Timeline slide:** A clear, confident account of when things happen. Phase names, durations, key dates. Specific — write it like the project has already started.
 
-One rule: do not invent numbers or names that are not in the project data. If something is missing, infer intelligently or leave it out — never write a placeholder.
+Layout shape for Timeline: Process flow. Short phase labels with durations. Not a paragraph.
 
-Your output gets placed into a branded slide template. Return it as a JSON object with exactly these keys — all values must be flat strings (no arrays, no nested objects):
+**Investment slide — cost breakdown:** Line items showing what the investment covers — roles, deliverables, or phases — with figures from the estimate data. End with TOTAL. No decoration, no justification prose.
+
+Layout shape for Cost_Breakdown: One line item per line. Final line must start with TOTAL.
+
+**Next steps slide:** After the client says yes, what happens first. Concrete and specific — not "we'll be in touch". Three to four steps maximum.
+
+**Stakeholders:** Who is involved on both sides. One person per line, name and role.
+
+Voice: Direct and sharp. Short sentences. No hedging. No corporate language. Write like a person, not a document. Match the tone specified in the brief — if rigorous, every claim has evidence; if energetic, there is momentum in every line; if matter-of-fact, no flourishes.
+
+One rule: do not invent numbers or names that are not in the project data. If something is missing, infer intelligently or leave it out.
+
+Return a JSON object with exactly these keys — all values are flat strings (no arrays, no nested objects):
 
 "Client_Name" — the client name exactly as given
 "Project_Title" — the deck title
-"Sector" — the sector / industry context
-"Key_Takeaway" — the three insight statements, each on its own line separated by \\n
-"Project_Milestones" — each milestone on its own line, format: "Phase name — what happens". Separated by \\n
-"Project_Timeline" — the timeline as a paragraph
-"Cost_Breakdown" — line items one per line, final line starting with TOTAL. Separated by \\n
-"Next_Steps" — what happens after sign-off
-"Stakeholders" — key people and roles, one per line separated by \\n
+"Sector" — sector / industry, two to four words
+"Key_Takeaway" — three insight statements, each on its own line, separated by \\n. Short, standalone, no bullets.
+"Project_Milestones" — each phase on its own line, format: "Phase name — what happens". Separated by \\n
+"Project_Timeline" — timeline as a short process-flow paragraph or phased list
+"Cost_Breakdown" — line items one per line, final line starting TOTAL. Separated by \\n
+"Next_Steps" — what happens after sign-off, concrete steps
+"Stakeholders" — people and roles, one per line separated by \\n
 
 Return ONLY the JSON object. No markdown, no code fences, no explanation outside the JSON.`;
 
