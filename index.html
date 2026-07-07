@@ -1779,7 +1779,7 @@ ${truncated ? '\nNOTE: Input was truncated to 40,000 characters. Extract from wh
 
 Text:
 ${textToUse}`;
-  const out = await callGemini(prompt, { maxTokens: 8000, responseMimeType: 'application/json' });
+  const out = await callGemini(prompt, { maxTokens: 16000, responseMimeType: 'application/json' });
   try {
     const jsonMatch = out.match(/\{[\s\S]*\}/);
     const clean = jsonMatch ? jsonMatch[0] : out.replace(/```json\s*|```\s*/g,'').replace(/^["']?json\s*/i,'').trim();
