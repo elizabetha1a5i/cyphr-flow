@@ -1836,21 +1836,26 @@ function estRenderStep2(fields, days) {
     <input type="text" id="${id}" value="${String(val||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper)">
   </div>`;
 
+  const cellStyle = 'padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--paper);width:100%;box-sizing:border-box';
   const daysTable = (phase, roleList, daysData) => `
     <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)">
       <thead>
         <tr>
           <th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3)">Role</th>
-          <th style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3)">Rate/day</th>
-          <th style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3)">Days</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3);width:80px">Rate/day</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3);width:70px">Days</th>
         </tr>
       </thead>
       <tbody>
-        ${roleList.map(r => `<tr>
-          <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${r.label}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;color:var(--ink3)">£${r.rate}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:right">
-            <input type="number" min="0" max="200" value="${(daysData&&daysData[r.key])||0}" data-phase="${phase}" data-role="${r.key}" class="est-days-input" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);text-align:right;background:var(--paper)">
+        ${roleList.map((r,i) => `<tr>
+          <td style="padding:4px 6px;border-bottom:1px solid var(--border)">
+            <input type="text" value="${r.label}" data-phase="${phase}" data-rowidx="${i}" class="est-role-label" style="${cellStyle}">
+          </td>
+          <td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right">
+            <input type="number" min="0" value="${r.rate}" data-phase="${phase}" data-rowidx="${i}" class="est-role-rate" style="${cellStyle};text-align:right">
+          </td>
+          <td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right">
+            <input type="number" min="0" max="999" value="${(daysData&&daysData[r.key])||0}" data-phase="${phase}" data-role="${r.key}" class="est-days-input" style="${cellStyle};text-align:right">
           </td>
         </tr>`).join('')}
       </tbody>
@@ -1886,10 +1891,24 @@ async function estGenerate() {
   const clientName  = ($('est-f-client')  || $('est-client-name')).value.trim() || estFields.client_name || 'Client';
   const projectName = ($('est-f-project') || {value:''}).value.trim() || estFields.project_name || '';
 
-  // Collect days from table inputs
+  // Collect days, labels, and rates from editable table inputs
   const collected = { phase1: {}, phase2: {} };
   document.querySelectorAll('.est-days-input').forEach(inp => {
     collected[inp.dataset.phase][inp.dataset.role] = parseInt(inp.value, 10) || 0;
+  });
+  // Build edited role lists (label + rate may have been changed by user)
+  const editedRoles = { phase1: [], phase2: [] };
+  ['phase1','phase2'].forEach(phase => {
+    const labels = document.querySelectorAll(`.est-role-label[data-phase="${phase}"]`);
+    const rates  = document.querySelectorAll(`.est-role-rate[data-phase="${phase}"]`);
+    EST_ROLES[phase].forEach((r, i) => {
+      editedRoles[phase].push({
+        key:   r.key,
+        label: (labels[i] && labels[i].value.trim()) || r.label,
+        rate:  parseInt((rates[i] && rates[i].value) || r.rate, 10) || r.rate,
+        days:  (collected[phase] || {})[r.key] || 0
+      });
+    });
   });
 
   estShowStep(3);
@@ -1937,58 +1956,42 @@ async function estGenerate() {
     const sheetData = await sheetRes.json();
     const rows = sheetData.values || [];
 
-    // Map role labels to row numbers (1-indexed for Sheets API)
-    const roleRowMap = {};
-    rows.forEach((row, idx) => {
-      const cell = (row[0] || '').trim().toLowerCase();
-      // Try to match each known role label
-      [...EST_ROLES.phase1, ...EST_ROLES.phase2].forEach(r => {
-        if (cell && r.label.toLowerCase().includes(cell) || cell.includes(r.label.toLowerCase().split(' ')[0].toLowerCase())) {
-          // Use label as key with phase context — we'll match by unique label text
-          if (!roleRowMap[cell]) roleRowMap[cell] = idx + 1; // 1-indexed
-        }
-      });
-    });
-
-    // Build value updates: match rows by scanning for role name substrings
-    const updates = [];
-    const allRoles = [
-      ...EST_ROLES.phase1.map(r => ({ ...r, phase: 'phase1' })),
-      ...EST_ROLES.phase2.map(r => ({ ...r, phase: 'phase2' }))
+    // Build flat list of all roles with edited labels/rates/days
+    const allEditedRoles = [
+      ...editedRoles.phase1.map(r => ({ ...r, phase: 'phase1' })),
+      ...editedRoles.phase2.map(r => ({ ...r, phase: 'phase2' }))
     ];
 
-    // Scan rows to find each role — track which ones we've already matched to avoid double-assigning
-    const matched = new Map(); // rowIdx -> { phase, key, days }
-    rows.forEach((row, rowIdx) => {
-      const cellText = (row[0] || '').trim();
-      if (!cellText) return;
-      allRoles.forEach(r => {
-        if (matched.has(rowIdx)) return; // row already claimed
-        // Match if the cell text substantially matches the role label
-        const cellLower = cellText.toLowerCase();
-        const labelLower = r.label.toLowerCase();
-        if (cellLower === labelLower || labelLower.startsWith(cellLower) || cellLower.startsWith(labelLower.split('(')[0].trim())) {
-          const days = (collected[r.phase] || {})[r.key] || 0;
-          matched.set(rowIdx, { rowNum: rowIdx + 1, days });
+    // Scan column B to match each role to its sheet row
+    const updates = [];
+    const claimed = new Set();
+    allEditedRoles.forEach(r => {
+      const targetLabel = r.label.toLowerCase();
+      const baseLabel = targetLabel.split('(')[0].trim();
+      for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+        if (claimed.has(rowIdx)) continue;
+        const cellText = (rows[rowIdx][0] || '').trim().toLowerCase();
+        if (!cellText) continue;
+        if (cellText === targetLabel || cellText.startsWith(baseLabel) || targetLabel.startsWith(cellText)) {
+          const rowNum = rowIdx + 1;
+          updates.push({ range: `C${rowNum}`, values: [[r.rate]] });
+          updates.push({ range: `D${rowNum}`, values: [[r.days]] });
+          claimed.add(rowIdx);
+          break;
         }
-      });
-    });
-
-    matched.forEach(({ rowNum, days }) => {
-      updates.push({ range: `D${rowNum}`, values: [[days]] });
+      }
     });
 
     if (!updates.length) {
-      log('Warning: could not match role rows — sheet may have changed. Writing to default rows…');
-      // Fallback: hardcode approximate rows based on template
-      const fallbackRows = {
-        phase1: [8,9,10,11,12],
-        phase2: [24,25,26,27,28,29,30,31,32]
-      };
+      log('Warning: could not match role rows — using fallback row positions…');
+      const fallbackRows = { phase1: [8,9,10,11,12], phase2: [24,25,26,27,28,29,30,31,32] };
       ['phase1','phase2'].forEach(phase => {
-        EST_ROLES[phase].forEach((r, i) => {
-          const rowNum = fallbackRows[phase][i];
-          if (rowNum) updates.push({ range: `D${rowNum}`, values: [[(collected[phase]||{})[r.key]||0]] });
+        editedRoles[phase].forEach((r, i) => {
+          const rowNum = (fallbackRows[phase] || [])[i];
+          if (rowNum) {
+            updates.push({ range: `C${rowNum}`, values: [[r.rate]] });
+            updates.push({ range: `D${rowNum}`, values: [[r.days]] });
+          }
         });
       });
     }
