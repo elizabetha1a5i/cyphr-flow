@@ -1597,7 +1597,7 @@ async function readAgencyDetails(token) {
     ).join('').trim();
     if (!text) return {};
 
-    const result = await callGemini(`Read this agency details document and extract every field that has an actual value filled in (skip any field that is blank, says "[fill in]", or is a placeholder). Return ONLY valid JSON — include only keys where there is real content.
+    const result = await callGemini(`Read this agency details document and extract every field that has an actual value filled in (skip any field that is blank, says "[fill in]", starts with "e.g.", is an example, or is a placeholder). Return ONLY valid JSON — include only keys where there is real content.
 
 Fields to look for if present:
 agency_name, agency_website, agency_email, agency_phone, company_number, address,
