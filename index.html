@@ -1316,16 +1316,142 @@ const PROP_TEMPLATE_DOC_ID        = '1lCLYqrCy29igLR0GgVFq98c-djcRUQcTbQDuT9t_AL
 const PROP_TEMPLATE_SLIDES_ID     = '13YVxEbj1y4xLxaFC7mHtrzKxG2WZbFV59fOo-nBd6kI';
 const PROP_AGENCY_DOC_ID          = '1m5sVU_I39uoUSk9WLWffPotF4zaIwZhUo5D6X1StzqM';
 const PROP_PARENT_FOLDER_ID       = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
-const PROP_BRANDED_SLIDES_ID      = '1vPXArh3t7i07SQpBgekPceLnwmnvI7YZzOPrbmJQoU0';
+const PROP_BRANDED_SLIDES_ID      = '1znCgQg3cJeYLFQ2CwWnNBvCXbR2v04pOJdcOHQQeLJI';
 
-// Placeholder map for the Cyphr branded slides template (Presentation_9_Cyphr_Branded)
-// type:'field'    — copy directly from propFields
-// type:'static'   — fixed value
-// type:'ai'       — single Gemini call → one placeholder
-// type:'ai_split' — one Gemini call → split by newline into {{base_1}}…{{base_N}}
+// Placeholder map for Presentation_Cyphr_Minimal_FINAL (9 slides, 45 placeholders)
+// type:'field'  — direct from propFields | type:'static' — fixed | type:'ai' — Gemini call
 const PROP_CYPHR_SLIDES = [
-  { type:'field',  ph:'{{SLIDE_1_TITLE}}',  field:'Client Name' },
-  { type:'field',  ph:'{{project_name}}',   field:'Project Name' },
+
+  // ── Slide 1: Title ──────────────────────────────────────────────────────────
+  { type:'field',  ph:'{{client_name}}',   field:'Client Name' },
+  { type:'field',  ph:'{{project_name}}',  field:'Project Name' },
+  { type:'static', ph:'{{estimate_type}}', value:'Cost Estimate' },
+
+  // ── Slide 2: Executive Summary ───────────────────────────────────────────────
+  { type:'ai', ph:'{{executive_summary}}', label:'Executive summary', max_words:200,
+    prompt:(d,v)=>`Write a 3-5 sentence executive summary (max 150 words) for a Cyphr Studio ${v==='partnerships'?'partnership':'digital'} proposal to ${d['Client Name']}. Business context: ${d['Business Description']||''}. Goals: ${[d['Primary Goal 1'],d['Primary Goal 2'],d['Primary Goal 3']].filter(Boolean).join(', ')||''}. Lead with value — what Cyphr will deliver and the expected outcome. Confident, senior consultant tone. Return ONLY the paragraph.` },
+
+  // ── Slide 3: Activity Overview ───────────────────────────────────────────────
+  { type:'ai', ph:'{{digital_journey}}', label:'Digital journey context', max_words:120,
+    prompt:(d,v)=>`Write 2-3 sentences (max 100 words) framing the digital ${v==='partnerships'?'partnership':'transformation'} opportunity for ${d['Client Name']}. Business: ${d['Business Description']||''}. Target audience: ${d['Target Audience']||''}. Visionary but grounded. Return ONLY the paragraph.` },
+
+  { type:'ai', ph:'{{the_ask}}', label:'The ask (large display text)', max_words:15,
+    prompt:(d)=>`Write the client's core ask as a punchy 3-8 word phrase (MAX 8 words) for ${d['Client Name']}. Based on: ${d['Primary Goal 1']||d['Deliverables']||'digital growth'}. This renders in huge display font — be direct and bold. Return ONLY the phrase, no punctuation.` },
+
+  // ── Slide 4: Scope + Services (4 columns × 4 lines each) ────────────────────
+  // Strategy & Venture column
+  { type:'ai', ph:'{{service_1_detail_1}}', label:'Strategy & Venture: line 1', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Strategy & Venture" column in a proposal for ${d['Client Name']}. Choose from: IP development, brand strategy, ventures, partnerships, innovation consulting, market entry. Most relevant to their goals: ${d['Primary Goal 1']||''}. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_1_detail_2}}', label:'Strategy & Venture: line 2', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Strategy & Venture" column for ${d['Client Name']}. Different from "IP development" or "market entry". Choose from Cyphr's strategy offerings: growth strategy, competitive analysis, positioning, business model design. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_1_detail_3}}', label:'Strategy & Venture: line 3', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Strategy & Venture" column for ${d['Client Name']}. Choose from: stakeholder engagement, roadmap planning, investment strategy, partnerships. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_1_detail_4}}', label:'Strategy & Venture: line 4', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Strategy & Venture" column for ${d['Client Name']}. Final line — something forward-looking: innovation pipeline, venture scouting, or similar. Return ONLY the line.` },
+
+  // Product Design & Build column
+  { type:'ai', ph:'{{service_2_detail_1}}', label:'Product Design & Build: line 1', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Product Design & Build" column for ${d['Client Name']}. Their deliverables: ${d['Deliverables']||''}. Choose from: UX/UI design, brand identity, design systems, user research. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_2_detail_2}}', label:'Product Design & Build: line 2', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Product Design & Build" column for ${d['Client Name']}. Choose from: web development, mobile development, CMS build, platform development. Relevant to: ${d['Tech Stack']||'web'}. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_2_detail_3}}', label:'Product Design & Build: line 3', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Product Design & Build" column for ${d['Client Name']}. Choose from: prototyping, QA & testing, accessibility, performance optimisation. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_2_detail_4}}', label:'Product Design & Build: line 4', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Product Design & Build" column for ${d['Client Name']}. Choose from: integrations, API development, third-party platform setup, technical architecture. Return ONLY the line.` },
+
+  // Marketing column
+  { type:'ai', ph:'{{service_3_detail_1}}', label:'Marketing: line 1', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Marketing" column for ${d['Client Name']}. Their channels: ${d['Current Channels']||'digital'}. Choose from: marketing strategy, SEO, paid media, content strategy. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_3_detail_2}}', label:'Marketing: line 2', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Marketing" column for ${d['Client Name']}. Choose from: social media management, campaign activation, email marketing, CRM strategy. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_3_detail_3}}', label:'Marketing: line 3', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Marketing" column for ${d['Client Name']}. Choose from: brand communications, PR & outreach, community management, influencer strategy. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_3_detail_4}}', label:'Marketing: line 4', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Marketing" column for ${d['Client Name']}. Choose from: loyalty programmes, CRM/retention, conversion optimisation, analytics reporting. Return ONLY the line.` },
+
+  // Data & Insights column
+  { type:'ai', ph:'{{service_4_detail_1}}', label:'Data & Insights: line 1', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Data & Insights" column for ${d['Client Name']}. Choose from: data strategy, analytics setup, KPI framework, reporting dashboards. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_4_detail_2}}', label:'Data & Insights: line 2', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Data & Insights" column for ${d['Client Name']}. Choose from: audience segmentation, customer data platform, behavioural analytics, attribution modelling. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_4_detail_3}}', label:'Data & Insights: line 3', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Data & Insights" column for ${d['Client Name']}. Choose from: performance tracking, A/B testing, data visualisation, insight reporting. Return ONLY the line.` },
+  { type:'ai', ph:'{{service_4_detail_4}}', label:'Data & Insights: line 4', max_words:10,
+    prompt:(d)=>`Write ONE short service line (3-8 words, no punctuation) for a "Data & Insights" column for ${d['Client Name']}. Choose from: data governance, privacy compliance, first-party data strategy, predictive analytics. Return ONLY the line.` },
+
+  // ── Slide 5: Detailed Deliverables ───────────────────────────────────────────
+  { type:'ai', ph:'{{deliverable_intro}}', label:'Deliverables intro', max_words:80,
+    prompt:(d)=>`Write 2-3 sentences (max 70 words) introducing the deliverables for ${d['Client Name']}'s project. Context: ${d['Deliverables']||d['Service Categories']||'digital project'}. Professional, engaging. Return ONLY the paragraph.` },
+
+  { type:'ai', ph:'{{deliverable_1}}', label:'DISCOVER card deliverables', max_words:100,
+    prompt:(d)=>`List 3-5 short discovery-phase deliverables (max 8 words each) for ${d['Client Name']}'s project. Include: research, audits, stakeholder interviews, analysis. Based on: ${d['Pain Point 1']||''}, ${d['Business Description']||''}. One item per line. NO bullets, dashes, or numbers — plain text lines only.` },
+
+  { type:'ai', ph:'{{deliverable_2}}', label:'DEFINE card deliverables', max_words:100,
+    prompt:(d)=>`List 3-5 short define-phase deliverables (max 8 words each) for ${d['Client Name']}'s project. Include: strategy, requirements, roadmap, specifications. Based on goals: ${d['Primary Goal 1']||''}, ${d['Primary Goal 2']||''}. One item per line. NO bullets, dashes, or numbers — plain text lines only.` },
+
+  { type:'ai', ph:'{{deliverable_3}}', label:'DESIGN & DELIVER card deliverables', max_words:100,
+    prompt:(d)=>`List 3-5 short design-and-deliver phase deliverables (max 8 words each) for ${d['Client Name']}'s project. Include: design, build, launch, optimisation. Based on: ${d['Deliverables']||d['Service Categories']||''}. One item per line. NO bullets, dashes, or numbers — plain text lines only.` },
+
+  // ── Slide 6: Project Milestones ──────────────────────────────────────────────
+  { type:'ai', ph:'{{milestone_intro}}', label:'Milestone intro', max_words:60,
+    prompt:(d)=>`Write 1-2 sentences (max 50 words) as a brief context line above the project timeline for ${d['Client Name']}. Total project: ${d['Timeline']||'?'} weeks. Professional, concise. Return ONLY the sentences.` },
+
+  { type:'ai', ph:'{{milestone_1}}', label:'Milestone 1', max_words:25,
+    prompt:(d)=>`Write a 2-line milestone label: line 1 = milestone name (2-4 words), line 2 = timing (e.g. "Week 1-${d['Phase 1']||'2'}" or "Month 1"). This is the KICKOFF & DISCOVERY milestone for ${d['Client Name']}'s project. Use a newline between the two lines. Return ONLY the two lines.` },
+
+  { type:'ai', ph:'{{milestone_2}}', label:'Milestone 2', max_words:25,
+    prompt:(d)=>`Write a 2-line milestone label: line 1 = milestone name (2-4 words), line 2 = timing. This is the STRATEGY & DESIGN milestone (around week ${d['Phase 2']||'4'}). For ${d['Client Name']}'s project. Use a newline between the two lines. Return ONLY the two lines.` },
+
+  { type:'ai', ph:'{{milestone_3}}', label:'Milestone 3', max_words:25,
+    prompt:(d)=>`Write a 2-line milestone label: line 1 = milestone name (2-4 words), line 2 = timing. This is the BUILD & DEVELOP milestone (around week ${d['Phase 3']||'8'}). For ${d['Client Name']}'s project. Use a newline between the two lines. Return ONLY the two lines.` },
+
+  { type:'ai', ph:'{{milestone_4}}', label:'Milestone 4 (completion)', max_words:25,
+    prompt:(d)=>`Write a 2-line milestone label: line 1 = milestone name (2-4 words), line 2 = timing. This is the LAUNCH milestone — final completion for ${d['Client Name']}'s project. Total duration: ${d['Timeline']||'?'} weeks. Use a newline between the two lines. Return ONLY the two lines.` },
+
+  // ── Slide 7: Project Timeline ────────────────────────────────────────────────
+  { type:'ai', ph:'{{timeline_description}}', label:'Timeline description', max_words:50,
+    prompt:(d)=>`Write 1-2 sentences (max 40 words) describing the project timeline for ${d['Client Name']}. Total: ${d['Timeline']||'?'} weeks across 3 phases. Concise, professional. Return ONLY the sentences.` },
+
+  { type:'ai', ph:'{{phase_1_duration}}', label:'Phase 1 duration', max_words:8,
+    prompt:(d)=>`Write a short phase duration label (e.g. "Weeks 1-${d['Phase 1']||'3'}" or "Month 1") for Phase 1 of ${d['Client Name']}'s project. Return ONLY the label.` },
+
+  { type:'ai', ph:'{{phase_1_details}}', label:'Phase 1 activities', max_words:90,
+    prompt:(d)=>`List 3-5 short Phase 1 activities (max 8 words each) for ${d['Client Name']}'s project. Phase 1 covers discovery, research, and planning. Based on: ${d['Pain Point 1']||''}. One item per line. NO bullets, dashes, or numbers — plain text lines only.` },
+
+  { type:'ai', ph:'{{phase_2_duration}}', label:'Phase 2 duration', max_words:8,
+    prompt:(d)=>`Write a short phase duration label for Phase 2 of ${d['Client Name']}'s project. Phase 1 is ${d['Phase 1']||'?'} weeks, so Phase 2 follows. Return ONLY the label (e.g. "Weeks 4-${(parseInt(d['Phase 1']||0)+parseInt(d['Phase 2']||0))||'8'}").` },
+
+  { type:'ai', ph:'{{phase_2_details}}', label:'Phase 2 activities', max_words:90,
+    prompt:(d)=>`List 3-5 short Phase 2 activities (max 8 words each) for ${d['Client Name']}'s project. Phase 2 covers design, build, and development. Based on deliverables: ${d['Deliverables']||''}. One item per line. NO bullets, dashes, or numbers — plain text lines only.` },
+
+  { type:'ai', ph:'{{phase_3_duration}}', label:'Phase 3 duration', max_words:8,
+    prompt:(d)=>`Write a short phase duration label for the final phase of ${d['Client Name']}'s project. Final phase covers launch and optimisation. Total project: ${d['Timeline']||'?'} weeks. Return ONLY the label (e.g. "Weeks 9-${d['Timeline']||'12'}").` },
+
+  { type:'ai', ph:'{{phase_3_details}}', label:'Phase 3 activities', max_words:90,
+    prompt:(d)=>`List 3-5 short Phase 3 activities (max 8 words each) for ${d['Client Name']}'s project. Phase 3 covers launch, QA, optimisation, and handover. One item per line. NO bullets, dashes, or numbers — plain text lines only.` },
+
+  // ── Slide 8: Cost Estimate ───────────────────────────────────────────────────
+  { type:'ai', ph:'{{project_cost_intro}}', label:'Cost intro paragraph', max_words:80,
+    prompt:(d)=>`Write 2-3 sentences (max 70 words) framing the investment for ${d['Client Name']}'s project. Total: ${d['Price']||'TBD'}. Cover what the costs include and the expected value. Professional, value-focused. Return ONLY the paragraph.` },
+
+  { type:'ai', ph:'{{cost_strategy}}', label:'Strategy & Planning cost', max_words:5,
+    prompt:(d)=>`Based on total project cost of ${d['Price']||d['Cost Estimate']||'TBD'}, write ONLY the currency amount (with symbol) for the Strategy & Planning phase (typically 20-25% of total). E.g. "£8,500". Return ONLY the amount.` },
+
+  { type:'ai', ph:'{{cost_design}}', label:'Design & Development cost', max_words:5,
+    prompt:(d)=>`Based on total project cost of ${d['Price']||d['Cost Estimate']||'TBD'}, write ONLY the currency amount (with symbol) for the Design & Development phase (typically 50-55% of total). E.g. "£22,000". Return ONLY the amount.` },
+
+  { type:'ai', ph:'{{cost_launch}}', label:'Launch & Support cost', max_words:5,
+    prompt:(d)=>`Based on total project cost of ${d['Price']||d['Cost Estimate']||'TBD'}, write ONLY the currency amount (with symbol) for the Launch & Support phase (typically 20-25% of total). E.g. "£8,500". Return ONLY the amount.` },
+
+  { type:'ai', ph:'{{total_cost}}', label:'Total cost (formatted)', max_words:5,
+    prompt:(d)=>`Format this project cost with a currency symbol: ${d['Price']||d['Cost Estimate']||'TBD'}. If it's already formatted (e.g. "£35,000"), return it as-is. If it's a number, add £ and comma-format it. Return ONLY the formatted amount.` },
+
+  { type:'ai', ph:'{{roi_summary}}', label:'ROI summary', max_words:100,
+    prompt:(d)=>`Write 2-3 sentences (max 90 words) on the ROI and business value of this investment for ${d['Client Name']}. Goals: ${d['Primary Goal 1']||''}. Total investment: ${d['Price']||'TBD'}. Include expected return, payback logic, or business impact. Persuasive but grounded. Return ONLY the paragraph.` },
+
+  // ── Slide 9: Thank You ───────────────────────────────────────────────────────
+  { type:'static', ph:'{{thank_you_message}}', value:'THANK YOU' },
+];
   { type:'static', ph:'{{header_logo}}',    value:'' },
   { type:'static', ph:'{{page_number_label}}', value:'' },
   { type:'static', ph:'{{page_label}}',     value:'' },
