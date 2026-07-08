@@ -2624,10 +2624,22 @@ async function trackerGenerate() {
     const decisionSheet = sheets.find(s => s.properties.title.toLowerCase().includes('decision'))?.properties?.title || sheets[1]?.properties?.title || 'Decision Log';
 
     log(`Writing ${taskRows.length} tasks to Gantt tab…`);
-    // Update title in row 1 and write tasks starting row 5 (cols B-E)
-    const ganttValues = [
-      [`${client} x Cyphr — ${project} — PROJECT GANTT`]
-    ];
+
+    // Calculate 13 week headers from project start date
+    const startStr = $('tracker-start').value.trim();
+    const baseDate = startStr ? new Date(startStr) : new Date();
+    const dow = baseDate.getDay();
+    const toMonday = dow === 0 ? -6 : 1 - dow;
+    const firstMonday = new Date(baseDate);
+    firstMonday.setDate(baseDate.getDate() + toMonday);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    // Week header cells: G2, L2, Q2, V2, AA2, AF2, AK2, AP2, AU2, AZ2, BE2, BJ2, BO2
+    const weekCols = ['G','L','Q','V','AA','AF','AK','AP','AU','AZ','BE','BJ','BO'];
+    const weekData = weekCols.map((col, i) => {
+      const d = new Date(firstMonday); d.setDate(firstMonday.getDate() + i * 7);
+      return { range: `'${ganttSheet}'!${col}2`, values: [[`W${i+1}: ${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]}`]] };
+    });
+
     const taskData = taskRows.map(r => ['', r[0], r[1], r[2], r[3], false]);
     const ganttWriteRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`, {
       method: 'POST',
@@ -2635,8 +2647,9 @@ async function trackerGenerate() {
       body: JSON.stringify({
         valueInputOption: 'USER_ENTERED',
         data: [
-          { range: `'${ganttSheet}'!A1`, values: ganttValues },
-          { range: `'${ganttSheet}'!A5:F${4 + taskData.length}`, values: taskData }
+          { range: `'${ganttSheet}'!A1`, values: [[`${client} x Cyphr — ${project} — PROJECT GANTT`]] },
+          { range: `'${ganttSheet}'!A5:F${4 + taskData.length}`, values: taskData },
+          ...weekData
         ]
       })
     });
