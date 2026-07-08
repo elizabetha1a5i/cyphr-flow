@@ -1551,24 +1551,6 @@ async function propGenerate() {
     });
     if (!docUpdateRes.ok) throw new Error('Could not update document');
 
-    log('Copying slides template…');
-    const slidesCopyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${PROP_TEMPLATE_SLIDES_ID}/copy`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: `${propFields['Client Name']} - Website Proposal` })
-    });
-    if (!slidesCopyRes.ok) throw new Error('Could not copy slides template');
-    const { id: slidesId } = await slidesCopyRes.json();
-    await fetch(`https://www.googleapis.com/drive/v3/files/${slidesId}?addParents=${folderId}&removeParents=root&fields=id`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
-
-    log('Filling slides placeholders…');
-    const slidesUpdateRes = await fetch(`https://slides.googleapis.com/v1/presentations/${slidesId}:batchUpdate`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests: docRequests })
-    });
-    if (!slidesUpdateRes.ok) throw new Error('Could not update slides');
-
     log('Copying branded slides template…');
     const brandedCopyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${PROP_BRANDED_SLIDES_ID}/copy`, {
       method: 'POST',
@@ -1598,7 +1580,6 @@ async function propGenerate() {
       <div style="display:flex;flex-direction:column;gap:10px">
         <a href="https://drive.google.com/drive/folders/${folderId}" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center">Open client folder ↗</a>
         <a href="https://docs.google.com/document/d/${docId}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open proposal doc ↗</a>
-        <a href="https://docs.google.com/presentation/d/${slidesId}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open slides deck ↗</a>
         <a href="https://docs.google.com/presentation/d/${brandedSlidesId}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open branded deck ↗</a>
       </div>
       <button class="btn btn-ghost" onclick="showProposal()" style="margin-top:12px;width:100%">Generate another →</button>`;
