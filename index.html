@@ -2598,7 +2598,7 @@ async function trackerGenerate() {
     const { id: folderId } = await folderRes.json();
 
     log('Copying tracker template…');
-    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TRACKER_TEMPLATE_SHEET_ID}/copy`, {
+    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TRACKER_TEMPLATE_SHEET_ID}/copy?supportsAllDrives=true`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: `${client} x Cyphr || ${project} || Gantt + Decision Log` })
