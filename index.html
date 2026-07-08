@@ -1583,13 +1583,49 @@ const EST_RATECARD = [
 // Live role lists — rebuilt on each step 2 render, mutated by add/remove actions
 let estLiveRoles = { phase1: [], phase2: [] };
 
+// Shared agency doc reader — used by all generators
+// Returns only fields that are actually filled in the doc
+async function readAgencyDetails(token) {
+  try {
+    const res = await fetch(`https://docs.googleapis.com/v1/documents/${PROP_AGENCY_DOC_ID}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return {};
+    const doc = await res.json();
+    const text = (doc.body?.content || []).map(el =>
+      (el.paragraph?.elements || []).map(e => e.textRun?.content || '').join('')
+    ).join('').trim();
+    if (!text) return {};
+
+    const result = await callGemini(`Read this agency details document and extract every field that has an actual value filled in (skip any field that is blank, says "[fill in]", or is a placeholder). Return ONLY valid JSON — include only keys where there is real content.
+
+Fields to look for if present:
+agency_name, agency_website, agency_email, agency_phone, company_number, address,
+tagline, description, services (array), team (array of {name, role, rate}),
+case_studies (array of {client, sector, what, outcome}),
+payment_terms, invoice_schedule, contingency_pct, target_margin, late_payment, expenses_policy,
+project_phases (array), ip_clause, confidentiality_clause, termination_clause, liability_cap,
+linkedin, instagram, notable_clients, awards
+
+Document:
+${text.slice(0, 4000)}
+
+Return ONLY valid JSON with filled fields only.`);
+
+    const m = result.match(/\{[\s\S]*\}/);
+    return m ? JSON.parse(m[0]) : {};
+  } catch(e) {
+    return {};
+  }
+}
+
 function getEstimateToken() {
   return new Promise((resolve, reject) => {
     if (estToken) { resolve(estToken); return; }
     if (!window.google?.accounts?.oauth2) { reject(new Error('Google Identity Services not loaded')); return; }
     const client = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',
+      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents',
       callback: (response) => {
         if (response.error) { reject(new Error(response.error_description || response.error)); return; }
         estToken = response.access_token;
@@ -1966,6 +2002,9 @@ async function estGenerate() {
     log('Requesting Google permissions…');
     const token = await getEstimateToken();
 
+    log('Reading agency details…');
+    const agency = await readAgencyDetails(token);
+
     log('Creating client folder in Drive…');
     const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',
@@ -2127,7 +2166,7 @@ async function estGenerate() {
 
 Project: ${estFields.client_name || clientName} — ${estFields.project_type || 'Digital project'}
 Timeline: ${estFields.timeline || weekCount + ' weeks'}
-Deliverables: ${estFields.deliverables || ''}
+Deliverables: ${estFields.deliverables || ''}${agency.project_phases ? '\nTypical project phases: ' + (Array.isArray(agency.project_phases) ? agency.project_phases.join(', ') : agency.project_phases) : ''}
 
 Tasks in the sheet (in order):
 ${taskRows.map((t,i) => `${i+1}. ${t.name}`).join('\n')}
@@ -2661,17 +2700,13 @@ async function propGenerate() {
     const token = await getProposalToken();
 
     log('Reading agency details…');
-    const agencyRes = await fetch(`https://docs.googleapis.com/v1/documents/${PROP_AGENCY_DOC_ID}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!agencyRes.ok) throw new Error('Could not read agency details doc — check permissions');
-    const agencyDoc = await agencyRes.json();
-    const agencyText = (agencyDoc.body?.content || []).map(el =>
-      (el.paragraph?.elements || []).map(e => e.textRun?.content || '').join('')
-    ).join('');
-    const agencyResult = await callGemini(`Extract as JSON: Agency Name, Agency Contact Name, Agency Contact Email, Agency Contact Phone, Number of clients.\nText:\n${agencyText.slice(0,2000)}\nReturn ONLY valid JSON.`);
-    let agency = {};
-    try { const m = agencyResult.match(/\{[\s\S]*\}/); agency = JSON.parse(m ? m[0] : agencyResult); } catch(e) {}
-
-    propFields['Agency Name'] = agency['Agency Name'] || 'Cyphr Studio';
+    const agency = await readAgencyDetails(token);
+    propFields['Agency Name'] = agency.agency_name || 'Cyphr Studio';
+    if (agency.agency_email)   propFields['Agency Contact Email'] = propFields['Agency Contact Email'] || agency.agency_email;
+    if (agency.payment_terms)  propFields['Payment Terms'] = agency.payment_terms;
+    if (agency.services)       propFields['Agency Services'] = Array.isArray(agency.services) ? agency.services.join(', ') : agency.services;
+    if (agency.description)    propFields['Agency Description'] = agency.description;
+    if (agency.tagline)        propFields['Agency Tagline'] = agency.tagline;
     log('Generating slide content…');
     const enhancedContent = await propGenerateEnhancedContent(variant, propFields, log);
 
