@@ -629,6 +629,55 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       </div>
     </div>
 
+    <!-- SOW GENERATOR VIEW -->
+    <div id="view-sow" style="display:none;padding:32px;max-width:860px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">SOW Generator</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">Paste a transcript or brief — AI drafts a full Statement of Work as a Google Doc.</div>
+        </div>
+        <button class="btn btn-ghost" onclick="showDocs()" style="font-size:12px">← Back to Create</button>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="sow-step-1">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:12px">Project details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="field-group">
+              <label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">Client Name</label>
+              <input type="text" id="sow-client-name" placeholder="e.g. Blue Square" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
+            </div>
+            <div class="field-group">
+              <label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">Cyphr Lead</label>
+              <input type="text" id="sow-cyphr-lead" placeholder="e.g. Verity Smout" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:8px">Transcript / Brief</div>
+          <div id="sow-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:16px;margin-bottom:10px;text-align:center;font-size:12px;color:var(--ink3);cursor:pointer" onclick="$('sow-file-input').click()">
+            Drop files here or <span style="color:var(--accent);text-decoration:underline;cursor:pointer">browse</span>
+            <input type="file" id="sow-file-input" style="display:none" multiple accept=".txt,.pdf,.doc,.docx,.md">
+          </div>
+          <textarea id="sow-transcript" placeholder="Paste your call transcript, brief, or project notes here…" style="width:100%;min-height:180px;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper);resize:vertical"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="sowExtract()" style="width:100%">Extract fields →</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="sow-step-2" style="display:none">
+        <div id="sow-step-2-content"></div>
+        <div style="display:flex;gap:12px;margin-top:16px">
+          <button class="btn btn-ghost" onclick="sowShowStep(1)" style="flex:1">← Back</button>
+          <button class="btn btn-primary" onclick="sowGenerate()" style="flex:2">Generate SOW →</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="sow-step-3" style="display:none"></div>
+    </div>
+
     <!-- COST ESTIMATE GENERATOR VIEW -->
     <div id="view-estimate" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
@@ -1524,6 +1573,7 @@ function showDocs() {
   if ($('view-reports')) $('view-reports').style.display = 'none';
   $('view-proposal').style.display = 'none';
   $('view-estimate').style.display = 'none';
+  if ($('view-sow')) $('view-sow').style.display = 'none';
   $('view-docs').style.display = 'block';
   ['nav-docs'].forEach(id => { const el=$(id); if(el) el.style.background='rgba(255,255,255,0.12)'; });
 }
@@ -1531,6 +1581,7 @@ function showDocs() {
 function openDocType(type) {
   if (type === 'proposal') { showProposal(); return; }
   if (type === 'estimate') { showEstimate(); return; }
+  if (type === 'sow') { showSow(); return; }
   // Brief/SOW require an open project
   const stageMap = { brief: 2, sow: 5 };
   if (!activeProjectId) {
@@ -1635,6 +1686,18 @@ function getEstimateToken() {
     });
     client.requestAccessToken();
   });
+}
+
+function showSow() {
+  ['view-dashboard','view-flow','view-docs','view-proposal','view-estimate'].forEach(id => {
+    const el = $(id); if (el) el.style.display = 'none';
+  });
+  if ($('view-reports')) $('view-reports').style.display = 'none';
+  $('view-sow').style.display = 'block';
+  sowShowStep(1);
+}
+function sowShowStep(n) {
+  [1,2,3].forEach(i => { const el = $('sow-step-'+i); if(el) el.style.display = i===n?'block':'none'; });
 }
 
 function showEstimate() {
@@ -2273,6 +2336,289 @@ Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
       <div style="margin-top:14px">
         <button class="btn btn-ghost" onclick="estShowStep(1);$('est-transcript').value='';estFields={};" style="font-size:12px">← Start new estimate</button>
       </div>`;
+  } catch(e) {
+    log(`Error: ${e.message}`);
+    toast(e.message, 'error');
+  }
+}
+
+// ── SOW GENERATOR ────────────────────────────────────────────────────────
+
+const SOW_PARENT_FOLDER_ID = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
+let sowToken = null;
+
+async function getSowToken() {
+  if (sowToken) return sowToken;
+  return new Promise((resolve, reject) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: settings.googleClientId,
+      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents',
+      callback: r => {
+        if (r.error) { reject(r); return; }
+        sowToken = r.access_token;
+        setTimeout(() => { sowToken = null; }, (r.expires_in - 60) * 1000);
+        resolve(sowToken);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+let sowFields = {};
+
+async function sowExtract() {
+  const transcript = ($('sow-transcript') && $('sow-transcript').value) || '';
+  const clientName = ($('sow-client-name') && $('sow-client-name').value.trim()) || '';
+  if (!transcript.trim() && !clientName) { toast('Add a client name or paste a transcript first', 'info'); return; }
+
+  const btn = document.querySelector('#sow-step-1 button.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Extracting…'; }
+
+  try {
+    const prompt = `Extract project details from this transcript/brief for a Statement of Work. Return ONLY valid JSON:
+{
+  "client_name": "",
+  "client_address": "",
+  "project_summary": "",
+  "deliverables": "",
+  "assumptions": "",
+  "exclusions": "",
+  "location": "United Kingdom",
+  "sow_start_date": "",
+  "sow_end_date": "",
+  "milestones": [{"event":"Kick off","date":"","owner":"Cyphr / Client"}],
+  "risks": "",
+  "fee_breakdown": "",
+  "total_fee": "",
+  "invoice_milestone": "",
+  "payment_terms": "30 days from invoice date",
+  "invoice_email": "",
+  "client_lead": "",
+  "cyphr_lead": ""
+}
+Fill every field you can from the transcript. For milestones, create a realistic list based on the project type and timeline.
+Transcript:
+${transcript.slice(0, 5000)}`;
+
+    const result = await callGemini(prompt, { temperature: 0.2 });
+    const m = result.match(/\{[\s\S]*\}/);
+    sowFields = m ? JSON.parse(m[0]) : {};
+    if (clientName) sowFields.client_name = clientName;
+    const cyphrLead = $('sow-cyphr-lead') && $('sow-cyphr-lead').value.trim();
+    if (cyphrLead) sowFields.cyphr_lead = cyphrLead;
+    sowRenderStep2();
+    sowShowStep(2);
+  } catch(e) {
+    toast('Extraction failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Extract fields →'; }
+  }
+}
+
+function sowRenderStep2() {
+  const f = sowFields;
+  const inp = (id, val, label, multiline) => `<div class="field-group" style="margin-bottom:10px">
+    <label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">${label}</label>
+    ${multiline
+      ? `<textarea id="${id}" style="width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper);resize:vertical">${String(val||'').replace(/</g,'&lt;')}</textarea>`
+      : `<input type="text" id="${id}" value="${String(val||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper)">`
+    }
+  </div>`;
+
+  const milestonesText = Array.isArray(f.milestones)
+    ? f.milestones.map(m => `${m.event} | ${m.date} | ${m.owner||'Cyphr'}`).join('\n')
+    : (f.milestones || '');
+
+  $('sow-step-2-content').innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:12px">Parties</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${inp('sow-f-client', f.client_name, 'Client Name')}
+        ${inp('sow-f-cyphr-lead', f.cyphr_lead, 'Cyphr Lead')}
+      </div>
+      ${inp('sow-f-client-address', f.client_address, 'Client Address')}
+      ${inp('sow-f-client-lead', f.client_lead, 'Client Lead')}
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:12px">Project</div>
+      ${inp('sow-f-summary', f.project_summary, 'Project Summary (1.1)', true)}
+      ${inp('sow-f-deliverables', f.deliverables, 'Deliverables (1.2)', true)}
+      ${inp('sow-f-assumptions', f.assumptions, 'Assumptions (1.3)', true)}
+      ${inp('sow-f-exclusions', f.exclusions, 'Exclusions (1.3)', true)}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        ${inp('sow-f-location', f.location, 'Location')}
+        ${inp('sow-f-start', f.sow_start_date, 'SOW Start')}
+        ${inp('sow-f-end', f.sow_end_date, 'SOW End')}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:12px">Milestones</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;font-family:var(--mono)">One per line: Event | Date | Owner</div>
+      <textarea id="sow-f-milestones" style="width:100%;min-height:120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--mono);box-sizing:border-box;background:var(--paper);resize:vertical">${milestonesText}</textarea>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:12px">Commercial</div>
+      ${inp('sow-f-risks', f.risks, 'Risks (2.5)', true)}
+      ${inp('sow-f-fee-breakdown', f.fee_breakdown, 'Fee Breakdown (3.1)', true)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${inp('sow-f-total', f.total_fee, 'Total Fee')}
+        ${inp('sow-f-payment', f.payment_terms, 'Payment Terms')}
+      </div>
+      ${inp('sow-f-invoice-milestone', f.invoice_milestone, 'Invoice Milestone')}
+      ${inp('sow-f-invoice-email', f.invoice_email, 'Invoice Email')}
+    </div>`;
+}
+
+function sowCollectFields() {
+  const g = id => { const el = $(id); return el ? el.value.trim() : ''; };
+  const milestonesRaw = g('sow-f-milestones');
+  const milestones = milestonesRaw.split('\n').filter(Boolean).map(line => {
+    const parts = line.split('|').map(s => s.trim());
+    return { event: parts[0]||'', date: parts[1]||'', owner: parts[2]||'Cyphr' };
+  });
+  return {
+    client_name:        g('sow-f-client')          || sowFields.client_name      || 'Client',
+    cyphr_lead:         g('sow-f-cyphr-lead')       || sowFields.cyphr_lead       || 'Cyphr',
+    client_address:     g('sow-f-client-address')   || sowFields.client_address   || '',
+    client_lead:        g('sow-f-client-lead')      || sowFields.client_lead      || '',
+    project_summary:    g('sow-f-summary')          || sowFields.project_summary  || '',
+    deliverables:       g('sow-f-deliverables')     || sowFields.deliverables     || '',
+    assumptions:        g('sow-f-assumptions')      || sowFields.assumptions      || '',
+    exclusions:         g('sow-f-exclusions')       || sowFields.exclusions       || '',
+    location:           g('sow-f-location')         || sowFields.location         || 'United Kingdom',
+    sow_start_date:     g('sow-f-start')            || sowFields.sow_start_date   || '',
+    sow_end_date:       g('sow-f-end')              || sowFields.sow_end_date     || '',
+    risks:              g('sow-f-risks')            || sowFields.risks            || '',
+    fee_breakdown:      g('sow-f-fee-breakdown')    || sowFields.fee_breakdown    || '',
+    total_fee:          g('sow-f-total')            || sowFields.total_fee        || '',
+    payment_terms:      g('sow-f-payment')          || sowFields.payment_terms    || '30 days from invoice date',
+    invoice_milestone:  g('sow-f-invoice-milestone')|| sowFields.invoice_milestone|| '',
+    invoice_email:      g('sow-f-invoice-email')    || sowFields.invoice_email    || '',
+    milestones,
+  };
+}
+
+async function sowGenerate() {
+  const f = sowCollectFields();
+  sowShowStep(3);
+  $('sow-step-3').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Generating…</div><div id="sow-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="sow-result" style="display:none;margin-top:20px"></div></div>`;
+  const log = msg => { const el=$('sow-log'); if(el) el.innerHTML += msg+'<br>'; };
+
+  try {
+    log('Requesting Google permissions…');
+    const token = await getSowToken();
+
+    log('Reading agency details…');
+    const agency = await readAgencyDetails(token);
+
+    log('Creating client folder…');
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: f.client_name, mimeType: 'application/vnd.google-apps.folder', parents: [SOW_PARENT_FOLDER_ID] })
+    });
+    if (!folderRes.ok) throw new Error('Could not create Drive folder');
+    const { id: folderId } = await folderRes.json();
+
+    log('Creating SOW document…');
+    const docRes = await fetch('https://docs.googleapis.com/v1/documents', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: `${f.client_name} — Statement of Work` })
+    });
+    if (!docRes.ok) throw new Error('Could not create Google Doc');
+    const { documentId } = await docRes.json();
+
+    log('Moving to client folder…');
+    const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}?fields=parents`, { headers: { Authorization: `Bearer ${token}` } });
+    const meta = await metaRes.json();
+    const oldParents = (meta.parents || []).join(',');
+    await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}?addParents=${folderId}&removeParents=${oldParents}`, {
+      method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({})
+    });
+
+    log('Building SOW content…');
+    const agencyName   = agency.agency_name   || 'Cyphr';
+    const agencyAddr   = agency.address       || 'Camburgh House, 27 New Dover Road, Canterbury, Kent, CT1 3DN';
+    const agencyNum    = agency.company_number || '[INSERT COMPANY NUMBER]';
+    const payTerms     = f.payment_terms || agency.payment_terms || '30 days from invoice date';
+    const today        = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+    // Build milestone rows text for the doc
+    const milestoneRows = f.milestones.map(m => `${m.event}\t${m.date}\t${m.owner}`).join('\n');
+
+    // SOW body — plain text sections we'll insert via Docs API
+    const sections = [
+      { heading: null, text: `Statement of Work\nRevision Number 0.00\n` },
+      { heading: null, text: `This "Statement of Work" or "SOW" is effective from ${f.sow_start_date || today} (the "Effective Date"), by and between ${f.client_name}${f.client_address ? ', with a registered office at ' + f.client_address : ''} (hereinafter designated as "${f.client_name}") and ${agencyName} with a registered office at ${agencyAddr} (hereinafter designated as "${agencyName}"). In the event of any inconsistency between this SOW and any applicable terms, the terms of this SOW shall prevail.\n` },
+      { heading: '1.0\tThe Project', text: '' },
+      { heading: '1.1\tProject Summary', text: f.project_summary + (f.sow_start_date && f.sow_end_date ? `\n\nSOW term: ${f.sow_start_date} to ${f.sow_end_date}  Territory: ${f.location || 'United Kingdom'}.` : '') + `\n\nSOW Termination and Extension\n${agencyName} will commit the resources required to deliver the agreed scope for the agreed delivery window. Services are time-boxed. Any extension to timeline, additional feature requests, or new workstreams will require a Change Request. The project timeline is dependent on timely sign-off at agreed milestones.` },
+      { heading: '1.2\tProject Objectives and Outputs', text: f.deliverables },
+      { heading: '1.3\tProject Assumptions and Exclusions', text: (f.assumptions ? `Client provided inputs\n${f.assumptions}` : '') + (f.exclusions ? `\n\nExclusions\n${f.exclusions}` : '') },
+      { heading: '1.4\tProject Responsibilities', text: `The Deliverables will be delivered to materially conform to the agreed requirements and prioritised backlog, to ensure milestones are met.` },
+      { heading: '1.5\tLocation of Works', text: f.location || 'United Kingdom' },
+      { heading: '2.0\tProject Management', text: `${agencyName} will meet with the ${f.client_name} team regularly to discuss requirements and timelines, cadence to be agreed between teams.` },
+      { heading: '2.1\tProject Team Leaders', text: `${agencyName}: ${f.cyphr_lead || '[Cyphr Lead]'}\n${f.client_name}: ${f.client_lead || '[Client Lead]'}` },
+      { heading: '2.2\tProject Reporting and Communications', text: `${agencyName} will provide regular project updates during delivery, plus coordination during key delivery milestones as required.` },
+      { heading: '2.4\tProject Milestones', text: `Event/Action\tDate\tAction Owner\n${milestoneRows}` },
+      { heading: '2.5\tProject Risks', text: f.risks || `${agencyName} will address Severity 1 issues identified during testing and the delivery window. Non-blocking defects may be deferred pending time and issue prioritisation.` },
+      { heading: '3.0\tProject Commercial Detail', text: '' },
+      { heading: '3.1\tFee Summary', text: `Services will be charged on a fixed price basis as set out below.\n\nFee breakdown:\n${f.fee_breakdown || '[Fee breakdown to be confirmed]'}\n\nTotal fees: ${f.total_fee || '[TBC]'}` },
+      { heading: '3.2\tInvoice Submission', text: `Services will be invoiced on signature of the SOW for the commissioned scope.\n${f.invoice_milestone ? 'Invoice milestone: ' + f.invoice_milestone + '.' : ''}\nPayment terms: ${payTerms}.` },
+      { heading: '3.3\tInvoice Instructions', text: f.invoice_email ? `Invoice to be submitted to: ${f.invoice_email}` : '[Invoice email to be confirmed]' },
+      { heading: '3.4\tChange Request and Sign off', text: `A change request (CR) will likely result in an incremental charge and is defined as any change requested by the client to the deliverables defined in 1.2.\n\n• CR can be requested by the client representative mentioned in 2.1\n• CR must be requested in writing/email to the ${agencyName} Project Manager in 2.1\n• ${agencyName} will review and inform the client of any impacts on delivery. This will include cost, resource, time or materials.` },
+      { heading: '3.5\tChange Request Log', text: `Detail here each change request (revision and reissue revised SOW).\nDate – Item – Agreed by – Impact (project/cost) – SOW revision number` },
+      { heading: '3.6\tSignatures', text: `Signed by on behalf of ${agencyName}\n\n${f.cyphr_lead || '[Name]'}\n[Role]\n${today}\n\nSigned by on behalf of ${f.client_name}\n\n(Name)                    (Role)                    (Date)` },
+    ];
+
+    // Build Docs API requests
+    const requests = [];
+    let insertIndex = 1;
+
+    for (const section of sections) {
+      if (section.heading) {
+        requests.push({ insertText: { location: { index: insertIndex }, text: section.heading + '\n' } });
+        requests.push({ updateParagraphStyle: { range: { startIndex: insertIndex, endIndex: insertIndex + section.heading.length + 1 }, paragraphStyle: { namedStyleType: 'HEADING_2' }, fields: 'namedStyleType' } });
+        requests.push({ updateTextStyle: { range: { startIndex: insertIndex, endIndex: insertIndex + section.heading.length }, textStyle: { bold: true }, fields: 'bold' } });
+        insertIndex += section.heading.length + 1;
+      }
+      if (section.text) {
+        const body = section.text + '\n\n';
+        requests.push({ insertText: { location: { index: insertIndex }, text: body } });
+        insertIndex += body.length;
+      }
+    }
+
+    // Add T&Cs note at the end
+    const tcNote = `\n---\n\nStandard Terms and Conditions\n\nThis SOW is subject to ${agencyName}'s standard terms and conditions. In the event of any inconsistency between the terms contained herein and any separate terms and conditions, the terms of this SOW shall prevail. All services are governed by and interpreted according to English law.\n`;
+    requests.push({ insertText: { location: { index: insertIndex }, text: tcNote } });
+
+    log(`Writing ${requests.length} formatting requests to document…`);
+    const batchRes = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests })
+    });
+    if (!batchRes.ok) {
+      const err = await batchRes.json();
+      throw new Error('Could not write to doc: ' + (err.error?.message || batchRes.status));
+    }
+
+    log('Done!');
+    const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
+    const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    const resultEl = $('sow-result');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:10px">✓ SOW created</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="${docUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center">Open SOW →</a>
+        <a href="${folderUrl}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open Client Folder</a>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-ghost" onclick="sowShowStep(1);$('sow-transcript').value='';sowFields={};" style="font-size:12px">← Start new SOW</button>
+      </div>`;
+
   } catch(e) {
     log(`Error: ${e.message}`);
     toast(e.message, 'error');
