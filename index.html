@@ -1958,7 +1958,11 @@ async function estGenerate() {
       throw new Error(`Sheets API error ${metaSheetRes.status}: ${errBody.error?.message || 'Could not read spreadsheet metadata'}`);
     }
     const metaSheet = await metaSheetRes.json();
-    const firstSheetTitle = metaSheet.sheets?.[0]?.properties?.title || 'Sheet1';
+    const allSheetProps = metaSheet.sheets || [];
+    const firstSheetTitle = allSheetProps[0]?.properties?.title || 'Sheet1';
+    const timingsSheetProp = allSheetProps.find(s => s.properties.title.toLowerCase().includes('timing'));
+    const timingsSheetTitle = timingsSheetProp?.properties?.title;
+    const timingsSheetGid   = timingsSheetProp?.properties?.sheetId;
     log(`Reading sheet tab: ${firstSheetTitle}…`);
 
     const sheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(firstSheetTitle)}!B1:D60`, {
@@ -2023,6 +2027,109 @@ async function estGenerate() {
     if (!batchRes.ok) {
       const err = await batchRes.json();
       throw new Error('Could not write days to sheet: ' + (err.error?.message || batchRes.status));
+    }
+
+    // ── Fill Timings + Deliverables Gantt ────────────────────────────────────
+    if (timingsSheetTitle && timingsSheetGid != null) {
+      try {
+        log('Reading Timings tab…');
+        const timingsRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(timingsSheetTitle)}!A1:Z30`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (timingsRes.ok) {
+          const timingsData = await timingsRes.json();
+          const tRows = timingsData.values || [];
+
+          // Find header row (the row containing "Week 1")
+          let headerRowIdx = -1, weekColStart = -1, weekCount = 0;
+          tRows.forEach((row, ri) => {
+            const weekIdx = row.findIndex(c => /^week\s*1$/i.test((c||'').trim()));
+            if (weekIdx !== -1) { headerRowIdx = ri; weekColStart = weekIdx; }
+          });
+          if (headerRowIdx === -1) { weekColStart = 2; headerRowIdx = 4; } // fallback: col C, row 5
+
+          // Count weeks by looking at header row
+          if (headerRowIdx >= 0) {
+            const hRow = tRows[headerRowIdx] || [];
+            for (let c = weekColStart; c < hRow.length; c++) {
+              if (/^week\s*\d+$/i.test((hRow[c]||'').trim())) weekCount++;
+              else if (weekCount > 0) break;
+            }
+          }
+          if (!weekCount) weekCount = 6;
+
+          // Collect task names (col B, rows after header until blank)
+          const taskRows = []; // { name, rowIdx }
+          for (let ri = headerRowIdx + 1; ri < tRows.length; ri++) {
+            const name = ((tRows[ri] || [])[1] || '').trim();
+            if (name) taskRows.push({ name, rowIdx: ri });
+          }
+
+          if (taskRows.length) {
+            log(`Asking AI to plan ${taskRows.length} tasks across ${weekCount} weeks…`);
+            const ganttPrompt = `You are planning a project Gantt chart.
+
+Project: ${estFields.client_name || clientName} — ${estFields.project_type || 'Digital project'}
+Timeline: ${estFields.timeline || weekCount + ' weeks'}
+Deliverables: ${estFields.deliverables || ''}
+
+Tasks in the sheet (in order):
+${taskRows.map((t,i) => `${i+1}. ${t.name}`).join('\n')}
+
+Total weeks available: ${weekCount}
+
+For each task, which weeks does it run? Weeks are 1-${weekCount}.
+Return ONLY valid JSON — an array matching the task order:
+[{"task":"Kick off","weeks":[1]},{"task":"Interviews / Desk Research","weeks":[1,2]},...]
+Keep it realistic. Tasks should overlap naturally. Every week should have at least one active task.`;
+
+            const ganttResult = await callGemini(ganttPrompt, { temperature: 0.3 });
+            let ganttPlan = [];
+            try {
+              const m = ganttResult.match(/\[[\s\S]*\]/);
+              ganttPlan = JSON.parse(m ? m[0] : ganttResult);
+            } catch(e) { ganttPlan = []; }
+
+            if (ganttPlan.length) {
+              // Build batchUpdate formatting requests to apply teal background
+              const teal = { red: 0.016, green: 0.737, blue: 0.737 }; // #04BCBC
+              const fmtRequests = [];
+              ganttPlan.forEach((item, taskIdx) => {
+                const taskRow = taskRows[taskIdx];
+                if (!taskRow) return;
+                const rowIdx0 = taskRow.rowIdx; // 0-indexed
+                (item.weeks || []).forEach(wk => {
+                  const colIdx0 = weekColStart + (wk - 1); // 0-indexed col
+                  fmtRequests.push({
+                    repeatCell: {
+                      range: {
+                        sheetId: timingsSheetGid,
+                        startRowIndex: rowIdx0,
+                        endRowIndex: rowIdx0 + 1,
+                        startColumnIndex: colIdx0,
+                        endColumnIndex: colIdx0 + 1
+                      },
+                      cell: { userEnteredFormat: { backgroundColor: teal } },
+                      fields: 'userEnteredFormat.backgroundColor'
+                    }
+                  });
+                });
+              });
+
+              if (fmtRequests.length) {
+                log(`Shading ${fmtRequests.length} Gantt cells…`);
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ requests: fmtRequests })
+                });
+              }
+            }
+          }
+        }
+      } catch(ganttErr) {
+        log(`Gantt warning: ${ganttErr.message} — skipping`);
+      }
     }
 
     log('Done!');
