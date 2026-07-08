@@ -2342,7 +2342,8 @@ Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
 
 // ── SOW GENERATOR ────────────────────────────────────────────────────────
 
-const SOW_PARENT_FOLDER_ID = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
+const SOW_PARENT_FOLDER_ID  = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
+const SOW_TEMPLATE_DOC_ID   = '19OTbWKVcDY6s56QaNuWtmyYKum_qHgmSfulABrsLtWs';
 let sowToken = null;
 
 function getSowToken() {
@@ -2519,14 +2520,14 @@ async function sowGenerate() {
     if (!folderRes.ok) throw new Error('Could not create Drive folder');
     const { id: folderId } = await folderRes.json();
 
-    log('Creating SOW document…');
-    const docRes = await fetch('https://docs.googleapis.com/v1/documents', {
+    log('Copying SOW template…');
+    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${SOW_TEMPLATE_DOC_ID}/copy`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: `${f.client_name} — Statement of Work` })
+      body: JSON.stringify({ name: `${f.client_name} — Statement of Work` })
     });
-    if (!docRes.ok) throw new Error('Could not create Google Doc');
-    const { documentId } = await docRes.json();
+    if (!copyRes.ok) throw new Error('Could not copy SOW template — make sure it is shared with your Google account');
+    const { id: documentId } = await copyRes.json();
 
     log('Moving to client folder…');
     const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}?fields=parents`, { headers: { Authorization: `Bearer ${token}` } });
@@ -2536,72 +2537,62 @@ async function sowGenerate() {
       method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({})
     });
 
-    log('Building SOW content…');
-    const agencyName   = agency.agency_name   || 'Cyphr';
-    const agencyAddr   = agency.address       || 'Camburgh House, 27 New Dover Road, Canterbury, Kent, CT1 3DN';
-    const agencyNum    = agency.company_number || '[INSERT COMPANY NUMBER]';
-    const payTerms     = f.payment_terms || agency.payment_terms || '30 days from invoice date';
-    const today        = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-
-    // Build milestone rows text for the doc
-    const milestoneRows = f.milestones.map(m => `${m.event}\t${m.date}\t${m.owner}`).join('\n');
-
-    // SOW body — plain text sections we'll insert via Docs API
-    const sections = [
-      { heading: null, text: `Statement of Work\nRevision Number 0.00\n` },
-      { heading: null, text: `This "Statement of Work" or "SOW" is effective from ${f.sow_start_date || today} (the "Effective Date"), by and between ${f.client_name}${f.client_address ? ', with a registered office at ' + f.client_address : ''} (hereinafter designated as "${f.client_name}") and ${agencyName} with a registered office at ${agencyAddr} (hereinafter designated as "${agencyName}"). In the event of any inconsistency between this SOW and any applicable terms, the terms of this SOW shall prevail.\n` },
-      { heading: '1.0\tThe Project', text: '' },
-      { heading: '1.1\tProject Summary', text: f.project_summary + (f.sow_start_date && f.sow_end_date ? `\n\nSOW term: ${f.sow_start_date} to ${f.sow_end_date}  Territory: ${f.location || 'United Kingdom'}.` : '') + `\n\nSOW Termination and Extension\n${agencyName} will commit the resources required to deliver the agreed scope for the agreed delivery window. Services are time-boxed. Any extension to timeline, additional feature requests, or new workstreams will require a Change Request. The project timeline is dependent on timely sign-off at agreed milestones.` },
-      { heading: '1.2\tProject Objectives and Outputs', text: f.deliverables },
-      { heading: '1.3\tProject Assumptions and Exclusions', text: (f.assumptions ? `Client provided inputs\n${f.assumptions}` : '') + (f.exclusions ? `\n\nExclusions\n${f.exclusions}` : '') },
-      { heading: '1.4\tProject Responsibilities', text: `The Deliverables will be delivered to materially conform to the agreed requirements and prioritised backlog, to ensure milestones are met.` },
-      { heading: '1.5\tLocation of Works', text: f.location || 'United Kingdom' },
-      { heading: '2.0\tProject Management', text: `${agencyName} will meet with the ${f.client_name} team regularly to discuss requirements and timelines, cadence to be agreed between teams.` },
-      { heading: '2.1\tProject Team Leaders', text: `${agencyName}: ${f.cyphr_lead || '[Cyphr Lead]'}\n${f.client_name}: ${f.client_lead || '[Client Lead]'}` },
-      { heading: '2.2\tProject Reporting and Communications', text: `${agencyName} will provide regular project updates during delivery, plus coordination during key delivery milestones as required.` },
-      { heading: '2.4\tProject Milestones', text: `Event/Action\tDate\tAction Owner\n${milestoneRows}` },
-      { heading: '2.5\tProject Risks', text: f.risks || `${agencyName} will address Severity 1 issues identified during testing and the delivery window. Non-blocking defects may be deferred pending time and issue prioritisation.` },
-      { heading: '3.0\tProject Commercial Detail', text: '' },
-      { heading: '3.1\tFee Summary', text: `Services will be charged on a fixed price basis as set out below.\n\nFee breakdown:\n${f.fee_breakdown || '[Fee breakdown to be confirmed]'}\n\nTotal fees: ${f.total_fee || '[TBC]'}` },
-      { heading: '3.2\tInvoice Submission', text: `Services will be invoiced on signature of the SOW for the commissioned scope.\n${f.invoice_milestone ? 'Invoice milestone: ' + f.invoice_milestone + '.' : ''}\nPayment terms: ${payTerms}.` },
-      { heading: '3.3\tInvoice Instructions', text: f.invoice_email ? `Invoice to be submitted to: ${f.invoice_email}` : '[Invoice email to be confirmed]' },
-      { heading: '3.4\tChange Request and Sign off', text: `A change request (CR) will likely result in an incremental charge and is defined as any change requested by the client to the deliverables defined in 1.2.\n\n• CR can be requested by the client representative mentioned in 2.1\n• CR must be requested in writing/email to the ${agencyName} Project Manager in 2.1\n• ${agencyName} will review and inform the client of any impacts on delivery. This will include cost, resource, time or materials.` },
-      { heading: '3.5\tChange Request Log', text: `Detail here each change request (revision and reissue revised SOW).\nDate – Item – Agreed by – Impact (project/cost) – SOW revision number` },
-      { heading: '3.6\tSignatures', text: `Signed by on behalf of ${agencyName}\n\n${f.cyphr_lead || '[Name]'}\n[Role]\n${today}\n\nSigned by on behalf of ${f.client_name}\n\n(Name)                    (Role)                    (Date)` },
-    ];
-
-    // Build Docs API requests
-    const requests = [];
-    let insertIndex = 1;
-
-    for (const section of sections) {
-      if (section.heading) {
-        requests.push({ insertText: { location: { index: insertIndex }, text: section.heading + '\n' } });
-        requests.push({ updateParagraphStyle: { range: { startIndex: insertIndex, endIndex: insertIndex + section.heading.length + 1 }, paragraphStyle: { namedStyleType: 'HEADING_2' }, fields: 'namedStyleType' } });
-        requests.push({ updateTextStyle: { range: { startIndex: insertIndex, endIndex: insertIndex + section.heading.length }, textStyle: { bold: true }, fields: 'bold' } });
-        insertIndex += section.heading.length + 1;
-      }
-      if (section.text) {
-        const body = section.text + '\n\n';
-        requests.push({ insertText: { location: { index: insertIndex }, text: body } });
-        insertIndex += body.length;
-      }
+    log('Reading copied doc to verify placeholders…');
+    const verifyRes = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const verifyDoc = await verifyRes.json();
+    const verifyText = (verifyDoc.body?.content || []).map(el => (el.paragraph?.elements || []).map(e => e.textRun?.content || '').join('')).join('');
+    const bracketIdx = verifyText.indexOf('{');
+    if (bracketIdx >= 0) {
+      log('Placeholder sample: ' + JSON.stringify(verifyText.slice(bracketIdx, bracketIdx + 25)));
+    } else {
+      log('WARNING: No { found in copied doc — template may not have copied correctly');
     }
 
-    // Add T&Cs note at the end
-    const tcNote = `\n---\n\nStandard Terms and Conditions\n\nThis SOW is subject to ${agencyName}'s standard terms and conditions. In the event of any inconsistency between the terms contained herein and any separate terms and conditions, the terms of this SOW shall prevail. All services are governed by and interpreted according to English law.\n`;
-    requests.push({ insertText: { location: { index: insertIndex }, text: tcNote } });
+    log('Filling placeholders…');
+    const today        = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+    const milestoneText = f.milestones.map(m => `${m.event} | ${m.date} | ${m.owner}`).join('\n');
+    const payTerms     = f.payment_terms || agency.payment_terms || '30 days from invoice date';
 
-    log(`Writing ${requests.length} formatting requests to document…`);
+    const replacements = [
+      ['{{effective_date}}',         f.sow_start_date || today],
+      ['{{client_name}}',            f.client_name],
+      ['{{client_address}}',         f.client_address || ''],
+      ['{{location}}',               f.location || 'United Kingdom'],
+      ['{{project_summary}}',        f.project_summary],
+      ['{{sow_start_date}}',         f.sow_start_date || ''],
+      ['{{sow_end_date}}',           f.sow_end_date || ''],
+      ['{{deliverables}}',           f.deliverables],
+      ['{{assumptions_exclusions}}', (f.assumptions ? 'Client provided inputs\n' + f.assumptions : '') + (f.exclusions ? '\n\nExclusions\n' + f.exclusions : '')],
+      ['{{responsibilities}}',       'Cyphr owns design, development, QA and launch support. Client will provide brand assets, timely approvals and prompt feedback.'],
+      ['{{cyphr_lead}}',             f.cyphr_lead || ''],
+      ['{{client_lead}}',            f.client_lead || ''],
+      ['{{milestones}}',             milestoneText],
+      ['{{risks}}',                  f.risks || ''],
+      ['{{fee_breakdown}}',          f.fee_breakdown || ''],
+      ['{{total_fee}}',              f.total_fee || ''],
+      ['{{invoice_milestone}}',      f.invoice_milestone || ''],
+      ['{{payment_terms}}',          payTerms],
+      ['{{invoice_email}}',          f.invoice_email || ''],
+      ['{{cyphr_signatory_name}}',   f.cyphr_lead || ''],
+      ['{{cyphr_signatory_role}}',   ''],
+      ['{{cyphr_signature_date}}',   today],
+    ];
+
+    const requests = replacements.map(([find, replace]) => ({
+      replaceAllText: { containsText: { text: find, matchCase: true }, replaceText: replace }
+    }));
+
     const batchRes = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ requests })
     });
+    const batchData = await batchRes.json();
     if (!batchRes.ok) {
-      const err = await batchRes.json();
-      throw new Error('Could not write to doc: ' + (err.error?.message || batchRes.status));
+      throw new Error('Could not fill placeholders: ' + (batchData.error?.message || batchRes.status));
     }
+    const totalReplaced = (batchData.replies || []).reduce((sum, r) => sum + (r.replaceAllText?.occurrencesChanged || 0), 0);
+    log(`Replaced ${totalReplaced} placeholder(s)…`);
 
     log('Done!');
     const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
