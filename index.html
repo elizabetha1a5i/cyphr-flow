@@ -2584,7 +2584,7 @@ async function trackerGenerate() {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: `${client} x Cyphr || ${project} || Gantt + Decision Log` })
     });
-    if (!copyRes.ok) throw new Error('Could not copy tracker template');
+    if (!copyRes.ok) { const ce = await copyRes.json(); throw new Error('Could not copy tracker template: ' + (ce.error?.message || copyRes.status)); }
     const { id: sheetId } = await copyRes.json();
 
     log('Moving to client folder…');
