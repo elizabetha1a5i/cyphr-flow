@@ -1439,7 +1439,7 @@ function propRenderStep2() {
   SECTIONS.forEach(section => {
     html += `<div class="card" style="margin-bottom:16px"><div class="card-title" style="margin-bottom:12px">${section.title}</div>`;
     section.keys.forEach(key => {
-      const val = (propFields[key] || '').replace(/"/g, '&quot;');
+      const val = String(propFields[key] || '').replace(/"/g, '&quot;');
       const id = 'pf-' + key.replace(/ /g,'-');
       if (LONG.has(key)) {
         html += `<div class="field-group" style="margin-bottom:10px"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">${key}</label><textarea id="${id}" data-key="${key}" class="prop-field" style="width:100%;height:64px;resize:vertical;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper)">${val}</textarea></div>`;
