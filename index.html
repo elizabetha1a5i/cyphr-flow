@@ -1948,11 +1948,26 @@ async function estGenerate() {
       body: JSON.stringify({})
     });
 
-    log('Reading sheet to find role rows…');
-    const sheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/B1:D50`, {
+    log('Reading sheet structure…');
+    // Get spreadsheet metadata to find the correct sheet tab name
+    const metaSheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!sheetRes.ok) throw new Error('Could not read sheet data');
+    if (!metaSheetRes.ok) {
+      const errBody = await metaSheetRes.json().catch(() => ({}));
+      throw new Error(`Sheets API error ${metaSheetRes.status}: ${errBody.error?.message || 'Could not read spreadsheet metadata'}`);
+    }
+    const metaSheet = await metaSheetRes.json();
+    const firstSheetTitle = metaSheet.sheets?.[0]?.properties?.title || 'Sheet1';
+    log(`Reading sheet tab: ${firstSheetTitle}…`);
+
+    const sheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(firstSheetTitle)}!B1:D60`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!sheetRes.ok) {
+      const errBody = await sheetRes.json().catch(() => ({}));
+      throw new Error(`Could not read sheet data (${sheetRes.status}): ${errBody.error?.message || ''}`);
+    }
     const sheetData = await sheetRes.json();
     const rows = sheetData.values || [];
 
