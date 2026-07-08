@@ -1531,30 +1531,42 @@ async function propReadFile(file) {
         r.readAsText(file);
       });
     } else {
-      // Send as base64 to Gemini with file extraction prompt
-      const b64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => res(e.target.result.split(',')[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-      const mimeType = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      const geminiUrl = (settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev') + '/gemini';
-      const fileRes = await fetch(geminiUrl, {
+      // Upload to Google Drive temporarily, read as plain text, then delete
+      status.textContent = `Uploading ${file.name} to read content…`;
+      const token = await getProposalToken();
+      const arrayBuffer = await file.arrayBuffer();
+
+      // Multipart upload: convert docx → Google Doc, or upload pdf as-is
+      const uploadMime = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      const targetMime = 'application/vnd.google-apps.document';
+      const boundary = 'prop_file_boundary';
+      const metaPart = JSON.stringify({ name: file.name, mimeType: targetMime });
+      const encoder = new TextEncoder();
+      const metaBytes = encoder.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metaPart}\r\n--${boundary}\r\nContent-Type: ${uploadMime}\r\n\r\n`);
+      const endBytes = encoder.encode(`\r\n--${boundary}--`);
+      const body = new Uint8Array(metaBytes.byteLength + arrayBuffer.byteLength + endBytes.byteLength);
+      body.set(metaBytes, 0);
+      body.set(new Uint8Array(arrayBuffer), metaBytes.byteLength);
+      body.set(endBytes, metaBytes.byteLength + arrayBuffer.byteLength);
+
+      const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gemini-2.5-flash',
-          contents: [{ parts: [
-            { inline_data: { mime_type: mimeType, data: b64 } },
-            { text: 'Extract all text content from this document. Return the raw text only — no commentary, no formatting labels, no markdown.' }
-          ]}],
-          generationConfig: { temperature: 0, maxOutputTokens: 8000, thinkingConfig: { thinkingBudget: 0 } }
-        })
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body
       });
-      if (!fileRes.ok) throw new Error('Gemini could not read the file');
-      const fileData = await fileRes.json();
-      text = fileData?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+      if (!uploadRes.ok) throw new Error('Could not upload file to Drive');
+      const { id: tempId } = await uploadRes.json();
+
+      // Export the Google Doc as plain text
+      status.textContent = `Extracting text from ${file.name}…`;
+      const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${tempId}/export?mimeType=text/plain`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!exportRes.ok) throw new Error('Could not extract text from file');
+      text = await exportRes.text();
+
+      // Delete the temp file
+      fetch(`https://www.googleapis.com/drive/v3/files/${tempId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     }
 
     if (!text.trim()) throw new Error('No text found in file');
