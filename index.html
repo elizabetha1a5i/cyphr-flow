@@ -1568,12 +1568,9 @@ function showDashboard() {
 }
 
 function showDocs() {
-  $('view-dashboard').style.display = 'none';
-  $('view-flow').style.display = 'none';
-  if ($('view-reports')) $('view-reports').style.display = 'none';
-  $('view-proposal').style.display = 'none';
-  $('view-estimate').style.display = 'none';
-  if ($('view-sow')) $('view-sow').style.display = 'none';
+  ['view-dashboard','view-flow','view-reports','view-proposal','view-estimate','view-sow'].forEach(id => {
+    const el = $(id); if (el) el.style.display = 'none';
+  });
   $('view-docs').style.display = 'block';
   ['nav-docs'].forEach(id => { const el=$(id); if(el) el.style.background='rgba(255,255,255,0.12)'; });
 }
