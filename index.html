@@ -414,6 +414,9 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       <div onclick="window.open('blarney-intelligence.html','_self')" style="padding:8px 16px;font-size:12px;color:rgba(255,255,255,0.6);cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
         <span>🎤</span><span>Blarney Intelligence</span>
       </div>
+      <div id="nav-proposal" onclick="showProposal()" style="padding:8px 16px;font-size:12px;color:rgba(255,255,255,0.6);cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
+        <span>📝</span><span>Proposal Generator</span>
+      </div>
     </div>
     <div class="sidebar-footer">
       <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
@@ -460,6 +463,47 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
         </div>
         <iframe id="report-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals" style="display:none;width:100%;height:calc(100vh - 160px);border:none"></iframe>
       </div>
+    </div>
+
+    <!-- PROPOSAL GENERATOR VIEW -->
+    <div id="view-proposal" style="display:none;padding:32px;max-width:860px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Proposal Generator</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">Paste a sales call transcript — AI extracts the key details and generates a branded proposal doc and slides deck in Google Drive.</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Transcript -->
+      <div id="prop-step-1">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:10px">Your details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field-group"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">Your name *</label><input type="text" id="prop-contact-name" placeholder="Elizabeth Alabi" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)"></div>
+            <div class="field-group"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">Your email *</label><input type="text" id="prop-contact-email" placeholder="elizabeth@cyphr.studio" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)"></div>
+            <div class="field-group"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">Your phone</label><input type="text" id="prop-contact-phone" placeholder="+44 7700 000000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:10px">Proposal type</div>
+          <div class="field-group"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">What kind of proposal is this?</label>
+          <select id="prop-variant" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
+            <option value="website">Website Proposal</option>
+            <option value="partnerships">Strategic Partnerships</option>
+          </select></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:10px">Sales call transcript</div>
+          <textarea id="prop-transcript" placeholder="Paste the full call transcript here…" style="width:100%;min-height:220px;font-family:var(--mono);font-size:12px;padding:12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="propExtract()" id="btn-prop-extract">Extract fields →</button>
+      </div>
+
+      <!-- Step 2: Review fields -->
+      <div id="prop-step-2" style="display:none"></div>
+
+      <!-- Step 3: Progress & result -->
+      <div id="prop-step-3" style="display:none"></div>
     </div>
 
     <div id="view-flow" style="display:none">
@@ -1054,6 +1098,7 @@ async function callGemini(prompt, options = {}) {
 // ── PROJECTS ───────────────────────────────────────────────────────────────
 function newProject() {
   if ($('view-reports')) $('view-reports').style.display = 'none';
+  if ($('view-proposal')) $('view-proposal').style.display = 'none';
   const id = 'proj_' + Date.now();
   const proj = {
     id, stage: 0, done: [],
@@ -1121,6 +1166,7 @@ function confirmDeleteProject(id) {
 
 function openProject(id) {
   if ($('view-reports')) $('view-reports').style.display = 'none';
+  if ($('view-proposal')) $('view-proposal').style.display = 'none';
   activeProjectId = id;
   const p = gp();
   currentStage = p.stage || 0;
@@ -1231,8 +1277,337 @@ function showDashboard() {
   $('view-dashboard').style.display = 'block';
   $('view-flow').style.display = 'none';
   if ($('view-reports')) $('view-reports').style.display = 'none';
+  if ($('view-proposal')) $('view-proposal').style.display = 'none';
   renderDashboard();
   renderSidebar();
+}
+
+function showProposal() {
+  $('view-dashboard').style.display = 'none';
+  $('view-flow').style.display = 'none';
+  if ($('view-reports')) $('view-reports').style.display = 'none';
+  $('view-proposal').style.display = 'block';
+  propShowStep(1);
+}
+
+// ── PROPOSAL GENERATOR ────────────────────────────────────────────────────
+const PROP_TEMPLATE_DOC_ID        = '1lCLYqrCy29igLR0GgVFq98c-djcRUQcTbQDuT9t_ALc';
+const PROP_TEMPLATE_SLIDES_ID     = '13YVxEbj1y4xLxaFC7mHtrzKxG2WZbFV59fOo-nBd6kI';
+const PROP_AGENCY_DOC_ID          = '1m5sVU_I39uoUSk9WLWffPotF4zaIwZhUo5D6X1StzqM';
+const PROP_PARENT_FOLDER_ID       = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
+const PROP_BRANDED_SLIDES_ID      = '1vPXArh3t7i07SQpBgekPceLnwmnvI7YZzOPrbmJQoU0';
+
+const PROP_PLACEHOLDER_MAPS = {
+  website: {"presentation":"Presentation_2_Modern_Growth_Theme","version":"1.0","theme":"Modern Growth","placeholders":[{"slide_number":3,"slide_title":"Strategies for Growth","placeholder":"{{market_analysis}}","metadata":{"identifier":"market_analysis","type":"Strategic_Insights","tone":"Professional, analytical, forward-looking","length":"3-4 bullet points","audience":"Executive stakeholders","format":"bullet_list","max_words":200,"notes":"Focus on growth opportunities and emerging market trends. Include at least one market statistic showing growth potential or market expansion opportunity."}},{"slide_number":4,"slide_title":"Current Market Analysis","placeholder":"{{market_insights}}","metadata":{"identifier":"market_insights","type":"Strategic_Insights","tone":"Professional, analytical, objective","length":"3-4 key trends","audience":"Executive stakeholders","format":"bullet_list","max_words":200,"notes":"Include specific industry trends. Reference consumer behaviour shifts if relevant. Emphasise implications for the client."}},{"slide_number":5,"slide_title":"Market Expansion","placeholder":"{{expansion_opportunity}}","metadata":{"identifier":"expansion_opportunity","type":"Opportunity_Statement","tone":"Confident, growth-oriented","length":"2-3 sentences","audience":"Executive stakeholders","format":"paragraph","max_words":120,"notes":"Paint a vision of expansion. Include market size or growth rate if available. Connect to business strategy."}},{"slide_number":6,"slide_title":"Product Launch","placeholder":"{{launch_timeline}}","metadata":{"identifier":"launch_timeline","type":"Action_Item","tone":"Clear, structured, forward-looking","length":"4-5 phases with timeframes","audience":"Executive stakeholders","format":"numbered_list","max_words":200,"notes":"Realistic timeline. Highlight critical path items and dependencies. Include key decision/approval points."}},{"slide_number":7,"slide_title":"Marketing Strategies","placeholder":"{{marketing_approach}}","metadata":{"identifier":"marketing_approach","type":"Strategic_Insights","tone":"Professional, strategic, growth-focused","length":"3 core strategies","audience":"Marketing stakeholders","format":"bullet_list","max_words":180,"notes":"Focus on channels and tactics proven to drive growth. Align with overall growth objectives."}},{"slide_number":8,"slide_title":"Financial Overview","placeholder":"{{financial_summary}}","metadata":{"identifier":"financial_summary","type":"Data_Summary","tone":"Data-driven, objective, outcome-focused","length":"3-4 key metrics","audience":"Executive stakeholders","format":"bullet_list","max_words":150,"notes":"Focus on growth trajectory and ROI. Include revenue projections or margin improvements. Be transparent about assumptions."}},{"slide_number":9,"slide_title":"Quarterly Targets","placeholder":"{{quarterly_goals}}","metadata":{"identifier":"quarterly_goals","type":"Action_Item","tone":"Clear, ambitious, measurable","length":"4 quarterly objectives","audience":"Executive stakeholders","format":"numbered_list","max_words":160,"notes":"Objectives should be SMART. Show progression across quarters."}},{"slide_number":10,"slide_title":"Financial Snapshot","placeholder":"{{performance_metrics}}","metadata":{"identifier":"performance_metrics","type":"Key_Finding","tone":"Data-driven, objective","length":"3-5 key metrics with context","audience":"Executive stakeholders","format":"bullet_list","max_words":140,"notes":"Show positive momentum/growth trajectory. Include YoY or period-over-period comparisons."}},{"slide_number":11,"slide_title":"Innovative Solutions","placeholder":"{{innovation_narrative}}","metadata":{"identifier":"innovation_narrative","type":"Solution_Overview","tone":"Confident, forward-thinking, visionary","length":"2-3 sentences + 3 supporting points","audience":"Executive stakeholders","format":"paragraph + bullet_list","max_words":200,"notes":"Paint vision of future state. Reference emerging tech or methodologies. Connect to competitive advantage."}},{"slide_number":12,"slide_title":"Future Initiatives","placeholder":"{{future_roadmap}}","metadata":{"identifier":"future_roadmap","type":"Opportunity_Statement","tone":"Visionary, strategic","length":"3-4 future initiatives","audience":"Executive stakeholders","format":"bullet_list","max_words":180,"notes":"Focus on 12-24 month horizon. Connect each initiative to growth objectives or market opportunity."}},{"slide_number":13,"slide_title":"Thank You / Next Steps","placeholder":"{{cta_engagement}}","metadata":{"identifier":"cta_engagement","type":"Action_Item","tone":"Direct, motivational, urgent","length":"2-3 immediate next steps","audience":"Executive stakeholders","format":"numbered_list","max_words":120,"notes":"First action must be obvious and easy. Include decision timeline. Provide clear contact/next meeting info."}}]},
+  partnerships: {"presentation":"Presentation_Strategic_Partnerships","version":"1.0","variant":"Strategic Partnerships","theme":"Modern Growth","theme_voice":"Collaborative, win-win focused, strategic","description":"Partnership opportunity, integration benefits, mutual growth","placeholders":[{"slide_number":1,"slide_title":"Title Slide","placeholder":"{{title_content}}","metadata":{"identifier":"title_content","type":"Title","tone":"Professional, collaborative","length":"Partnership proposal, company names","audience":"Partner leadership","max_words":20}},{"slide_number":2,"slide_title":"Agenda","placeholder":"{{agenda_items}}","metadata":{"identifier":"agenda_items","type":"Agenda","tone":"Clear, structured","length":"5 key topics","format":"numbered_list","max_words":80,"notes":"Opportunity, market potential, integration approach, mutual benefits, roadmap"}},{"slide_number":3,"slide_title":"Partnership Opportunity","placeholder":"{{partnership_context}}","metadata":{"identifier":"partnership_context","type":"Opportunity_Statement","tone":"Strategic, collaborative","length":"Market gap + partnership potential","audience":"Partner stakeholders","format":"paragraph","max_words":120,"notes":"Market opportunity, complementary strengths, why partnership makes sense"}},{"slide_number":4,"slide_title":"Partner Ecosystem","placeholder":"{{market_landscape}}","metadata":{"identifier":"market_landscape","type":"Strategic_Insights","tone":"Objective, opportunity-focused","length":"3-4 market insights","audience":"Partner leadership","format":"bullet_list","max_words":150,"notes":"Partnership ecosystem, collaboration trends, market demand, competitive dynamics"}},{"slide_number":5,"slide_title":"Joint Solution","placeholder":"{{combined_offering}}","metadata":{"identifier":"combined_offering","type":"Solution_Overview","tone":"Value-focused, benefits-driven","length":"How we work together + customer benefits","audience":"All stakeholders","format":"paragraph + bullet_list","max_words":140,"notes":"Integration points, combined capabilities, unique value to customers"}},{"slide_number":6,"slide_title":"Integration Roadmap","placeholder":"{{integration_phases}}","metadata":{"identifier":"integration_phases","type":"Action_Item","tone":"Clear, phased","length":"4-5 integration phases","audience":"Integration teams","format":"numbered_list","max_words":160,"notes":"Planning, design, development, testing, launch phases with timeline"}},{"slide_number":7,"slide_title":"Go-to-Market Strategy","placeholder":"{{joint_gtm}}","metadata":{"identifier":"joint_gtm","type":"Strategic_Insights","tone":"Action-oriented, collaborative","length":"3-4 joint initiatives","audience":"Sales and marketing teams","format":"bullet_list","max_words":150,"notes":"Co-marketing, joint sales, shared customers, co-branding, events"}},{"slide_number":8,"slide_title":"Financial Model","placeholder":"{{partnership_financials}}","metadata":{"identifier":"partnership_financials","type":"Key_Finding","tone":"Transparent, mutual benefit-focused","length":"3-4 financial elements","audience":"Finance and leadership","format":"bullet_list","max_words":140,"notes":"Revenue share, cost allocation, investment required, ROI timeline, mutual value"}},{"slide_number":9,"slide_title":"Partnership Milestones","placeholder":"{{quarterly_goals}}","metadata":{"identifier":"quarterly_goals","type":"Action_Item","tone":"Clear, goal-focused","length":"4 quarterly milestones","audience":"Partnership team","format":"numbered_list","max_words":140,"notes":"Q1-Q4 integration milestones, co-customer targets, revenue goals"}},{"slide_number":10,"slide_title":"Success Metrics","placeholder":"{{partnership_kpis}}","metadata":{"identifier":"partnership_kpis","type":"Data_Summary","tone":"Objective, alignment-focused","length":"5-6 partnership KPIs","audience":"Leadership","format":"bullet_list","max_words":130,"notes":"Co-customers acquired, revenue generated, integration adoption, joint wins, NPS"}},{"slide_number":11,"slide_title":"Joint Capabilities","placeholder":"{{combined_strengths}}","metadata":{"identifier":"combined_strengths","type":"Competitive_Analysis","tone":"Differentiating, value-focused","length":"3-4 unique capabilities","audience":"Sales and product teams","format":"bullet_list","max_words":130,"notes":"What makes this partnership unique, competitive advantages, customer value"}},{"slide_number":12,"slide_title":"Future Expansion","placeholder":"{{partnership_roadmap}}","metadata":{"identifier":"partnership_roadmap","type":"Opportunity_Statement","tone":"Visionary, growth-focused","length":"3-4 expansion opportunities","audience":"Leadership","format":"bullet_list","max_words":140,"notes":"Future phases, market expansion, new use cases, innovation opportunities"}},{"slide_number":13,"slide_title":"Partnership Agreement","placeholder":"{{next_steps}}","metadata":{"identifier":"next_steps","type":"Action_Item","tone":"Direct, collaborative","length":"2-3 immediate next steps","audience":"Partner leadership","format":"numbered_list","max_words":110,"notes":"Agreement review, kick-off meeting, team assignments, timeline to launch"}}]}
+};
+
+function propBuildEnhancedPrompt(metadata, clientData) {
+  const ctx = [
+    clientData['Client Name']       ? `Client: ${clientData['Client Name']}`              : '',
+    clientData['Business Description'] ? `Business: ${clientData['Business Description']}` : '',
+    clientData['Target Audience']   ? `Audience: ${clientData['Target Audience']}`         : '',
+    clientData['Primary Goal 1']    ? `Goal 1: ${clientData['Primary Goal 1']}`            : '',
+    clientData['Primary Goal 2']    ? `Goal 2: ${clientData['Primary Goal 2']}`            : '',
+    clientData['Primary Goal 3']    ? `Goal 3: ${clientData['Primary Goal 3']}`            : '',
+    clientData['Pain Point 1']      ? `Challenge 1: ${clientData['Pain Point 1']}`         : '',
+    clientData['Deliverables']      ? `Deliverables: ${clientData['Deliverables']}`        : '',
+    clientData['Agency Contact Name'] ? `Agency: ${clientData['Agency Contact Name']}`     : '',
+  ].filter(Boolean).join('\n');
+
+  return `You are writing slide content for a professional business presentation.
+
+Slide: ${metadata.slide_title || metadata.identifier}
+Content type: ${metadata.type}
+Tone: ${metadata.tone}
+Audience: ${metadata.audience || 'Business stakeholders'}
+Format: ${metadata.format || 'bullet_list'}
+Length: ${metadata.length}
+Max words: ${metadata.max_words}
+${metadata.notes ? `Guidance: ${metadata.notes}` : ''}
+
+Client context:
+${ctx}
+
+Write ONLY the slide content — no titles, no labels, no explanation. Use the specified format and stay within the word limit.`;
+}
+
+async function propGenerateEnhancedContent(variant, clientData, logFn) {
+  const map = PROP_PLACEHOLDER_MAPS[variant];
+  if (!map) return {};
+  const result = {};
+  const total = map.placeholders.length;
+  let i = 0;
+  for (const item of map.placeholders) {
+    i++;
+    logFn(`Generating slide ${item.slide_number}/${total}: ${item.slide_title}…`);
+    try {
+      const prompt = propBuildEnhancedPrompt(item.metadata, clientData);
+      const content = await callGemini(prompt, { maxTokens: item.metadata.max_words * 2, temperature: 0.6 });
+      result[item.placeholder] = content.trim();
+    } catch(e) {
+      result[item.placeholder] = '';
+    }
+  }
+  return result;
+}
+
+let propToken = null;
+let propFields = {};
+
+function propShowStep(n) {
+  [1,2,3].forEach(i => {
+    const el = $('prop-step-' + i);
+    if (el) el.style.display = (i === n) ? 'block' : 'none';
+  });
+}
+
+function getProposalToken() {
+  return new Promise((resolve, reject) => {
+    if (propToken) { resolve(propToken); return; }
+    if (!window.google?.accounts?.oauth2) { reject(new Error('Google Identity Services not loaded')); return; }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/presentations',
+      callback: (response) => {
+        if (response.error) { reject(new Error(response.error_description || response.error)); return; }
+        propToken = response.access_token;
+        setTimeout(() => { propToken = null; }, (response.expires_in - 60) * 1000);
+        resolve(propToken);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+async function propExtract() {
+  const contactName  = ($('prop-contact-name').value  || '').trim();
+  const contactEmail = ($('prop-contact-email').value || '').trim();
+  if (!contactName || !contactEmail) { toast('Enter your name and email first', 'error'); return; }
+  propFields['Agency Contact Name']  = contactName;
+  propFields['Agency Contact Email'] = contactEmail;
+  propFields['Agency Contact Phone'] = ($('prop-contact-phone').value || '').trim();
+  const transcript = ($('prop-transcript').value || '').trim();
+  if (!transcript) { toast('Paste a transcript first', 'error'); return; }
+  const btn = $('btn-prop-extract');
+  btn.disabled = true;
+  btn.textContent = 'Extracting…';
+  try {
+    const prompt = `Extract structured data from this sales call transcript. Return ONLY a valid JSON object with these exact keys (use empty string "" if not found):
+"Client Name", "Project Name", "Business Description", "Target Audience", "Current Channels",
+"Primary Goal 1", "Primary Goal 2", "Primary Goal 3",
+"Pain Point 1", "Pain Point 2", "Pain Point 3", "Pain Point 4",
+"Tech Stack", "Deliverables", "Timeline",
+"Phase 1", "Phase 2", "Phase 3", "Phase 4", "Phase 5",
+"Price", "Payment Split 1", "Payment Split 2", "Payment Split 3",
+"Service Categories", "Detailed Deliverables", "Cost Estimate"
+
+Notes:
+- Timeline and Phase values: numbers only (weeks)
+- Price: number only, no currency symbol
+- Target Audience and Current Channels: phrase naturally to fit inside a sentence
+- Service Categories: the types/categories of services being proposed (e.g. Strategy, Design, Development, SEO)
+- Detailed Deliverables: a more granular breakdown of what will be delivered beyond the top-level summary
+- Cost Estimate: a breakdown of costs by service or phase if mentioned
+
+Transcript:
+${transcript.slice(0, 8000)}`;
+    const result = await callGemini(prompt);
+    const m = result.match(/\{[\s\S]*\}/);
+    propFields = JSON.parse(m ? m[0] : result);
+    propRenderStep2();
+    propShowStep(2);
+  } catch(e) {
+    toast(e.message || 'Extraction failed — try again', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Extract fields →';
+  }
+}
+
+function propRenderStep2() {
+  const SECTIONS = [
+    { title: 'Client', keys: ['Client Name','Project Name','Business Description','Target Audience','Current Channels'] },
+    { title: 'Goals', keys: ['Primary Goal 1','Primary Goal 2','Primary Goal 3'] },
+    { title: 'Pain points', keys: ['Pain Point 1','Pain Point 2','Pain Point 3','Pain Point 4'] },
+    { title: 'Tech & deliverables', keys: ['Tech Stack','Deliverables','Service Categories','Detailed Deliverables'] },
+    { title: 'Timeline (weeks)', keys: ['Timeline','Phase 1','Phase 2','Phase 3','Phase 4','Phase 5'] },
+    { title: 'Pricing', keys: ['Price','Payment Split 1','Payment Split 2','Payment Split 3','Cost Estimate'] },
+  ];
+  const LONG = new Set(['Business Description','Deliverables','Detailed Deliverables','Cost Estimate']);
+  let html = `<div style="font-size:13px;color:var(--ink2);margin-bottom:16px">Review and edit the extracted fields, then generate.</div>`;
+  SECTIONS.forEach(section => {
+    html += `<div class="card" style="margin-bottom:16px"><div class="card-title" style="margin-bottom:12px">${section.title}</div>`;
+    section.keys.forEach(key => {
+      const val = (propFields[key] || '').replace(/"/g, '&quot;');
+      const id = 'pf-' + key.replace(/ /g,'-');
+      if (LONG.has(key)) {
+        html += `<div class="field-group" style="margin-bottom:10px"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">${key}</label><textarea id="${id}" data-key="${key}" class="prop-field" style="width:100%;height:64px;resize:vertical;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper)">${val}</textarea></div>`;
+      } else {
+        html += `<div class="field-group" style="margin-bottom:10px"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">${key}</label><input type="text" id="${id}" data-key="${key}" class="prop-field" value="${val}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper)"></div>`;
+      }
+    });
+    html += `</div>`;
+  });
+  html += `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-ghost" onclick="propShowStep(1)">← Back</button><button class="btn btn-primary" id="btn-prop-generate" onclick="propGenerate()">Generate proposal →</button></div>`;
+  $('prop-step-2').innerHTML = html;
+}
+
+function propCollectFields() {
+  document.querySelectorAll('.prop-field').forEach(el => {
+    propFields[el.dataset.key] = el.value.trim();
+  });
+}
+
+async function propGenerate() {
+  propCollectFields();
+  if (!propFields['Client Name']) { toast('Client Name is required', 'error'); return; }
+  const variant = ($('prop-variant') || {}).value || 'website';
+  propShowStep(3);
+  $('prop-step-3').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Generating…</div><div id="prop-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="prop-result" style="display:none;margin-top:20px"></div></div>`;
+  const log = msg => { const el = $('prop-log'); if (el) el.innerHTML += `<div>→ ${msg}</div>`; };
+  try {
+    log('Requesting Google permissions…');
+    const token = await getProposalToken();
+
+    log('Reading agency details…');
+    const agencyRes = await fetch(`https://docs.googleapis.com/v1/documents/${PROP_AGENCY_DOC_ID}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!agencyRes.ok) throw new Error('Could not read agency details doc — check permissions');
+    const agencyDoc = await agencyRes.json();
+    const agencyText = (agencyDoc.body?.content || []).map(el =>
+      (el.paragraph?.elements || []).map(e => e.textRun?.content || '').join('')
+    ).join('');
+    const agencyResult = await callGemini(`Extract as JSON: Agency Name, Agency Contact Name, Agency Contact Email, Agency Contact Phone, Number of clients.\nText:\n${agencyText.slice(0,2000)}\nReturn ONLY valid JSON.`);
+    let agency = {};
+    try { const m = agencyResult.match(/\{[\s\S]*\}/); agency = JSON.parse(m ? m[0] : agencyResult); } catch(e) {}
+
+    let enhancedContent = {};
+    if (PROP_PLACEHOLDER_MAPS[variant]) {
+      log(`Generating enhanced slide content (${PROP_PLACEHOLDER_MAPS[variant].placeholders.length} slides)…`);
+      enhancedContent = await propGenerateEnhancedContent(variant, propFields, log);
+    }
+
+    log('Creating client folder in Drive…');
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: propFields['Client Name'], mimeType: 'application/vnd.google-apps.folder', parents: [PROP_PARENT_FOLDER_ID] })
+    });
+    if (!folderRes.ok) throw new Error('Could not create Drive folder');
+    const { id: folderId } = await folderRes.json();
+
+    const replacements = [
+      ['{{client_name}}',        propFields['Client Name']],
+      ['{{agency_name}}',        agency['Agency Name'] || ''],
+      ['{{project_name}}',       propFields['Project Name']],
+      ['{{date}}',               new Date().toLocaleDateString('en-GB').replace(/\//g,'-')],
+      ['{{business_description}}',propFields['Business Description']],
+      ['{{target_audience}}',    propFields['Target Audience']],
+      ['{{current_channels}}',   propFields['Current Channels']],
+      ['{{primary_goal_1}}',     propFields['Primary Goal 1']],
+      ['{{primary_goal_2}}',     propFields['Primary Goal 2']],
+      ['{{primary_goal_3}}',     propFields['Primary Goal 3']],
+      ['{{pain_point_1}}',       propFields['Pain Point 1']],
+      ['{{pain_point_2}}',       propFields['Pain Point 2']],
+      ['{{pain_point_3}}',       propFields['Pain Point 3']],
+      ['{{pain_point_4}}',       propFields['Pain Point 4']],
+      ['{{tech_stack}}',         propFields['Tech Stack']],
+      ['{{deliverables}}',       propFields['Deliverables']],
+      ['{{timeline}}',           propFields['Timeline']],
+      ['{{phase1_weeks}}',       propFields['Phase 1']],
+      ['{{phase2_weeks}}',       propFields['Phase 2']],
+      ['{{phase3_weeks}}',       propFields['Phase 3']],
+      ['{{phase4_weeks}}',       propFields['Phase 4']],
+      ['{{phase5_weeks}}',       propFields['Phase 5']],
+      ['{{price}}',              propFields['Price']],
+      ['{{payment_split_1}}',    propFields['Payment Split 1']],
+      ['{{payment_split_2}}',    propFields['Payment Split 2']],
+      ['{{payment_split_3}}',    propFields['Payment Split 3']],
+      ['{{number_of_clients}}',  agency['Number of clients'] || ''],
+      ['{{service_categories}}',  propFields['Service Categories'] || ''],
+      ['{{detailed_deliverables}}',propFields['Detailed Deliverables'] || ''],
+      ['{{cost_estimate}}',        propFields['Cost Estimate'] || ''],
+      ['{{agency_contact_name}}',propFields['Agency Contact Name'] || ''],
+      ['{{agency_contact_email}}',propFields['Agency Contact Email'] || ''],
+      ['{{agency_contact_phone}}',propFields['Agency Contact Phone'] || ''],
+    ];
+    const docRequests = replacements.map(([text, replaceText]) => ({ replaceAllText: { containsText: { text, matchCase: true }, replaceText: replaceText || '' } }));
+
+    log('Copying proposal document template…');
+    const docCopyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${PROP_TEMPLATE_DOC_ID}/copy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${propFields['Client Name']} - Website Proposal` })
+    });
+    if (!docCopyRes.ok) throw new Error('Could not copy document template');
+    const { id: docId } = await docCopyRes.json();
+    await fetch(`https://www.googleapis.com/drive/v3/files/${docId}?addParents=${folderId}&removeParents=root&fields=id`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+
+    log('Filling document placeholders…');
+    const docUpdateRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: docRequests })
+    });
+    if (!docUpdateRes.ok) throw new Error('Could not update document');
+
+    log('Copying slides template…');
+    const slidesCopyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${PROP_TEMPLATE_SLIDES_ID}/copy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${propFields['Client Name']} - Website Proposal` })
+    });
+    if (!slidesCopyRes.ok) throw new Error('Could not copy slides template');
+    const { id: slidesId } = await slidesCopyRes.json();
+    await fetch(`https://www.googleapis.com/drive/v3/files/${slidesId}?addParents=${folderId}&removeParents=root&fields=id`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+
+    log('Filling slides placeholders…');
+    const slidesUpdateRes = await fetch(`https://slides.googleapis.com/v1/presentations/${slidesId}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: docRequests })
+    });
+    if (!slidesUpdateRes.ok) throw new Error('Could not update slides');
+
+    log('Copying branded slides template…');
+    const brandedCopyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${PROP_BRANDED_SLIDES_ID}/copy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${propFields['Client Name']} - ${variant === 'partnerships' ? 'Partnership' : 'Website'} Proposal Deck` })
+    });
+    if (!brandedCopyRes.ok) throw new Error('Could not copy branded slides template');
+    const { id: brandedSlidesId } = await brandedCopyRes.json();
+    await fetch(`https://www.googleapis.com/drive/v3/files/${brandedSlidesId}?addParents=${folderId}&removeParents=root&fields=id`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+
+    log('Filling branded slides…');
+    const enhancedRequests = Object.entries(enhancedContent).map(([placeholder, text]) => ({
+      replaceAllText: { containsText: { text: placeholder, matchCase: true }, replaceText: text || '' }
+    }));
+    if (enhancedRequests.length) {
+      await fetch(`https://slides.googleapis.com/v1/presentations/${brandedSlidesId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: enhancedRequests })
+      });
+    }
+
+    $('prop-log').innerHTML += `<div style="color:var(--ok);margin-top:4px">✓ Done!</div>`;
+    const result = $('prop-result');
+    result.style.display = 'block';
+    result.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a href="https://drive.google.com/drive/folders/${folderId}" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center">Open client folder ↗</a>
+        <a href="https://docs.google.com/document/d/${docId}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open proposal doc ↗</a>
+        <a href="https://docs.google.com/presentation/d/${slidesId}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open slides deck ↗</a>
+        <a href="https://docs.google.com/presentation/d/${brandedSlidesId}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open branded deck ↗</a>
+      </div>
+      <button class="btn btn-ghost" onclick="showProposal()" style="margin-top:12px;width:100%">Generate another →</button>`;
+  } catch(e) {
+    $('prop-log').innerHTML += `<div style="color:var(--danger)">✗ ${e.message || 'Generation failed'}</div>`;
+    const result = $('prop-result');
+    result.style.display = 'block';
+    result.innerHTML = `<button class="btn btn-ghost" onclick="propShowStep(2)">← Back to edit fields</button>`;
+  }
 }
 
 function updateFlowTitle() {
