@@ -2153,11 +2153,12 @@ async function estGenerate() {
           }
           if (!weekCount) weekCount = 6;
 
-          // Collect task names (col B, rows after header until blank)
+          // Collect task names (col B, rows after header — stop at first blank row)
           const taskRows = []; // { name, rowIdx }
           for (let ri = headerRowIdx + 1; ri < tRows.length; ri++) {
             const name = ((tRows[ri] || [])[1] || '').trim();
-            if (name) taskRows.push({ name, rowIdx: ri });
+            if (!name) break; // blank row = end of Gantt tasks
+            taskRows.push({ name, rowIdx: ri });
           }
 
           if (taskRows.length) {
