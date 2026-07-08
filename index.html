@@ -1559,27 +1559,29 @@ const EST_PARENT_FOLDER_ID  = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
 let estToken = null;
 let estFields = {};
 
-// Phase 1 and Phase 2 roles with their sheet column-B display names and JSON keys
-const EST_ROLES = {
-  phase1: [
-    { key: 'strategy_lead_rob',   label: 'Strategy Lead (Rob)',   rate: 950 },
-    { key: 'strategy_lead_james', label: 'Strategy Lead (James)', rate: 950 },
-    { key: 'tech_lead',           label: 'Tech Lead (Redian)',    rate: 700 },
-    { key: 'producer',            label: 'Producer (Verity)',     rate: 500 },
-    { key: 'ux_lead',             label: 'UX Lead',               rate: 550 },
-  ],
-  phase2: [
-    { key: 'strategy_lead_rob',   label: 'Strategy Lead (Rob)',   rate: 950 },
-    { key: 'strategy_lead_james', label: 'Strategy Lead (James)', rate: 950 },
-    { key: 'producer',            label: 'Producer (Verity)',     rate: 500 },
-    { key: 'designer',            label: 'Designer',              rate: 450 },
-    { key: 'tech_lead_redian',    label: 'Tech Lead (Redian)',    rate: 700 },
-    { key: 'developer_snr',       label: 'Developer (Snr)',       rate: 300 },
-    { key: 'qa',                  label: 'QA',                    rate: 450 },
-    { key: 'support',             label: 'Support',               rate: 500 },
-    { key: 'hosting',             label: 'Hosting & 3rd Party Costs', rate: 500 },
-  ]
-};
+// Ratecard — matches the Ratecard tab in the template sheet
+const EST_RATECARD = [
+  { label: 'Junior Software Engineer',    rate: 130 },
+  { label: 'Mid-level Software Engineer', rate: 200 },
+  { label: 'Senior Software Engineer',    rate: 300 },
+  { label: 'Technical Engineering Lead',  rate: 380 },
+  { label: 'Mid-level Designer',          rate: 150 },
+  { label: 'Senior Designer',             rate: 200 },
+  { label: 'Mid-weight Software Engineer',rate: 360 },
+  { label: 'Technical Engineering Lead (UK)', rate: 700 },
+  { label: 'UX Lead',                     rate: 130 },
+  { label: 'Senior UX',                   rate: 200 },
+  { label: 'Senior UX / UI',              rate: 300 },
+  { label: 'Mid UX',                      rate: 380 },
+  { label: 'Strategy Lead',               rate: 950 },
+  { label: 'Producer',                    rate: 500 },
+  { label: 'QA',                          rate: 450 },
+  { label: 'Support',                     rate: 500 },
+  { label: 'Hosting & 3rd Party Costs',   rate: 500 },
+];
+
+// Live role lists — rebuilt on each step 2 render, mutated by add/remove actions
+let estLiveRoles = { phase1: [], phase2: [] };
 
 function getEstimateToken() {
   return new Promise((resolve, reject) => {
@@ -1800,66 +1802,44 @@ ${transcript.slice(0, 8000)}`;
 async function estAIFillDays(fields) {
   const prompt = `You are estimating resource days for a digital agency project.
 
-Project details:
+Project:
 - Client: ${fields.client_name || 'Unknown'}
 - Type: ${fields.project_type || 'Digital project'}
 - Deliverables: ${fields.deliverables || 'Not specified'}
 - Timeline: ${fields.timeline || 'Not specified'}
 - Budget: £${fields.budget || 'Not specified'}
 
-Estimate realistic working days for each role across two project phases.
-Phase 1 is Discovery/Strategy. Phase 2 is Design & Build.
-Use 0 for roles not needed. Be conservative and realistic.
+Available roles (label: day rate):
+${EST_RATECARD.map(r => `- ${r.label}: £${r.rate}`).join('\n')}
 
-Return ONLY valid JSON exactly like this:
+Select the most appropriate roles for this project across two phases.
+Phase 1 = Discovery/Strategy. Phase 2 = Design & Build.
+Only include roles genuinely needed. Be realistic with days.
+
+Return ONLY valid JSON:
 {
-  "phase1": { "strategy_lead_rob": 5, "strategy_lead_james": 3, "tech_lead": 2, "producer": 3, "ux_lead": 4 },
-  "phase2": { "strategy_lead_rob": 2, "strategy_lead_james": 0, "producer": 5, "designer": 15, "tech_lead_redian": 20, "developer_snr": 25, "qa": 8, "support": 3, "hosting": 1 }
+  "phase1": [{"label":"Senior UX","rate":200,"days":5}],
+  "phase2": [{"label":"Senior Software Engineer","rate":300,"days":20}]
 }`;
   try {
     const result = await callGemini(prompt, { temperature: 0.3 });
     const m = result.match(/\{[\s\S]*\}/);
     return JSON.parse(m ? m[0] : result);
   } catch(e) {
-    // Return zeros on failure — user can fill in manually
-    const zeros = (keys) => Object.fromEntries(keys.map(k => [k, 0]));
-    return {
-      phase1: zeros(EST_ROLES.phase1.map(r => r.key)),
-      phase2: zeros(EST_ROLES.phase2.map(r => r.key))
-    };
+    return { phase1: [], phase2: [] };
   }
 }
 
-function estRenderStep2(fields, days) {
+function estRenderStep2(fields, aiRoles) {
+  estLiveRoles = {
+    phase1: ((aiRoles && aiRoles.phase1) || []).map((r,i) => ({ ...r, id: 'p1_'+i })),
+    phase2: ((aiRoles && aiRoles.phase2) || []).map((r,i) => ({ ...r, id: 'p2_'+i })),
+  };
+
   const inp = (id, val, label) => `<div class="field-group" style="margin-bottom:10px">
     <label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">${label}</label>
     <input type="text" id="${id}" value="${String(val||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--mono);box-sizing:border-box;background:var(--paper)">
   </div>`;
-
-  const cellStyle = 'padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--paper);width:100%;box-sizing:border-box';
-  const daysTable = (phase, roleList, daysData) => `
-    <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)">
-      <thead>
-        <tr>
-          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3)">Role</th>
-          <th style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3);width:80px">Rate/day</th>
-          <th style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--ink3);width:70px">Days</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${roleList.map((r,i) => `<tr>
-          <td style="padding:4px 6px;border-bottom:1px solid var(--border)">
-            <input type="text" value="${r.label}" data-phase="${phase}" data-rowidx="${i}" class="est-role-label" style="${cellStyle}">
-          </td>
-          <td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right">
-            <input type="number" min="0" value="${r.rate}" data-phase="${phase}" data-rowidx="${i}" class="est-role-rate" style="${cellStyle};text-align:right">
-          </td>
-          <td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right">
-            <input type="number" min="0" max="999" value="${(daysData&&daysData[r.key])||0}" data-phase="${phase}" data-role="${r.key}" class="est-days-input" style="${cellStyle};text-align:right">
-          </td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
 
   $('est-step-2-content').innerHTML = `
     <div class="card" style="margin-bottom:16px">
@@ -1873,17 +1853,97 @@ function estRenderStep2(fields, days) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="card">
         <div class="card-title" style="margin-bottom:10px">Phase 1 — Discovery</div>
-        ${daysTable('phase1', EST_ROLES.phase1, days&&days.phase1)}
+        <div id="est-phase1-table"></div>
+        <div style="margin-top:10px" id="est-phase1-add"></div>
       </div>
       <div class="card">
         <div class="card-title" style="margin-bottom:10px">Phase 2 — Design &amp; Build</div>
-        ${daysTable('phase2', EST_ROLES.phase2, days&&days.phase2)}
+        <div id="est-phase2-table"></div>
+        <div style="margin-top:10px" id="est-phase2-add"></div>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-ghost" onclick="estShowStep(1)">← Back</button>
       <button class="btn btn-primary" id="btn-est-generate" onclick="estGenerate()">Generate estimate →</button>
     </div>`;
+
+  estRenderPhaseTable('phase1');
+  estRenderPhaseTable('phase2');
+}
+
+function estRenderPhaseTable(phase) {
+  const roles = estLiveRoles[phase];
+  const cs = 'padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--paper);box-sizing:border-box';
+  const tableEl = $(phase === 'phase1' ? 'est-phase1-table' : 'est-phase2-table');
+  const addEl   = $(phase === 'phase1' ? 'est-phase1-add'   : 'est-phase2-add');
+
+  tableEl.innerHTML = roles.length ? `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)">
+      <thead><tr>
+        <th style="text-align:left;padding:5px 6px;border-bottom:2px solid var(--border);color:var(--ink3)">Role</th>
+        <th style="text-align:right;padding:5px 6px;border-bottom:2px solid var(--border);color:var(--ink3);width:72px">Rate</th>
+        <th style="text-align:right;padding:5px 6px;border-bottom:2px solid var(--border);color:var(--ink3);width:56px">Days</th>
+        <th style="width:24px;border-bottom:2px solid var(--border)"></th>
+      </tr></thead>
+      <tbody>
+        ${roles.map((r,i) => `<tr>
+          <td style="padding:3px 4px;border-bottom:1px solid var(--border)">
+            <input type="text" value="${(r.label||'').replace(/"/g,'&quot;')}" data-phase="${phase}" data-idx="${i}" class="est-role-label" style="${cs};width:100%">
+          </td>
+          <td style="padding:3px 4px;border-bottom:1px solid var(--border)">
+            <input type="number" min="0" value="${r.rate||0}" data-phase="${phase}" data-idx="${i}" class="est-role-rate" style="${cs};width:100%;text-align:right">
+          </td>
+          <td style="padding:3px 4px;border-bottom:1px solid var(--border)">
+            <input type="number" min="0" max="999" value="${r.days||0}" data-phase="${phase}" data-idx="${i}" class="est-days-input" style="${cs};width:100%;text-align:right">
+          </td>
+          <td style="padding:3px 4px;border-bottom:1px solid var(--border);text-align:center">
+            <button onclick="estRemoveRole('${phase}',${i})" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;line-height:1;padding:0 2px" title="Remove">×</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : `<div style="font-size:12px;color:var(--ink3);font-family:var(--mono);padding:8px 0">No roles yet — add one below</div>`;
+
+  const opts = EST_RATECARD.map((r,i) => `<option value="${i}">${r.label} — £${r.rate}/day</option>`).join('');
+  addEl.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:center">
+      <select id="est-${phase}-pick" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--mono);background:var(--paper)">
+        <option value="">— pick from ratecard —</option>
+        ${opts}
+        <option value="custom">+ Custom role</option>
+      </select>
+      <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" onclick="estAddRole('${phase}')">+ Add</button>
+    </div>`;
+}
+
+function estSyncLiveRoles(phase) {
+  const labels = document.querySelectorAll(`.est-role-label[data-phase="${phase}"]`);
+  const rates  = document.querySelectorAll(`.est-role-rate[data-phase="${phase}"]`);
+  const days   = document.querySelectorAll(`.est-days-input[data-phase="${phase}"]`);
+  estLiveRoles[phase].forEach((r, i) => {
+    if (labels[i]) r.label = labels[i].value;
+    if (rates[i])  r.rate  = parseInt(rates[i].value,10) || 0;
+    if (days[i])   r.days  = parseInt(days[i].value,10) || 0;
+  });
+}
+
+function estAddRole(phase) {
+  estSyncLiveRoles(phase);
+  const sel = $(`est-${phase}-pick`);
+  const val = sel.value;
+  if (!val) return;
+  if (val === 'custom') {
+    estLiveRoles[phase].push({ label: 'New Role', rate: 0, days: 0 });
+  } else {
+    const rc = EST_RATECARD[parseInt(val,10)];
+    if (rc) estLiveRoles[phase].push({ label: rc.label, rate: rc.rate, days: 0 });
+  }
+  estRenderPhaseTable(phase);
+}
+
+function estRemoveRole(phase, idx) {
+  estSyncLiveRoles(phase);
+  estLiveRoles[phase].splice(idx, 1);
+  estRenderPhaseTable(phase);
 }
 
 async function estGenerate() {
@@ -1891,25 +1951,12 @@ async function estGenerate() {
   const clientName  = ($('est-f-client')  || $('est-client-name')).value.trim() || estFields.client_name || 'Client';
   const projectName = ($('est-f-project') || {value:''}).value.trim() || estFields.project_name || '';
 
-  // Collect days, labels, and rates from editable table inputs
-  const collected = { phase1: {}, phase2: {} };
-  document.querySelectorAll('.est-days-input').forEach(inp => {
-    collected[inp.dataset.phase][inp.dataset.role] = parseInt(inp.value, 10) || 0;
-  });
-  // Build edited role lists (label + rate may have been changed by user)
-  const editedRoles = { phase1: [], phase2: [] };
-  ['phase1','phase2'].forEach(phase => {
-    const labels = document.querySelectorAll(`.est-role-label[data-phase="${phase}"]`);
-    const rates  = document.querySelectorAll(`.est-role-rate[data-phase="${phase}"]`);
-    EST_ROLES[phase].forEach((r, i) => {
-      editedRoles[phase].push({
-        key:   r.key,
-        label: (labels[i] && labels[i].value.trim()) || r.label,
-        rate:  parseInt((rates[i] && rates[i].value) || r.rate, 10) || r.rate,
-        days:  (collected[phase] || {})[r.key] || 0
-      });
-    });
-  });
+  // Sync and collect final role data from live role state
+  ['phase1','phase2'].forEach(phase => estSyncLiveRoles(phase));
+  const editedRoles = {
+    phase1: estLiveRoles.phase1.map(r => ({ label: r.label, rate: r.rate, days: r.days || 0 })),
+    phase2: estLiveRoles.phase2.map(r => ({ label: r.label, rate: r.rate, days: r.days || 0 })),
+  };
 
   estShowStep(3);
   $('est-step-3').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Generating…</div><div id="est-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="est-result" style="display:none;margin-top:20px"></div></div>`;
@@ -1947,6 +1994,15 @@ async function estGenerate() {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     });
+
+    log('Fixing template formulas…');
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [
+        { findReplace: { find: '=K18+K34+#REF!+#REF!+#REF!', replacement: '=K18+K34', includeFormulas: true, allSheets: true } }
+      ]})
+    }).catch(() => {}); // non-fatal
 
     log('Reading sheet structure…');
     // Get spreadsheet metadata to find the correct sheet tab name
