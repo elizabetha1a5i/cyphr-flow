@@ -2551,12 +2551,14 @@ ${chunk}`);
     const tasks = parseTasArray(tasksRaw);
     const decisions = parseTasArray(decisionsRaw);
 
+    console.log('Tasks raw:', tasksRaw);
+    console.log('Decisions raw:', decisionsRaw);
+    console.log('Parsed tasks:', tasks.length, 'decisions:', decisions.length);
+
     $('tracker-tasks-body').innerHTML = tasks.map(t => trackerTaskRow(t)).join('');
     $('tracker-decisions-body').innerHTML = decisions.map(d => trackerDecisionRow(d)).join('');
 
-    if (!tasks.length && !decisions.length) {
-      toast('Nothing extracted — check transcript has project content', 'info');
-    }
+    toast(`Extracted ${tasks.length} tasks, ${decisions.length} decisions`, 'info');
     trackerShowStep(2);
   } catch(e) {
     toast('Extraction failed: ' + e.message, 'error');
