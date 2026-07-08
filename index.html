@@ -2514,31 +2514,48 @@ async function trackerExtract() {
   const transcript = $('tracker-transcript').value.trim();
   if (!transcript) { toast('Paste a transcript first', 'info'); return; }
   const startDate = $('tracker-start').value.trim();
+  const chunk = transcript.slice(0, 8000);
 
   const btn = document.querySelector('#tracker-step-1 .btn-primary');
-  btn.textContent = 'Extracting…'; btn.disabled = true;
+  btn.textContent = 'Extracting tasks…'; btn.disabled = true;
 
   try {
-    const result = await callGemini(`Extract structured project data from this transcript. You MUST return ONLY a raw JSON object — no markdown, no explanation, no code fences.
+    const tasksRaw = await callGemini(`Extract ALL project tasks and phases from this transcript. Return ONLY a raw JSON array — no markdown, no explanation, no code fences.
 
-Required shape (include both arrays even if empty):
-{"tasks":[{"phase":"Discovery","task":"Kickoff meeting","start":"14 Jul","end":"15 Jul"}],"decisions":[{"raised_by":"Name","date":"14 Jul 2026","question":"What is the invoicing schedule?","response":"50% upfront 50% on delivery","status":"OPEN"}]}
+Format: [{"phase":"Infrastructure","task":"Cloud data warehouse provisioning","start":"28 Jul","end":"10 Aug"},...]
 
-Rules:
-- tasks: one object per task. phase = broad phase name. Estimate start/end from context or from start date "${startDate||'today'}". Format dates as "DD MMM".
-- decisions: extract every question, action item, or open point raised. If no answer given yet, leave response empty and set status OPEN. If resolved, set CLOSED.
-- Do NOT include any text outside the JSON object.
+Rules: one object per task, phase = broad phase name, dates as "DD MMM", estimate from context if not stated, start date hint: "${startDate||'today'}".
 
 Transcript:
-${transcript.slice(0, 6000)}`);
+${chunk}`);
 
-    const data = parseTrackerJson(result) || { tasks: [], decisions: [] };
+    btn.textContent = 'Extracting decisions…';
 
-    $('tracker-tasks-body').innerHTML = (data.tasks || []).map(t => trackerTaskRow(t)).join('');
-    $('tracker-decisions-body').innerHTML = (data.decisions || []).map(d => trackerDecisionRow(d)).join('');
+    const decisionsRaw = await callGemini(`Extract ALL questions, decisions, action items, and open points from this transcript. Return ONLY a raw JSON array — no markdown, no explanation, no code fences.
 
-    if (!data.tasks?.length && !data.decisions?.length) {
-      toast('Nothing extracted — try adding more detail to the transcript', 'info');
+Format: [{"raised_by":"Sarah","date":"22 Jul 2026","question":"Is there a rollback plan?","response":"Yes — full parallel load kept live until data integrity validated","status":"CLOSED"},...]
+
+Rules: status is OPEN if no clear answer given, CLOSED if resolved in the transcript. raised_by = person who asked/raised it.
+
+Transcript:
+${chunk}`);
+
+    const parseTasArray = raw => {
+      let s = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+      const start = s.indexOf('['), end = s.lastIndexOf(']');
+      if (start === -1 || end === -1) return [];
+      s = s.slice(start, end+1).replace(/,\s*([\]}])/g,'$1');
+      try { return JSON.parse(s); } catch(e) { return []; }
+    };
+
+    const tasks = parseTasArray(tasksRaw);
+    const decisions = parseTasArray(decisionsRaw);
+
+    $('tracker-tasks-body').innerHTML = tasks.map(t => trackerTaskRow(t)).join('');
+    $('tracker-decisions-body').innerHTML = decisions.map(d => trackerDecisionRow(d)).join('');
+
+    if (!tasks.length && !decisions.length) {
+      toast('Nothing extracted — check transcript has project content', 'info');
     }
     trackerShowStep(2);
   } catch(e) {
