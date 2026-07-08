@@ -2345,14 +2345,15 @@ Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
 const SOW_PARENT_FOLDER_ID = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
 let sowToken = null;
 
-async function getSowToken() {
-  if (sowToken) return sowToken;
+function getSowToken() {
   return new Promise((resolve, reject) => {
+    if (sowToken) { resolve(sowToken); return; }
+    if (!window.google?.accounts?.oauth2) { reject(new Error('Google Identity Services not loaded')); return; }
     const client = google.accounts.oauth2.initTokenClient({
-      client_id: settings.googleClientId,
+      client_id: GOOGLE_CLIENT_ID,
       scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents',
       callback: r => {
-        if (r.error) { reject(r); return; }
+        if (r.error) { reject(new Error(r.error_description || r.error)); return; }
         sowToken = r.access_token;
         setTimeout(() => { sowToken = null; }, (r.expires_in - 60) * 1000);
         resolve(sowToken);
