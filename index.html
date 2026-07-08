@@ -1565,12 +1565,19 @@ async function propGenerate() {
     const enhancedRequests = Object.entries(enhancedContent).map(([placeholder, text]) => ({
       replaceAllText: { containsText: { text: placeholder, matchCase: true }, replaceText: text || '' }
     }));
+    log(`Found ${enhancedRequests.length} placeholders to fill…`);
     if (enhancedRequests.length) {
-      await fetch(`https://slides.googleapis.com/v1/presentations/${brandedSlidesId}:batchUpdate`, {
+      const slideFillRes = await fetch(`https://slides.googleapis.com/v1/presentations/${brandedSlidesId}:batchUpdate`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ requests: enhancedRequests })
       });
+      if (!slideFillRes.ok) {
+        const err = await slideFillRes.json().catch(() => ({}));
+        log(`Slides fill error: ${err?.error?.message || slideFillRes.status}`);
+      } else {
+        log('Slides filled successfully');
+      }
     }
 
     $('prop-log').innerHTML += `<div style="color:var(--ok);margin-top:4px">✓ Done!</div>`;
