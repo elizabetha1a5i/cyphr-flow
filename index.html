@@ -508,11 +508,11 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
           <div id="prop-meet-results" style="margin-bottom:10px"></div>
 
           <div id="prop-dropzone" ondragover="event.preventDefault();this.style.borderColor='var(--brand)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="propHandleDrop(event)" onclick="$('prop-file-input').click()" style="border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color 0.15s">
-            <div style="font-size:13px;color:var(--ink3)">↑ Upload or drag a file here</div>
+            <div style="font-size:13px;color:var(--ink3)">↑ Upload or drag files here</div>
             <div style="font-size:11px;color:var(--ink3);margin-top:4px">.txt · .docx · .pdf</div>
             <div id="prop-file-status" style="font-size:12px;color:var(--ok,green);margin-top:6px;display:none"></div>
           </div>
-          <input type="file" id="prop-file-input" accept=".txt,.docx,.pdf" style="display:none" onchange="propHandleFileInput(event)">
+          <input type="file" id="prop-file-input" accept=".txt,.docx,.pdf" multiple style="display:none" onchange="propHandleFileInput(event)">
 
           <div style="font-size:11px;color:var(--ink3);font-family:var(--mono);margin-bottom:6px">OR PASTE DIRECTLY</div>
           <textarea id="prop-transcript" placeholder="Paste the full call transcript here…" style="width:100%;min-height:180px;font-family:var(--mono);font-size:12px;padding:12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
@@ -1503,14 +1503,18 @@ function getProposalToken() {
 function propHandleDrop(e) {
   e.preventDefault();
   $('prop-dropzone').style.borderColor = 'var(--border)';
-  const file = e.dataTransfer.files[0];
-  if (file) propReadFile(file);
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) propReadFiles(files);
 }
 
 function propHandleFileInput(e) {
-  const file = e.target.files[0];
-  if (file) propReadFile(file);
+  const files = Array.from(e.target.files);
+  if (files.length) propReadFiles(files);
   e.target.value = '';
+}
+
+async function propReadFiles(files) {
+  for (const file of files) await propReadFile(file);
 }
 
 async function propReadFile(file) {
