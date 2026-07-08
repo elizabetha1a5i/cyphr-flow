@@ -485,14 +485,6 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
           </div>
         </div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-title" style="margin-bottom:10px">Proposal type</div>
-          <div class="field-group"><label style="font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:4px">What kind of proposal is this?</label>
-          <select id="prop-variant" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
-            <option value="website">Website Proposal</option>
-            <option value="partnerships">Strategic Partnerships</option>
-          </select></div>
-        </div>
-        <div class="card" style="margin-bottom:16px">
           <div class="card-title" style="margin-bottom:12px">Sales call transcript</div>
 
           <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -1786,7 +1778,6 @@ async function propLoadMeetTranscript(fileId, fileName, btn) {
 async function propExtract() {
   const contactName  = ($('prop-contact-name').value  || '').trim();
   const contactEmail = ($('prop-contact-email').value || '').trim();
-  if (!contactName || !contactEmail) { toast('Enter your name and email first', 'error'); return; }
   propFields['Agency Contact Name']  = contactName;
   propFields['Agency Contact Email'] = contactEmail;
   propFields['Agency Contact Phone'] = ($('prop-contact-phone').value || '').trim();
