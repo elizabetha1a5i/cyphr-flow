@@ -663,10 +663,12 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       <div id="brief-step-1">
         <div class="card" style="max-width:600px">
           <div style="font-family:'Bandit Condensed',var(--serif);font-size:16px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:12px">Step 1 — Choose Type + Transcript</div>
-          <!-- Type toggle -->
-          <div style="display:flex;gap:8px;margin-bottom:18px">
-            <button id="brief-toggle-standard" onclick="setBriefType('standard')" class="btn btn-primary" style="flex:1;font-size:12px">Standard<div style="font-weight:400;font-size:10px;margin-top:2px;opacity:.8">One-page, fast</div></button>
-            <button id="brief-toggle-comprehensive" onclick="setBriefType('comprehensive')" class="btn btn-ghost" style="flex:1;font-size:12px">Comprehensive<div style="font-weight:400;font-size:10px;margin-top:2px;opacity:.8">Full detail, longer</div></button>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Brief Type</label>
+            <select id="brief-type-select" onchange="setBriefType(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--paper);color:var(--ink)">
+              <option value="standard">Standard — one-page, fast</option>
+              <option value="comprehensive">Comprehensive — full detail</option>
+            </select>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Client Name</label><input id="brief-client" type="text" placeholder="e.g. Riverside Retail" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
@@ -2550,9 +2552,8 @@ let briefType = 'standard';
 
 function setBriefType(type) {
   briefType = type;
+  const sel = $('brief-type-select'); if (sel) sel.value = type;
   const isStd = type === 'standard';
-  $('brief-toggle-standard').className     = isStd ? 'btn btn-primary' : 'btn btn-ghost';
-  $('brief-toggle-comprehensive').className = isStd ? 'btn btn-ghost' : 'btn btn-primary';
   document.querySelectorAll('.brief-comp-only').forEach(el => { el.style.display = isStd ? 'none' : ''; });
 }
 
@@ -2594,17 +2595,38 @@ async function briefExtract() {
   btn.textContent = 'Extracting…'; btn.disabled = true;
 
   try {
-    const client = $('brief-client').value.trim();
+    const client  = $('brief-client').value.trim();
     const project = $('brief-project').value.trim();
-    const result = await callGemini(`Extract project brief fields from this transcript. Return ONLY a raw JSON object — no markdown, no code fences.
+    const isComp  = briefType === 'comprehensive';
 
-{"summary":"1-2 sentence project summary","background":"why this project exists and context","objectives":["obj1","obj2","obj3"],"metrics":["metric1","metric2"],"audience":"primary target audience","in_scope":["item1","item2","item3"],"out_scope":["item1","item2"],"deliverables":["deliverable 1","deliverable 2"],"start_date":"DD Mon YYYY","end_date":"DD Mon YYYY","risks":["risk or assumption 1","risk 2"],"tone":"tone of voice description"}
+    const prompt = `You are extracting structured project brief data from a transcript or meeting notes. Be thorough — pull out every piece of information you can find. If a field is genuinely not mentioned, return an empty string or empty array for it. Do NOT invent information that isn't in the transcript.
 
-Client: ${client||'[unknown]'}, Project: ${project||'[unknown]'}
+Return ONLY a raw JSON object with exactly these keys, no markdown, no code fences:
+
+{
+  "summary": "clear 1-2 sentence description of what this project is",
+  "background": "why this project is happening, the business context or problem being solved",
+  "objectives": ["specific goal or outcome 1", "goal 2", "goal 3"],
+  "metrics": ["how success will be measured 1", "metric 2"],
+  "audience": "who this work is for — be specific",
+  "in_scope": ["thing included in scope 1", "item 2", "item 3"],
+  "out_scope": ["thing explicitly excluded 1", "item 2"],
+  "deliverables": ["tangible output 1", "output 2", "output 3"],
+  "start_date": "DD Mon YYYY or empty string",
+  "end_date": "DD Mon YYYY or empty string",
+  "risks": ["risk or assumption 1", "risk 2"],
+  "tone": "tone of voice if mentioned, else empty string",
+  "client_contact": "client's point of contact name and email if mentioned, else empty string",
+  "internal_lead": "internal project lead name if mentioned, else empty string",
+  "approver": "who signs off or approves, if mentioned, else empty string"
+}
+
+Client: ${client || 'not specified'}, Project: ${project || 'not specified'}
 
 Transcript:
-${transcript.slice(0, 7000)}`);
+${transcript.slice(0, 8000)}`;
 
+    const result = await callGemini(prompt);
     let d = {};
     try {
       const s = result.replace(/```json/gi,'').replace(/```/g,'').trim();
@@ -2612,18 +2634,21 @@ ${transcript.slice(0, 7000)}`);
       if (i>-1 && j>-1) d = JSON.parse(s.slice(i,j+1).replace(/,\s*([\]}])/g,'$1'));
     } catch(e) {}
 
-    $('bf-summary').value      = d.summary || '';
-    $('bf-background').value   = d.background || '';
-    $('bf-audience').value     = d.audience || '';
-    $('bf-objectives').value   = (d.objectives||[]).join('\n');
-    $('bf-metrics').value      = (d.metrics||[]).join('\n');
-    $('bf-inscope').value      = (d.in_scope||[]).join('\n');
-    $('bf-outscope').value     = (d.out_scope||[]).join('\n');
-    $('bf-deliverables').value = (d.deliverables||[]).join('\n');
-    $('bf-start').value        = d.start_date || '';
-    $('bf-end').value          = d.end_date || '';
-    $('bf-risks').value        = (d.risks||[]).join('\n');
-    $('bf-tone').value         = d.tone || 'Confident, clear, professional';
+    $('bf-summary').value        = d.summary || '';
+    $('bf-background').value     = d.background || '';
+    $('bf-audience').value       = d.audience || '';
+    $('bf-objectives').value     = (d.objectives||[]).join('\n');
+    $('bf-metrics').value        = (d.metrics||[]).join('\n');
+    $('bf-inscope').value        = (d.in_scope||[]).join('\n');
+    $('bf-outscope').value       = (d.out_scope||[]).join('\n');
+    $('bf-deliverables').value   = (d.deliverables||[]).join('\n');
+    $('bf-start').value          = d.start_date || '';
+    $('bf-end').value            = d.end_date || '';
+    $('bf-risks').value          = (d.risks||[]).join('\n');
+    $('bf-tone').value           = d.tone || '';
+    $('bf-client-contact').value = d.client_contact || '';
+    $('bf-internal-lead').value  = d.internal_lead || '';
+    $('bf-approver').value       = d.approver || '';
     briefShowStep(2);
   } catch(e) {
     toast('Extraction failed: ' + e.message, 'error');
@@ -2635,7 +2660,7 @@ ${transcript.slice(0, 7000)}`);
 async function briefGenerate() {
   const client   = $('brief-client').value.trim() || 'Client';
   const project  = $('brief-project').value.trim() || 'Project';
-  const budget   = $('brief-budget').value.trim() || '[TBC]';
+  const budget   = $('brief-budget').value.trim();
   const prepBy   = $('brief-preparedby').value.trim() || 'Cyphr';
   const today    = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
 
@@ -2691,15 +2716,15 @@ async function briefGenerate() {
       ['[CLIENT_NAME]',      client],
       ['[DATE]',             today],
       ['[PREPARED_BY]',      prepBy],
-      ['[PROJECT_SUMMARY]',  $('bf-summary').value.trim() || '[TBC]'],
+      ['[PROJECT_SUMMARY]',  $('bf-summary').value.trim() || ''],
       ['[BACKGROUND]',       $('bf-background').value.trim() || ''],
-      ['[GOAL_1]',           objectives[0] || '[TBC]'],
+      ['[GOAL_1]',           objectives[0] || ''],
       ['[GOAL_2]',           objectives[1] || ''],
-      ['[TARGET_AUDIENCE]',  $('bf-audience').value.trim() || '[TBC]'],
-      ['[DELIVERABLE_1]',    deliverables[0] || '[TBC]'],
+      ['[TARGET_AUDIENCE]',  $('bf-audience').value.trim() || ''],
+      ['[DELIVERABLE_1]',    deliverables[0] || ''],
       ['[DELIVERABLE_2]',    deliverables[1] || ''],
-      ['[START_DATE]',       $('bf-start').value.trim() || '[TBC]'],
-      ['[DUE_DATE]',         $('bf-end').value.trim() || '[TBC]'],
+      ['[START_DATE]',       $('bf-start').value.trim() || ''],
+      ['[DUE_DATE]',         $('bf-end').value.trim() || ''],
       ['[BUDGET]',           budget],
       ['[CLIENT_CONTACT]',   clientContact],
       ['[INTERNAL_LEAD]',    internalLead],
@@ -2712,20 +2737,20 @@ async function briefGenerate() {
       ['[DATE_ISSUED]',                     today],
       ['[VERSION_NUMBER]',                  'v1.0'],
       ['[PROJECT_CODE]',                    ''],
-      ['[PROJECT_SUMMARY]',                 $('bf-summary').value.trim() || '[TBC]'],
+      ['[PROJECT_SUMMARY]',                 $('bf-summary').value.trim() || ''],
       ['[CLIENT_CONTACT_NAME]',             clientContact],
       ['[CLIENT_CONTACT_ROLE]',             ''],
       ['[CLIENT_CONTACT_EMAIL]',            ''],
       ['[CLIENT_CONTACT_PHONE]',            ''],
       ['[INTERNAL_LEAD_NAME]',              internalLead],
       ['[INTERNAL_LEAD_ROLE]',              'Project Lead'],
-      ['[BACKGROUND_CONTEXT]',              $('bf-background').value.trim() || '[TBC]'],
-      ['[OBJECTIVE_1]',                     objectives[0] || '[TBC]'],
+      ['[BACKGROUND_CONTEXT]',              $('bf-background').value.trim() || ''],
+      ['[OBJECTIVE_1]',                     objectives[0] || ''],
       ['[OBJECTIVE_2]',                     objectives[1] || ''],
       ['[OBJECTIVE_3]',                     objectives[2] || ''],
-      ['[SUCCESS_METRIC_1]',                metrics[0] || '[TBC]'],
+      ['[SUCCESS_METRIC_1]',                metrics[0] || ''],
       ['[SUCCESS_METRIC_2]',                metrics[1] || ''],
-      ['[PRIMARY_AUDIENCE]',                $('bf-audience').value.trim() || '[TBC]'],
+      ['[PRIMARY_AUDIENCE]',                $('bf-audience').value.trim() || ''],
       ['[SECONDARY_AUDIENCE]',              ''],
       ['[STAKEHOLDER_1_NAME]',              client + ' Lead'],
       ['[STAKEHOLDER_1_ROLE]',              'Client'],
@@ -2735,12 +2760,12 @@ async function briefGenerate() {
       ['[STAKEHOLDER_2_ROLE]',              'Agency Lead'],
       ['[STAKEHOLDER_2_RESPONSIBILITY]',    'Delivery'],
       ['[STAKEHOLDER_2_CONTACT]',           ''],
-      ['[IN_SCOPE_ITEM_1]',                 inScope[0] || '[TBC]'],
+      ['[IN_SCOPE_ITEM_1]',                 inScope[0] || ''],
       ['[IN_SCOPE_ITEM_2]',                 inScope[1] || ''],
       ['[IN_SCOPE_ITEM_3]',                 inScope[2] || ''],
       ['[OUT_OF_SCOPE_ITEM_1]',             outScope[0] || ''],
       ['[OUT_OF_SCOPE_ITEM_2]',             outScope[1] || ''],
-      ['[DELIVERABLE_1]',                   deliverables[0] || '[TBC]'],
+      ['[DELIVERABLE_1]',                   deliverables[0] || ''],
       ['[DELIVERABLE_1_FORMAT]',            'Google Doc'],
       ['[DELIVERABLE_1_OWNER]',             internalLead],
       ['[DELIVERABLE_1_DUE_DATE]',          $('bf-end').value.trim() || ''],
@@ -2761,8 +2786,8 @@ async function briefGenerate() {
       ['[MILESTONE_3]',                     ''],
       ['[MILESTONE_3_DATE]',                ''],
       ['[MILESTONE_3_DEPENDENCY]',          ''],
-      ['[PROJECT_START_DATE]',              $('bf-start').value.trim() || '[TBC]'],
-      ['[PROJECT_END_DATE]',                $('bf-end').value.trim() || '[TBC]'],
+      ['[PROJECT_START_DATE]',              $('bf-start').value.trim() || ''],
+      ['[PROJECT_END_DATE]',                $('bf-end').value.trim() || ''],
       ['[TOTAL_BUDGET]',                    budget],
       ['[BUDGET_APPROVER]',                 approver],
       ['[BUDGET_LINE_ITEM_1]',              'Agency fees'],
