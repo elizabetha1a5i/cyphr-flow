@@ -1531,42 +1531,9 @@ async function propReadFile(file) {
         r.readAsText(file);
       });
     } else {
-      // Upload to Google Drive temporarily, read as plain text, then delete
-      status.textContent = `Uploading ${file.name} to read content…`;
-      const token = await getProposalToken();
-      const arrayBuffer = await file.arrayBuffer();
-
-      // Multipart upload: convert docx → Google Doc, or upload pdf as-is
-      const uploadMime = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      const targetMime = 'application/vnd.google-apps.document';
-      const boundary = 'prop_file_boundary';
-      const metaPart = JSON.stringify({ name: file.name, mimeType: targetMime });
-      const encoder = new TextEncoder();
-      const metaBytes = encoder.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metaPart}\r\n--${boundary}\r\nContent-Type: ${uploadMime}\r\n\r\n`);
-      const endBytes = encoder.encode(`\r\n--${boundary}--`);
-      const body = new Uint8Array(metaBytes.byteLength + arrayBuffer.byteLength + endBytes.byteLength);
-      body.set(metaBytes, 0);
-      body.set(new Uint8Array(arrayBuffer), metaBytes.byteLength);
-      body.set(endBytes, metaBytes.byteLength + arrayBuffer.byteLength);
-
-      const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
-        body
-      });
-      if (!uploadRes.ok) throw new Error('Could not upload file to Drive');
-      const { id: tempId } = await uploadRes.json();
-
-      // Export the Google Doc as plain text
-      status.textContent = `Extracting text from ${file.name}…`;
-      const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${tempId}/export?mimeType=text/plain`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!exportRes.ok) throw new Error('Could not extract text from file');
-      text = await exportRes.text();
-
-      // Delete the temp file
-      fetch(`https://www.googleapis.com/drive/v3/files/${tempId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      // Reuse the same readFileText() used by the main flow (mammoth for docx, PDF.js for pdf)
+      text = await readFileText(file);
+      if (text.startsWith('[')) throw new Error('Could not extract text — try pasting manually');
     }
 
     if (!text.trim()) throw new Error('No text found in file');
