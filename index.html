@@ -575,6 +575,26 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
           </div>
         </div>
 
+        <!-- Project Tracker -->
+        <div onclick="openDocType('tracker')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+          <div style="background:#F0F4FF;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border);padding:12px 14px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;margin-bottom:6px">
+              <div style="background:#2323CC;height:4px;border-radius:1px"></div>
+              <div style="background:#2323CC;height:4px;border-radius:1px;opacity:0.5"></div>
+              <div style="background:#e0e0e0;height:4px;border-radius:1px"></div>
+            </div>
+            <div style="font-size:5px;font-weight:700;color:#2323CC;font-family:monospace;margin-bottom:4px;letter-spacing:0.06em">GANTT CHART</div>
+            ${[['Discovery','100%'],['Design','70%'],['Build','30%'],['QA','0%']].map(([p,w])=>`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><div style="font-size:4px;color:#555;font-family:monospace;width:30px">${p}</div><div style="flex:1;background:#e8e8e8;height:4px;border-radius:1px"><div style="background:#2323CC;width:${w};height:4px;border-radius:1px"></div></div></div>`).join('')}
+            <div style="margin-top:6px;font-size:5px;font-weight:700;color:#333;font-family:monospace;margin-bottom:3px;letter-spacing:0.06em">DECISION LOG</div>
+            <div style="background:#fff;border-radius:3px;padding:3px 5px"><div style="font-size:4px;color:#888;font-family:monospace">Raised By · Date · Question · Status</div></div>
+          </div>
+          <div style="padding:16px 20px 18px">
+            <div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:4px">Project Tracker</div>
+            <div style="font-size:12px;color:var(--ink3);line-height:1.5;margin-bottom:10px">Gantt chart + decision log from a transcript, in one sheet</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--ink3);background:var(--bg);padding:3px 8px;border-radius:4px;display:inline-block">Google Sheets</div>
+          </div>
+        </div>
+
         <!-- Proposal Doc -->
         <div onclick="openDocType('proposal')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
           <div style="background:#fff;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border)">
@@ -627,6 +647,83 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
         </div>
 
       </div>
+    </div>
+
+    <!-- PROJECT TRACKER VIEW -->
+    <div id="view-tracker" style="display:none;padding:32px;max-width:860px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Project Tracker</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">Paste a transcript — AI builds your Gantt and Decision Log in one sheet.</div>
+        </div>
+        <button class="btn btn-ghost" onclick="showDocs()" style="font-size:12px">← Back to Create</button>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="tracker-step-1">
+        <div class="card" style="max-width:600px">
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:16px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Step 1 — Project Details + Transcript</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Client Name</label><input id="tracker-client" type="text" placeholder="e.g. Blue Square" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Project Name</label><input id="tracker-project" type="text" placeholder="e.g. HP Crush 3.0" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Start Date</label><input id="tracker-start" type="text" placeholder="e.g. 14 Jul 2026" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">End Date</label><input id="tracker-end" type="text" placeholder="e.g. 30 Sep 2026" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+          </div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Transcript / Meeting Notes</label>
+          <textarea id="tracker-transcript" rows="10" placeholder="Paste your project transcript or meeting notes here…" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;line-height:1.6;background:var(--paper);color:var(--ink);resize:vertical"></textarea>
+          <div style="margin-top:14px;display:flex;justify-content:flex-end">
+            <button class="btn btn-primary" onclick="trackerExtract()">Extract tasks + decisions →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="tracker-step-2" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:860px">
+          <!-- Gantt tasks -->
+          <div class="card">
+            <div style="font-family:'Bandit Condensed',var(--serif);font-size:15px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:12px">Gantt Tasks</div>
+            <div id="tracker-tasks-wrap" style="overflow-x:auto">
+              <table id="tracker-tasks" style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--bg)">
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Phase</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Task</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Start</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">End</th>
+                  <th style="padding:4px"></th>
+                </tr></thead>
+                <tbody id="tracker-tasks-body"></tbody>
+              </table>
+            </div>
+            <button onclick="trackerAddTask()" style="margin-top:8px;font-size:11px;background:none;border:1px dashed var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;color:var(--ink3)">+ Add row</button>
+          </div>
+          <!-- Decision log -->
+          <div class="card">
+            <div style="font-family:'Bandit Condensed',var(--serif);font-size:15px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:12px">Decision Log</div>
+            <div id="tracker-decisions-wrap" style="overflow-x:auto">
+              <table id="tracker-decisions" style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--bg)">
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Raised By</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Date</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Question</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Response</th>
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Status</th>
+                  <th style="padding:4px"></th>
+                </tr></thead>
+                <tbody id="tracker-decisions-body"></tbody>
+              </table>
+            </div>
+            <button onclick="trackerAddDecision()" style="margin-top:8px;font-size:11px;background:none;border:1px dashed var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;color:var(--ink3)">+ Add row</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="trackerShowStep(1)">← Back</button>
+          <button class="btn btn-primary" onclick="trackerGenerate()">Generate sheet →</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="tracker-step-3" style="display:none"></div>
     </div>
 
     <!-- SOW GENERATOR VIEW -->
@@ -1568,7 +1665,7 @@ function showDashboard() {
 }
 
 function showDocs() {
-  ['view-dashboard','view-flow','view-reports','view-proposal','view-estimate','view-sow'].forEach(id => {
+  ['view-dashboard','view-flow','view-reports','view-proposal','view-estimate','view-sow','view-tracker'].forEach(id => {
     const el = $(id); if (el) el.style.display = 'none';
   });
   $('view-docs').style.display = 'block';
@@ -1579,6 +1676,7 @@ function openDocType(type) {
   if (type === 'proposal') { showProposal(); return; }
   if (type === 'estimate') { showEstimate(); return; }
   if (type === 'sow') { showSow(); return; }
+  if (type === 'tracker') { showTracker(); return; }
   // Brief/SOW require an open project
   const stageMap = { brief: 2, sow: 5 };
   if (!activeProjectId) {
@@ -1695,6 +1793,18 @@ function showSow() {
 }
 function sowShowStep(n) {
   [1,2,3].forEach(i => { const el = $('sow-step-'+i); if(el) el.style.display = i===n?'block':'none'; });
+}
+
+function showTracker() {
+  ['view-dashboard','view-flow','view-docs','view-proposal','view-estimate','view-sow'].forEach(id => {
+    const el = $(id); if (el) el.style.display = 'none';
+  });
+  if ($('view-reports')) $('view-reports').style.display = 'none';
+  $('view-tracker').style.display = 'block';
+  trackerShowStep(1);
+}
+function trackerShowStep(n) {
+  [1,2,3].forEach(i => { const el = $('tracker-step-'+i); if(el) el.style.display = i===n?'block':'none'; });
 }
 
 function showEstimate() {
@@ -2336,6 +2446,199 @@ Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
       </div>`;
   } catch(e) {
     log(`Error: ${e.message}`);
+    toast(e.message, 'error');
+  }
+}
+
+// ── PROJECT TRACKER ──────────────────────────────────────────────────────
+const TRACKER_TEMPLATE_SHEET_ID = '1VOgxwK5l6nhL26sDHrH0bTZS34aFiRfVpIplZHcakxM';
+const TRACKER_PARENT_FOLDER_ID  = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
+let trackerToken = null;
+
+function getTrackerToken() {
+  return new Promise((resolve, reject) => {
+    if (trackerToken) { resolve(trackerToken); return; }
+    if (!window.google?.accounts?.oauth2) { reject(new Error('Google Identity Services not loaded')); return; }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',
+      callback: r => {
+        if (r.error) { reject(new Error(r.error_description || r.error)); return; }
+        trackerToken = r.access_token;
+        setTimeout(() => { trackerToken = null; }, (r.expires_in - 60) * 1000);
+        resolve(trackerToken);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+function trackerTaskRow(t) {
+  return `<tr>
+    <td style="padding:4px 6px"><input value="${t.phase||''}" style="width:80px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><input value="${t.task||''}" style="width:160px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><input value="${t.start||''}" style="width:70px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><input value="${t.end||''}" style="width:70px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 2px"><button onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px">×</button></td>
+  </tr>`;
+}
+
+function trackerDecisionRow(d) {
+  return `<tr>
+    <td style="padding:4px 6px"><input value="${d.raised_by||''}" style="width:70px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><input value="${d.date||''}" style="width:70px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><input value="${d.question||''}" style="width:160px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><input value="${d.response||''}" style="width:160px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"></td>
+    <td style="padding:4px 6px"><select style="border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;background:var(--paper);color:var(--ink)"><option ${d.status==='OPEN'?'selected':''}>OPEN</option><option ${d.status==='CLOSED'?'selected':''}>CLOSED</option></select></td>
+    <td style="padding:4px 2px"><button onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px">×</button></td>
+  </tr>`;
+}
+
+function trackerAddTask() { $('tracker-tasks-body').insertAdjacentHTML('beforeend', trackerTaskRow({})); }
+function trackerAddDecision() { $('tracker-decisions-body').insertAdjacentHTML('beforeend', trackerDecisionRow({})); }
+
+async function trackerExtract() {
+  const transcript = $('tracker-transcript').value.trim();
+  if (!transcript) { toast('Paste a transcript first', 'info'); return; }
+  const client = $('tracker-client').value.trim();
+  const project = $('tracker-project').value.trim();
+  const startDate = $('tracker-start').value.trim();
+
+  const btn = document.querySelector('#tracker-step-1 .btn-primary');
+  btn.textContent = 'Extracting…'; btn.disabled = true;
+
+  try {
+    const result = await callGemini(`You are extracting structured project data from a transcript or meeting notes.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "tasks": [{"phase":"Discovery","task":"Kickoff meeting","start":"14 Jul","end":"15 Jul"}],
+  "decisions": [{"raised_by":"Name","date":"14 Jul 2026","question":"...","response":"...","status":"OPEN"}]
+}
+
+Rules:
+- tasks: extract phases and tasks with realistic start/end dates. If no dates mentioned, estimate based on start date "${startDate || 'today'}". Use format "DD MMM" e.g. "14 Jul".
+- decisions: extract any questions, action items, or decisions raised. If no clear response yet, leave response blank and set status OPEN.
+- Return ALL tasks and decisions you can find.
+
+Transcript:
+${transcript.slice(0, 5000)}`);
+
+    const m = result.match(/\{[\s\S]*\}/);
+    const data = m ? JSON.parse(m[0]) : { tasks: [], decisions: [] };
+
+    $('tracker-tasks-body').innerHTML = (data.tasks || []).map(t => trackerTaskRow(t)).join('');
+    $('tracker-decisions-body').innerHTML = (data.decisions || []).map(d => trackerDecisionRow(d)).join('');
+    trackerShowStep(2);
+  } catch(e) {
+    toast('Extraction failed: ' + e.message, 'error');
+  } finally {
+    btn.textContent = 'Extract tasks + decisions →'; btn.disabled = false;
+  }
+}
+
+async function trackerGenerate() {
+  const client = $('tracker-client').value.trim() || 'Client';
+  const project = $('tracker-project').value.trim() || 'Project';
+
+  const taskRows = [...$('tracker-tasks-body').querySelectorAll('tr')].map(tr => {
+    const inputs = tr.querySelectorAll('input');
+    return [inputs[0]?.value||'', inputs[1]?.value||'', inputs[2]?.value||'', inputs[3]?.value||''];
+  }).filter(r => r[1]);
+
+  const decisionRows = [...$('tracker-decisions-body').querySelectorAll('tr')].map(tr => {
+    const inputs = tr.querySelectorAll('input');
+    const sel = tr.querySelector('select');
+    return [inputs[0]?.value||'', inputs[1]?.value||'', inputs[2]?.value||'', inputs[3]?.value||'', sel?.value||'OPEN'];
+  }).filter(r => r[2]);
+
+  trackerShowStep(3);
+  $('tracker-step-3').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Generating…</div><div id="tracker-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="tracker-result" style="display:none;margin-top:20px"></div></div>`;
+  const log = msg => { const el=$('tracker-log'); if(el) el.innerHTML += msg+'<br>'; };
+
+  try {
+    log('Requesting Google permissions…');
+    const token = await getTrackerToken();
+
+    log('Creating client folder…');
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${client} — ${project}`, mimeType: 'application/vnd.google-apps.folder', parents: [TRACKER_PARENT_FOLDER_ID] })
+    });
+    if (!folderRes.ok) throw new Error('Could not create Drive folder');
+    const { id: folderId } = await folderRes.json();
+
+    log('Copying tracker template…');
+    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TRACKER_TEMPLATE_SHEET_ID}/copy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${client} x Cyphr || ${project} || Gantt + Decision Log` })
+    });
+    if (!copyRes.ok) throw new Error('Could not copy tracker template');
+    const { id: sheetId } = await copyRes.json();
+
+    log('Moving to client folder…');
+    const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?fields=parents`, { headers: { Authorization: `Bearer ${token}` } });
+    const meta = await metaRes.json();
+    const oldParents = (meta.parents || []).join(',');
+    await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?addParents=${folderId}&removeParents=${oldParents}`, {
+      method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({})
+    });
+
+    log('Reading sheet structure…');
+    const sheetMetaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, { headers: { Authorization: `Bearer ${token}` } });
+    const sheetMeta = await sheetMetaRes.json();
+    const sheets = sheetMeta.sheets || [];
+    const ganttSheet = sheets[0]?.properties?.title || 'Sheet1';
+    const decisionSheet = sheets.find(s => s.properties.title.toLowerCase().includes('decision'))?.properties?.title || sheets[1]?.properties?.title || 'Decision Log';
+
+    log(`Writing ${taskRows.length} tasks to Gantt tab…`);
+    // Update title in row 1 and write tasks starting row 5 (cols B-E)
+    const ganttValues = [
+      [`${client} x Cyphr — ${project} — PROJECT GANTT`]
+    ];
+    const taskData = taskRows.map(r => ['', r[0], r[1], r[2], r[3], false]);
+    const ganttWriteRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          { range: `'${ganttSheet}'!A1`, values: ganttValues },
+          { range: `'${ganttSheet}'!A5:F${4 + taskData.length}`, values: taskData }
+        ]
+      })
+    });
+    if (!ganttWriteRes.ok) { const e = await ganttWriteRes.json(); log('Gantt write warning: ' + (e.error?.message || '')); }
+
+    log(`Writing ${decisionRows.length} decisions to Decision Log tab…`);
+    if (decisionRows.length > 0) {
+      const decRange = `'${decisionSheet}'!A2:F${1 + decisionRows.length}`;
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(decRange)}?valueInputOption=USER_ENTERED`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ range: decRange, majorDimension: 'ROWS', values: decisionRows })
+      });
+    }
+
+    log('Done!');
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+    const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    const resultEl = $('tracker-result');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:10px">✓ Project Tracker created</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="${sheetUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center">Open Tracker →</a>
+        <a href="${folderUrl}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open Client Folder</a>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-ghost" onclick="trackerShowStep(1);$('tracker-transcript').value='';" style="font-size:12px">← Start new tracker</button>
+      </div>`;
+
+  } catch(e) {
+    log('Error: ' + e.message);
     toast(e.message, 'error');
   }
 }
