@@ -2315,7 +2315,8 @@ Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
               body: JSON.stringify({ values: [[deliverablesText.trim()]] })
             });
           }
-        }
+          } // end if (taskRows.length)
+        } // end if (timingsRes.ok)
       } catch(ganttErr) {
         log(`Gantt warning: ${ganttErr.message} — skipping`);
       }
