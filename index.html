@@ -2524,8 +2524,17 @@ Rules:
 Transcript:
 ${transcript.slice(0, 5000)}`);
 
+    let data = { tasks: [], decisions: [] };
     const m = result.match(/\{[\s\S]*\}/);
-    const data = m ? JSON.parse(m[0]) : { tasks: [], decisions: [] };
+    if (m) {
+      try {
+        data = JSON.parse(m[0]);
+      } catch(jsonErr) {
+        // Strip trailing commas and retry
+        const cleaned = m[0].replace(/,\s*([\]}])/g, '$1');
+        try { data = JSON.parse(cleaned); } catch(e2) { /* use empty */ }
+      }
+    }
 
     $('tracker-tasks-body').innerHTML = (data.tasks || []).map(t => trackerTaskRow(t)).join('');
     $('tracker-decisions-body').innerHTML = (data.decisions || []).map(d => trackerDecisionRow(d)).join('');
