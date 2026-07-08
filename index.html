@@ -2531,11 +2531,11 @@ ${chunk}`);
 
     btn.textContent = 'Extracting decisions…';
 
-    const decisionsRaw = await callGemini(`Extract ALL questions, decisions, action items, and open points from this transcript. Return ONLY a raw JSON array — no markdown, no explanation, no code fences.
+    const decisionsRaw = await callGemini(`Extract the key decisions and open action items from this transcript. Focus on: things still unresolved, commitments made, things that need follow-up, and important choices agreed. Skip simple Q&A that is fully explained inline. Return max 15 items. Return ONLY a raw JSON array — no markdown, no explanation, no code fences.
 
 Format: [{"raised_by":"Sarah","date":"22 Jul 2026","question":"Is there a rollback plan?","response":"Yes — full parallel load kept live until data integrity validated","status":"CLOSED"},...]
 
-Rules: status is OPEN if no clear answer given, CLOSED if resolved in the transcript. raised_by = person who asked/raised it.
+Rules: status OPEN = unresolved or needs action, CLOSED = agreed/answered. raised_by = person who raised it. Keep question and response concise (under 120 chars each).
 
 Transcript:
 ${chunk}`);
