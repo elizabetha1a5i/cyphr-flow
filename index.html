@@ -473,17 +473,28 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 
         <!-- Brief -->
         <div onclick="openDocType('brief')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-          <div style="background:#2323CC;padding:28px 24px 20px;min-height:120px;display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <div style="height:8px;width:55%;background:rgba(255,255,255,0.55);border-radius:3px"></div>
-              <div style="height:5px;width:80%;background:rgba(255,255,255,0.25);border-radius:3px"></div>
-              <div style="height:5px;width:70%;background:rgba(255,255,255,0.25);border-radius:3px"></div>
-              <div style="height:5px;width:85%;background:rgba(255,255,255,0.25);border-radius:3px"></div>
+          <div style="background:#F9F9F7;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border)">
+            <div style="background:#2323CC;padding:7px 14px;display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:7px;font-weight:700;color:#fff;letter-spacing:0.1em;font-family:monospace">PROJECT BRIEF</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.55);font-family:monospace">CYPHR STUDIO</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
-              <div style="height:4px;width:90%;background:rgba(255,255,255,0.18);border-radius:2px"></div>
-              <div style="height:4px;width:75%;background:rgba(255,255,255,0.18);border-radius:2px"></div>
-              <div style="height:4px;width:82%;background:rgba(255,255,255,0.18);border-radius:2px"></div>
+            <div style="padding:10px 14px">
+              <div style="font-size:6px;font-weight:700;color:#111;font-family:monospace;letter-spacing:0.04em;margin-bottom:4px">1. Project Overview</div>
+              <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:7px">
+                <div style="height:3px;background:#ddd;border-radius:1px;width:95%"></div>
+                <div style="height:3px;background:#ddd;border-radius:1px;width:82%"></div>
+                <div style="height:3px;background:#ddd;border-radius:1px;width:90%"></div>
+              </div>
+              <div style="font-size:6px;font-weight:700;color:#111;font-family:monospace;letter-spacing:0.04em;margin-bottom:4px">2. Objectives & Scope</div>
+              <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:7px">
+                <div style="height:3px;background:#ddd;border-radius:1px;width:88%"></div>
+                <div style="height:3px;background:#ddd;border-radius:1px;width:75%"></div>
+              </div>
+              <div style="font-size:6px;font-weight:700;color:#111;font-family:monospace;letter-spacing:0.04em;margin-bottom:4px">3. Success Criteria</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="height:3px;background:#ddd;border-radius:1px;width:80%"></div>
+                <div style="height:3px;background:#ddd;border-radius:1px;width:92%"></div>
+              </div>
             </div>
           </div>
           <div style="padding:16px 20px 18px">
@@ -495,19 +506,35 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 
         <!-- Estimate -->
         <div onclick="openDocType('estimate')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-          <div style="background:#070809;padding:28px 24px 20px;min-height:120px;display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;gap:8px;margin-bottom:4px">
-              <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-                <div style="height:5px;background:rgba(255,255,255,0.4);border-radius:2px"></div>
-                <div style="height:5px;background:rgba(255,255,255,0.2);border-radius:2px"></div>
-                <div style="height:5px;background:rgba(255,255,255,0.2);border-radius:2px"></div>
-                <div style="height:5px;background:rgba(255,255,255,0.2);border-radius:2px"></div>
+          <div style="background:#F9F9F7;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border)">
+            <div style="background:#070809;padding:6px 14px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px">
+              <div style="font-size:6px;color:rgba(255,255,255,0.6);font-family:monospace">ROLE</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.6);font-family:monospace;text-align:right">DAYS</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.6);font-family:monospace;text-align:right">RATE</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.6);font-family:monospace;text-align:right">TOTAL</div>
+            </div>
+            <div style="padding:0 14px">
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid #eee">
+                <div style="font-size:6px;color:#444;font-family:monospace">Strategy Lead</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">5</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">£950</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">£4,750</div>
               </div>
-              <div style="width:60px;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-                <div style="height:5px;width:100%;background:rgba(255,255,255,0.4);border-radius:2px"></div>
-                <div style="height:5px;width:80%;background:rgba(255,255,255,0.2);border-radius:2px"></div>
-                <div style="height:5px;width:90%;background:rgba(255,255,255,0.2);border-radius:2px"></div>
-                <div style="height:5px;width:100%;background:#2323CC;border-radius:2px"></div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid #eee">
+                <div style="font-size:6px;color:#444;font-family:monospace">Designer</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">8</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">£750</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">£6,000</div>
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid #eee">
+                <div style="font-size:6px;color:#444;font-family:monospace">Developer</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">12</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">£850</div>
+                <div style="font-size:6px;color:#444;font-family:monospace;text-align:right">£10,200</div>
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 3fr;gap:4px;padding:6px 0;margin:0 -14px;padding:6px 14px;background:#F0F0EE">
+                <div style="font-size:7px;font-weight:700;color:#111;font-family:monospace">TOTAL</div>
+                <div style="font-size:7px;font-weight:700;color:#2323CC;font-family:monospace;text-align:right">£20,950</div>
               </div>
             </div>
           </div>
@@ -520,13 +547,26 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 
         <!-- SOW -->
         <div onclick="openDocType('sow')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-          <div style="background:#E8E8E2;padding:28px 24px 20px;min-height:120px;display:flex;flex-direction:column;gap:8px">
-            <div style="height:7px;width:45%;background:#111;border-radius:3px;opacity:0.7"></div>
-            <div style="height:4px;width:90%;background:#111;border-radius:2px;opacity:0.2"></div>
-            <div style="height:4px;width:80%;background:#111;border-radius:2px;opacity:0.2"></div>
-            <div style="height:4px;width:95%;background:#111;border-radius:2px;opacity:0.2"></div>
-            <div style="height:4px;width:70%;background:#111;border-radius:2px;opacity:0.2"></div>
-            <div style="height:4px;width:85%;background:#111;border-radius:2px;opacity:0.2"></div>
+          <div style="background:#FAFAF8;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border);padding:12px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div>
+                <div style="font-size:7px;font-weight:700;color:#111;letter-spacing:0.08em;font-family:monospace">STATEMENT OF WORK</div>
+                <div style="font-size:5px;color:#999;font-family:monospace;margin-top:1px">Cyphr Studio Ltd · 2025</div>
+              </div>
+              <div style="width:16px;height:16px;background:#2323CC;border-radius:3px"></div>
+            </div>
+            <div style="font-size:5px;font-weight:700;color:#333;font-family:monospace;margin-bottom:2px">1. Scope of Services</div>
+            <div style="height:2px;background:#e0e0e0;border-radius:1px;width:90%;margin-bottom:1px"></div>
+            <div style="height:2px;background:#e0e0e0;border-radius:1px;width:75%;margin-bottom:5px"></div>
+            <div style="font-size:5px;font-weight:700;color:#333;font-family:monospace;margin-bottom:2px">2. Deliverables & Timeline</div>
+            <div style="height:2px;background:#e0e0e0;border-radius:1px;width:85%;margin-bottom:1px"></div>
+            <div style="height:2px;background:#e0e0e0;border-radius:1px;width:70%;margin-bottom:5px"></div>
+            <div style="font-size:5px;font-weight:700;color:#333;font-family:monospace;margin-bottom:2px">3. Commercial Terms</div>
+            <div style="height:2px;background:#e0e0e0;border-radius:1px;width:80%;margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px;border-top:1px solid #ddd;padding-top:7px">
+              <div style="flex:1"><div style="height:1px;background:#bbb;margin-bottom:2px"></div><div style="font-size:4px;color:#aaa;font-family:monospace">CLIENT SIGNATURE</div></div>
+              <div style="flex:1"><div style="height:1px;background:#bbb;margin-bottom:2px"></div><div style="font-size:4px;color:#aaa;font-family:monospace">DATE</div></div>
+            </div>
           </div>
           <div style="padding:16px 20px 18px">
             <div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:4px">SOW</div>
@@ -537,17 +577,21 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 
         <!-- Proposal Doc -->
         <div onclick="openDocType('proposal')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-          <div style="background:#F2E1F4;padding:28px 24px 20px;min-height:120px;display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-              <div style="width:28px;height:28px;background:#2323CC;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px">📄</div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:3px">
-                <div style="height:5px;background:rgba(0,0,0,0.25);border-radius:2px"></div>
-                <div style="height:4px;width:70%;background:rgba(0,0,0,0.12);border-radius:2px"></div>
-              </div>
+          <div style="background:#fff;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border)">
+            <div style="background:#D4B8F0;padding:8px 14px 7px">
+              <div style="font-size:6px;color:#5a3a8a;font-family:monospace;font-weight:700;letter-spacing:0.06em">CLIENT NAME — Website Proposal · Cyphr Studio</div>
             </div>
-            <div style="height:4px;background:rgba(0,0,0,0.1);border-radius:2px"></div>
-            <div style="height:4px;width:85%;background:rgba(0,0,0,0.1);border-radius:2px"></div>
-            <div style="height:4px;width:70%;background:rgba(0,0,0,0.1);border-radius:2px"></div>
+            <div style="padding:8px 14px">
+              <div style="font-size:6px;font-weight:700;color:#2323CC;font-family:monospace;margin-bottom:2px">Overview</div>
+              <div style="height:2px;background:#e8e8e8;border-radius:1px;width:90%;margin-bottom:1px"></div>
+              <div style="height:2px;background:#e8e8e8;border-radius:1px;width:75%;margin-bottom:5px"></div>
+              <div style="font-size:6px;font-weight:700;color:#2323CC;font-family:monospace;margin-bottom:2px">Our Approach</div>
+              <div style="height:2px;background:#e8e8e8;border-radius:1px;width:85%;margin-bottom:1px"></div>
+              <div style="height:2px;background:#e8e8e8;border-radius:1px;width:65%;margin-bottom:5px"></div>
+              <div style="font-size:6px;font-weight:700;color:#2323CC;font-family:monospace;margin-bottom:2px">Investment</div>
+              <div style="height:2px;background:#e8e8e8;border-radius:1px;width:70%;margin-bottom:1px"></div>
+              <div style="height:2px;background:#e8e8e8;border-radius:1px;width:50%"></div>
+            </div>
           </div>
           <div style="padding:16px 20px 18px">
             <div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:4px">Proposal Doc</div>
@@ -558,15 +602,20 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 
         <!-- Branded Deck -->
         <div onclick="openDocType('proposal')" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;background:var(--paper)" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.10)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-          <div style="background:#2B28F5;padding:28px 24px 20px;min-height:120px;position:relative;overflow:hidden">
-            <div style="position:absolute;right:-10px;bottom:-10px;width:80px;height:55px;background:rgba(255,255,255,0.08);border-radius:6px;transform:rotate(-6deg)"></div>
-            <div style="position:relative;display:flex;flex-direction:column;gap:6px">
-              <div style="height:8px;width:50%;background:rgba(255,255,255,0.7);border-radius:3px"></div>
-              <div style="height:4px;width:75%;background:rgba(255,255,255,0.3);border-radius:2px"></div>
-              <div style="height:4px;width:60%;background:rgba(255,255,255,0.3);border-radius:2px"></div>
-              <div style="margin-top:8px;display:flex;gap:5px">
-                <div style="height:24px;flex:1;background:rgba(255,255,255,0.15);border-radius:4px"></div>
-                <div style="height:24px;flex:1;background:rgba(255,255,255,0.15);border-radius:4px"></div>
+          <div style="background:#ECECE9;min-height:140px;overflow:hidden;border-bottom:1px solid var(--border);display:flex">
+            <div style="width:6px;background:#2B28F5;flex-shrink:0"></div>
+            <div style="flex:1;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between">
+              <div>
+                <div style="font-size:14px;font-weight:900;color:#111;font-family:'Bandit Condensed',Impact,sans-serif;text-transform:uppercase;letter-spacing:0.04em;line-height:1">CLIENT</div>
+                <div style="font-size:7px;color:#555;font-family:monospace;margin-top:2px;text-transform:uppercase;letter-spacing:0.08em">Project Name</div>
+                <div style="display:inline-block;background:#2B28F5;color:#fff;font-size:5px;font-family:monospace;padding:2px 6px;border-radius:10px;margin-top:5px;text-transform:uppercase;letter-spacing:0.08em">Cost Estimate</div>
+              </div>
+              <div style="display:flex;gap:4px;margin-top:8px">
+                <div style="height:30px;flex:1.6;background:#fff;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"></div>
+                <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+                  <div style="height:13px;background:#fff;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"></div>
+                  <div style="height:13px;background:#fff;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"></div>
+                </div>
               </div>
             </div>
           </div>
