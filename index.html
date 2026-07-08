@@ -2221,6 +2221,37 @@ Keep it realistic. Tasks should overlap naturally. Every week should have at lea
                 });
               }
             }
+
+          // ── Generate deliverables text ──────────────────────────────────
+          log('Writing deliverables breakdown…');
+          const deliverablesPrompt = `You are writing a project deliverables breakdown for a client cost estimate.
+
+Project: ${estFields.client_name || clientName} — ${estFields.project_type || 'Digital project'}
+Deliverables: ${estFields.deliverables || ''}
+Timeline: ${estFields.timeline || ''}
+Gantt tasks: ${taskRows.map(t => t.name).join(', ')}
+
+Write a concise deliverables breakdown in this exact format (use plain text, no markdown):
+1. [Phase name]: [one-line description]
+   - [specific deliverable]
+   - [specific deliverable]
+2. [Phase name]: [one-line description]
+   - [specific deliverable]
+   - [specific deliverable]
+
+Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
+
+          const deliverablesText = await callGemini(deliverablesPrompt, { temperature: 0.3 });
+
+          // Find the "Deliverables" row in the sheet and write into the cell below it
+          const delivRowIdx = tRows.findIndex(row => (row[0]||row[1]||'').toString().trim().toLowerCase() === 'deliverables');
+          if (delivRowIdx !== -1 && deliverablesText) {
+            const writeRow = delivRowIdx + 2; // 1-indexed, row after "Deliverables" label
+            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(timingsSheetTitle)}!A${writeRow}:A${writeRow}?valueInputOption=RAW`, {
+              method: 'PUT',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ values: [[deliverablesText.trim()]] })
+            });
           }
         }
       } catch(ganttErr) {
