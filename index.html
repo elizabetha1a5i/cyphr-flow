@@ -649,6 +649,72 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       </div>
     </div>
 
+    <!-- BRIEF GENERATOR VIEW -->
+    <div id="view-brief" style="display:none;padding:32px;max-width:860px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Brief Generator</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">Paste a transcript or context — AI fills your project brief as a Google Doc.</div>
+        </div>
+        <button class="btn btn-ghost" onclick="showDocs()" style="font-size:12px">← Back to Create</button>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="brief-step-1">
+        <div class="card" style="max-width:600px">
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:16px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Step 1 — Context + Transcript</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Client Name</label><input id="brief-client" type="text" placeholder="e.g. Riverside Retail" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Project Name</label><input id="brief-project" type="text" placeholder="e.g. App Relaunch" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Budget</label><input id="brief-budget" type="text" placeholder="e.g. £45,000" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Prepared By</label><input id="brief-preparedby" type="text" placeholder="e.g. Rob Bennett" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--paper);color:var(--ink)"></div>
+          </div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Transcript / Meeting Notes</label>
+          <textarea id="brief-transcript" rows="10" placeholder="Paste your transcript, brief notes, or kick-off call summary here…" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;line-height:1.6;background:var(--paper);color:var(--ink);resize:vertical"></textarea>
+          <div style="margin-top:14px;display:flex;justify-content:flex-end">
+            <button class="btn btn-primary" onclick="briefExtract()">Extract fields →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="brief-step-2" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:860px">
+          <div class="card">
+            <div style="font-family:'Bandit Condensed',var(--serif);font-size:15px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:14px">Overview</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Project Summary</label><textarea id="bf-summary" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Background & Context</label><textarea id="bf-background" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Primary Audience</label><input id="bf-audience" type="text" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink)"></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Objectives (one per line)</label><textarea id="bf-objectives" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Success Metrics (one per line)</label><textarea id="bf-metrics" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-family:'Bandit Condensed',var(--serif);font-size:15px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:14px">Scope & Delivery</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">In Scope (one per line)</label><textarea id="bf-inscope" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Out of Scope (one per line)</label><textarea id="bf-outscope" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Key Deliverables (one per line)</label><textarea id="bf-deliverables" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Start Date</label><input id="bf-start" type="text" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink)"></div>
+                <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">End Date</label><input id="bf-end" type="text" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink)"></div>
+              </div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Risks & Assumptions (one per line)</label><textarea id="bf-risks" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink);resize:vertical"></textarea></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:3px">Tone of Voice</label><input id="bf-tone" type="text" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;background:var(--paper);color:var(--ink)"></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="briefShowStep(1)">← Back</button>
+          <button class="btn btn-primary" onclick="briefGenerate()">Generate brief →</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="brief-step-3" style="display:none"></div>
+    </div>
+
     <!-- PROJECT TRACKER VIEW -->
     <div id="view-tracker" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
@@ -1665,7 +1731,7 @@ function showDashboard() {
 }
 
 function showDocs() {
-  ['view-dashboard','view-flow','view-reports','view-proposal','view-estimate','view-sow','view-tracker'].forEach(id => {
+  ['view-dashboard','view-flow','view-reports','view-proposal','view-estimate','view-sow','view-tracker','view-brief'].forEach(id => {
     const el = $(id); if (el) el.style.display = 'none';
   });
   $('view-docs').style.display = 'block';
@@ -1677,6 +1743,7 @@ function openDocType(type) {
   if (type === 'estimate') { showEstimate(); return; }
   if (type === 'sow') { showSow(); return; }
   if (type === 'tracker') { showTracker(); return; }
+  if (type === 'brief') { showBrief(); return; }
   // Brief/SOW require an open project
   const stageMap = { brief: 2, sow: 5 };
   if (!activeProjectId) {
@@ -2447,6 +2514,257 @@ Be specific to this project. Max 3-4 phases. Return ONLY the formatted text.`;
   } catch(e) {
     log(`Error: ${e.message}`);
     toast(e.message, 'error');
+  }
+}
+
+// ── BRIEF GENERATOR ──────────────────────────────────────────────────────
+const BRIEF_TEMPLATE_DOC_ID  = '1gHjbvBQhaGHZZ6FN1VkV_d9yi66vKPa2fZNApUHW7-c';
+const BRIEF_PARENT_FOLDER_ID = '1wy748-MHFWzWYtHWtIf5BYgKa2mDmhWR';
+let briefToken = null;
+
+function getBriefToken() {
+  return new Promise((resolve, reject) => {
+    if (briefToken) { resolve(briefToken); return; }
+    if (!window.google?.accounts?.oauth2) { reject(new Error('Google Identity Services not loaded')); return; }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents',
+      callback: r => {
+        if (r.error) { reject(new Error(r.error_description || r.error)); return; }
+        briefToken = r.access_token;
+        setTimeout(() => { briefToken = null; }, (r.expires_in - 60) * 1000);
+        resolve(briefToken);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+function showBrief() {
+  ['view-dashboard','view-flow','view-docs','view-proposal','view-estimate','view-sow','view-tracker'].forEach(id => {
+    const el = $(id); if (el) el.style.display = 'none';
+  });
+  if ($('view-reports')) $('view-reports').style.display = 'none';
+  $('view-brief').style.display = 'block';
+  briefShowStep(1);
+}
+function briefShowStep(n) {
+  [1,2,3].forEach(i => { const el = $('brief-step-'+i); if(el) el.style.display = i===n?'block':'none'; });
+}
+
+async function briefExtract() {
+  const transcript = $('brief-transcript').value.trim();
+  if (!transcript) { toast('Paste a transcript first', 'info'); return; }
+  const btn = document.querySelector('#brief-step-1 .btn-primary');
+  btn.textContent = 'Extracting…'; btn.disabled = true;
+
+  try {
+    const client = $('brief-client').value.trim();
+    const project = $('brief-project').value.trim();
+    const result = await callGemini(`Extract project brief fields from this transcript. Return ONLY a raw JSON object — no markdown, no code fences.
+
+{"summary":"1-2 sentence project summary","background":"why this project exists and context","objectives":["obj1","obj2","obj3"],"metrics":["metric1","metric2"],"audience":"primary target audience","in_scope":["item1","item2","item3"],"out_scope":["item1","item2"],"deliverables":["deliverable 1","deliverable 2"],"start_date":"DD Mon YYYY","end_date":"DD Mon YYYY","risks":["risk or assumption 1","risk 2"],"tone":"tone of voice description"}
+
+Client: ${client||'[unknown]'}, Project: ${project||'[unknown]'}
+
+Transcript:
+${transcript.slice(0, 7000)}`);
+
+    let d = {};
+    try {
+      const s = result.replace(/```json/gi,'').replace(/```/g,'').trim();
+      const i = s.indexOf('{'), j = s.lastIndexOf('}');
+      if (i>-1 && j>-1) d = JSON.parse(s.slice(i,j+1).replace(/,\s*([\]}])/g,'$1'));
+    } catch(e) {}
+
+    $('bf-summary').value      = d.summary || '';
+    $('bf-background').value   = d.background || '';
+    $('bf-audience').value     = d.audience || '';
+    $('bf-objectives').value   = (d.objectives||[]).join('\n');
+    $('bf-metrics').value      = (d.metrics||[]).join('\n');
+    $('bf-inscope').value      = (d.in_scope||[]).join('\n');
+    $('bf-outscope').value     = (d.out_scope||[]).join('\n');
+    $('bf-deliverables').value = (d.deliverables||[]).join('\n');
+    $('bf-start').value        = d.start_date || '';
+    $('bf-end').value          = d.end_date || '';
+    $('bf-risks').value        = (d.risks||[]).join('\n');
+    $('bf-tone').value         = d.tone || 'Confident, clear, professional';
+    briefShowStep(2);
+  } catch(e) {
+    toast('Extraction failed: ' + e.message, 'error');
+  } finally {
+    btn.textContent = 'Extract fields →'; btn.disabled = false;
+  }
+}
+
+async function briefGenerate() {
+  const client   = $('brief-client').value.trim() || 'Client';
+  const project  = $('brief-project').value.trim() || 'Project';
+  const budget   = $('brief-budget').value.trim() || '[TBC]';
+  const prepBy   = $('brief-preparedby').value.trim() || 'Cyphr';
+  const today    = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  const objectives  = $('bf-objectives').value.trim().split('\n').filter(Boolean);
+  const metrics     = $('bf-metrics').value.trim().split('\n').filter(Boolean);
+  const inScope     = $('bf-inscope').value.trim().split('\n').filter(Boolean);
+  const outScope    = $('bf-outscope').value.trim().split('\n').filter(Boolean);
+  const deliverables= $('bf-deliverables').value.trim().split('\n').filter(Boolean);
+  const risks       = $('bf-risks').value.trim().split('\n').filter(Boolean);
+
+  briefShowStep(3);
+  $('brief-step-3').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Generating…</div><div id="brief-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="brief-result" style="display:none;margin-top:20px"></div></div>`;
+  const log = msg => { const el=$('brief-log'); if(el) el.innerHTML += msg+'<br>'; };
+
+  try {
+    log('Requesting Google permissions…');
+    const token = await getBriefToken();
+
+    log('Creating client folder…');
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({name:`${client} — ${project}`, mimeType:'application/vnd.google-apps.folder', parents:[BRIEF_PARENT_FOLDER_ID]})
+    });
+    if (!folderRes.ok) throw new Error('Could not create Drive folder');
+    const { id: folderId } = await folderRes.json();
+
+    log('Copying brief template…');
+    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${BRIEF_TEMPLATE_DOC_ID}/copy?supportsAllDrives=true`, {
+      method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({name:`${client} — ${project} — Brief`})
+    });
+    if (!copyRes.ok) { const ce = await copyRes.json(); throw new Error('Could not copy brief template: '+(ce.error?.message||copyRes.status)); }
+    const { id: documentId } = await copyRes.json();
+
+    log('Moving to client folder…');
+    const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}?fields=parents`,{headers:{Authorization:`Bearer ${token}`}});
+    const meta = await metaRes.json();
+    const oldParents = (meta.parents||[]).join(',');
+    await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}?addParents=${folderId}&removeParents=${oldParents}`,{
+      method:'PATCH', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body:JSON.stringify({})
+    });
+
+    log('Filling placeholders…');
+    const nl = (arr, fallback='[TBC]') => arr.length ? arr.join('\n') : fallback;
+
+    const replacements = [
+      ['[PROJECT_NAME]',                    project],
+      ['[CLIENT_NAME]',                     client],
+      ['[PREPARED_BY]',                     prepBy],
+      ['[DATE_ISSUED]',                     today],
+      ['[VERSION_NUMBER]',                  'v1.0'],
+      ['[PROJECT_CODE]',                    ''],
+      ['[PROJECT_SUMMARY]',                 $('bf-summary').value.trim() || '[TBC]'],
+      ['[CLIENT_CONTACT_NAME]',             ''],
+      ['[CLIENT_CONTACT_ROLE]',             ''],
+      ['[CLIENT_CONTACT_EMAIL]',            ''],
+      ['[CLIENT_CONTACT_PHONE]',            ''],
+      ['[INTERNAL_LEAD_NAME]',              prepBy],
+      ['[INTERNAL_LEAD_ROLE]',              'Project Lead'],
+      ['[BACKGROUND_CONTEXT]',              $('bf-background').value.trim() || '[TBC]'],
+      ['[OBJECTIVE_1]',                     objectives[0] || '[TBC]'],
+      ['[OBJECTIVE_2]',                     objectives[1] || ''],
+      ['[OBJECTIVE_3]',                     objectives[2] || ''],
+      ['[SUCCESS_METRIC_1]',                metrics[0] || '[TBC]'],
+      ['[SUCCESS_METRIC_2]',                metrics[1] || ''],
+      ['[PRIMARY_AUDIENCE]',                $('bf-audience').value.trim() || '[TBC]'],
+      ['[SECONDARY_AUDIENCE]',              ''],
+      ['[STAKEHOLDER_1_NAME]',              client + ' Lead'],
+      ['[STAKEHOLDER_1_ROLE]',              'Client'],
+      ['[STAKEHOLDER_1_RESPONSIBILITY]',    'Sign-off'],
+      ['[STAKEHOLDER_1_CONTACT]',           ''],
+      ['[STAKEHOLDER_2_NAME]',              prepBy],
+      ['[STAKEHOLDER_2_ROLE]',              'Agency Lead'],
+      ['[STAKEHOLDER_2_RESPONSIBILITY]',    'Delivery'],
+      ['[STAKEHOLDER_2_CONTACT]',           ''],
+      ['[IN_SCOPE_ITEM_1]',                 inScope[0] || '[TBC]'],
+      ['[IN_SCOPE_ITEM_2]',                 inScope[1] || ''],
+      ['[IN_SCOPE_ITEM_3]',                 inScope[2] || ''],
+      ['[OUT_OF_SCOPE_ITEM_1]',             outScope[0] || ''],
+      ['[OUT_OF_SCOPE_ITEM_2]',             outScope[1] || ''],
+      ['[DELIVERABLE_1]',                   deliverables[0] || '[TBC]'],
+      ['[DELIVERABLE_1_FORMAT]',            'Google Doc'],
+      ['[DELIVERABLE_1_OWNER]',             prepBy],
+      ['[DELIVERABLE_1_DUE_DATE]',          $('bf-end').value.trim() || ''],
+      ['[DELIVERABLE_2]',                   deliverables[1] || ''],
+      ['[DELIVERABLE_2_FORMAT]',            ''],
+      ['[DELIVERABLE_2_OWNER]',             ''],
+      ['[DELIVERABLE_2_DUE_DATE]',          ''],
+      ['[DELIVERABLE_3]',                   deliverables[2] || ''],
+      ['[DELIVERABLE_3_FORMAT]',            ''],
+      ['[DELIVERABLE_3_OWNER]',             ''],
+      ['[DELIVERABLE_3_DUE_DATE]',          ''],
+      ['[MILESTONE_1]',                     'Kickoff'],
+      ['[MILESTONE_1_DATE]',                $('bf-start').value.trim() || ''],
+      ['[MILESTONE_1_DEPENDENCY]',          'Signed brief'],
+      ['[MILESTONE_2]',                     'Final Delivery'],
+      ['[MILESTONE_2_DATE]',                $('bf-end').value.trim() || ''],
+      ['[MILESTONE_2_DEPENDENCY]',          'Client approvals'],
+      ['[MILESTONE_3]',                     ''],
+      ['[MILESTONE_3_DATE]',                ''],
+      ['[MILESTONE_3_DEPENDENCY]',          ''],
+      ['[PROJECT_START_DATE]',              $('bf-start').value.trim() || '[TBC]'],
+      ['[PROJECT_END_DATE]',                $('bf-end').value.trim() || '[TBC]'],
+      ['[TOTAL_BUDGET]',                    budget],
+      ['[BUDGET_APPROVER]',                 client + ' Lead'],
+      ['[BUDGET_LINE_ITEM_1]',              'Agency fees'],
+      ['[BUDGET_LINE_ITEM_1_COST]',         budget],
+      ['[BUDGET_LINE_ITEM_1_NOTES]',        ''],
+      ['[BUDGET_LINE_ITEM_2]',              ''],
+      ['[BUDGET_LINE_ITEM_2_COST]',         ''],
+      ['[BUDGET_LINE_ITEM_2_NOTES]',        ''],
+      ['[TONE_OF_VOICE]',                   $('bf-tone').value.trim() || 'Confident, clear, professional'],
+      ['[BRAND_GUIDELINES_LINK]',           ''],
+      ['[MANDATORY_ELEMENTS]',              ''],
+      ['[THINGS_TO_AVOID]',                 ''],
+      ['[CHECKIN_CADENCE]',                 'Weekly status call'],
+      ['[COMMUNICATION_CHANNEL]',           'Email / Slack'],
+      ['[APPROVAL_PROCESS]',                'Client lead approves at each milestone'],
+      ['[ESCALATION_CONTACT]',              prepBy],
+      ['[ASSUMPTION_1]',                    risks[0] || ''],
+      ['[ASSUMPTION_2]',                    risks[1] || ''],
+      ['[RISK_1]',                          risks[2] || ''],
+      ['[RISK_1_LIKELIHOOD]',               'Medium'],
+      ['[RISK_1_IMPACT]',                   'Medium'],
+      ['[RISK_1_MITIGATION]',               'Monitor and escalate early'],
+      ['[CLIENT_SIGNATORY_NAME]',           client + ' Lead'],
+      ['[CLIENT_SIGNATORY_TITLE]',          ''],
+      ['[CLIENT_SIGN_DATE]',                ''],
+      ['[INTERNAL_SIGNATORY_NAME]',         prepBy],
+      ['[INTERNAL_SIGNATORY_TITLE]',        'Project Lead'],
+      ['[INTERNAL_SIGN_DATE]',              today],
+    ];
+
+    const requests = replacements.map(([find, replace]) => ({
+      replaceAllText: { containsText:{text:find, matchCase:true}, replaceText: replace }
+    }));
+
+    const batchRes = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+      method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({requests})
+    });
+    const batchData = await batchRes.json();
+    if (!batchRes.ok) throw new Error('Could not fill placeholders: '+(batchData.error?.message||batchRes.status));
+    const replaced = (batchData.replies||[]).reduce((s,r)=>s+(r.replaceAllText?.occurrencesChanged||0),0);
+    log(`Replaced ${replaced} placeholder(s)…`);
+
+    log('Done!');
+    const docUrl    = `https://docs.google.com/document/d/${documentId}/edit`;
+    const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    const resultEl  = $('brief-result');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:10px">✓ Brief created</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="${docUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center">Open Brief →</a>
+        <a href="${folderUrl}" target="_blank" class="btn btn-ghost" style="text-decoration:none;text-align:center">Open Client Folder</a>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-ghost" onclick="briefShowStep(1);$('brief-transcript').value='';" style="font-size:12px">← Start new brief</button>
+      </div>`;
+
+  } catch(e) {
+    log('Error: '+e.message);
+    toast(e.message,'error');
   }
 }
 
