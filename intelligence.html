@@ -214,7 +214,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
       </div>
     </div>
     <div class="sidebar-footer">
-      <div class="settings-note">Gemini Flash 2.5 · Google Search</div>
+      <div class="settings-note">Gemini 2.5 Flash · Google Search grounding</div>
     </div>
   </aside>
 
@@ -449,8 +449,8 @@ const BRIEF_STORE     = 'cyphr_intel_brief';
 const RAILWAY_URL     = 'https://cyphr-api-production.up.railway.app';
 // ⚠️ API key lives in Cloudflare Worker — update WORKER_URL to your Worker domain
 const WORKER_URL      = 'https://cyphr-proxy.elizabeth-537.workers.dev/gemini';
-const MODEL_MAIN      = 'gemini-3.5-flash';
-const MODEL_QA        = 'gemini-3.5-flash';
+const MODEL_MAIN      = 'gemini-2.5-flash';
+const MODEL_QA        = 'gemini-2.5-flash';
 
 const DEFAULT_TOPICS  = ['Samsung Blarney AI retail', 'HP AI', 'Weber Ranch AI chatbot', 'EE AI', 'John Lewis AI', 'retail AI agents', 'AEO answer engine optimisation', 'conversational commerce AI'];
 const DEFAULT_SOURCES = [
@@ -622,7 +622,17 @@ async function gemini(prompt, options = {}) {
   }
 
   const data = await res.json();
-  return data?.candidates?.[0]?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || '';
+  const text = data?.candidates?.[0]?.content?.parts?.filter(p => p.text)?.map(p => p.text)?.join('') || '';
+
+  // Real, verified URLs from Google Search grounding (not model-guessed)
+  // Gemini's grounding URIs are Vertex redirect links, not the real page —
+  // the actual source domain lives in web.title instead.
+  const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const groundingSources = chunks
+    .map(c => ({ uri: c.web?.uri, domain: c.web?.title }))
+    .filter(c => c.uri && c.domain);
+
+  return options.returnGrounding ? { text, groundingSources } : text;
 }
 
 // ── TRY FETCH SOURCE ──────────────────────────────────────────────────────────
@@ -759,22 +769,38 @@ async function runDigest() {
     // Step 2: main Gemini search + generate
     setProgress(35, 'Searching and generating stories...', 'generate');
     const mainPrompt = buildMainPrompt(weekStr, sourceSummaries);
-    const rawMain = await gemini(mainPrompt, { search: true, temperature: 0.4, maxTokens: 8192 });
+    const { text: rawMain, groundingSources } = await gemini(mainPrompt, { search: true, temperature: 0.4, maxTokens: 8192, returnGrounding: true });
     const parsed = parseJSON(rawMain);
 
     if (!parsed || !parsed.stories || parsed.stories.length === 0) {
       throw new Error('No stories returned. Check console for raw output.');
     }
 
-    // Stamp stories with IDs and source-limited flags from our fetch
+    // Stamp stories with IDs and source-limited flags from our fetch.
+    // Also cross-check sourceUrl against real Google Search grounding URLs —
+    // the model can invent plausible-looking URLs that don't resolve to a real page.
     const stamped = parsed.stories.map((s, i) => {
       const srcMatch = sourceSummaries.find(x => s.sourceUrl && s.sourceUrl.includes(x.url.replace(/^https?:\/\//, '')));
+      let verifiedUrl = s.sourceUrl;
+      let urlUnverified = false;
+      if (s.sourceUrl) {
+        try {
+          const domain = new URL(s.sourceUrl.startsWith('http') ? s.sourceUrl : 'https://' + s.sourceUrl).hostname.replace(/^www\./, '');
+          const groundMatch = groundingSources.find(g => g.domain.replace(/^www\./, '').includes(domain) || domain.includes(g.domain.replace(/^www\./, '')));
+          if (groundMatch) {
+            verifiedUrl = groundMatch.uri;
+          } else {
+            urlUnverified = true;
+          }
+        } catch(e) { urlUnverified = true; }
+      }
       return {
         id: `story_${Date.now()}_${i}`,
         week: weekStr,
         qaNote: '',
-        sourceLimitedFlag: srcMatch?.limited || false,
-        ...s
+        sourceLimitedFlag: srcMatch?.limited || urlUnverified,
+        ...s,
+        sourceUrl: verifiedUrl
       };
     });
 
