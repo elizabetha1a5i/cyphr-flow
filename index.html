@@ -162,6 +162,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); fo
 .btn-primary { background: var(--accent); color: #fff; border: none; }
 .btn-primary:hover { background: #1f4129; }
 .btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--ink); }
+.google-signin-notice { margin-top:10px; padding:8px 12px; background:#fff7e6; border:1px solid #ffd591; border-radius:6px; font-size:12px; color:#874d00; }
 .btn-assume { background: transparent; border: 1px solid #F59E0B; color: #92400E; font-size: 10px; padding: 2px 7px; border-radius: 4px; cursor: pointer; font-family: var(--mono); letter-spacing: 0.04em; white-space: nowrap; line-height: 1.4; }
 .btn-assume:hover { background: #FEF3C7; }
 .btn-ghost:hover { background: var(--paper); }
@@ -742,6 +743,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
           <button class="btn btn-ghost" onclick="briefShowStep(1)">← Back</button>
           <button class="btn btn-primary" onclick="briefGenerate()">Generate brief →</button>
         </div>
+        <div class="google-signin-notice">⚠ When Google asks you to sign in, use <strong>tech@cyphr.studio</strong></div>
       </div>
 
       <!-- Step 3 -->
@@ -819,6 +821,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
           <button class="btn btn-ghost" onclick="trackerShowStep(1)">← Back</button>
           <button class="btn btn-primary" onclick="trackerGenerate()">Generate sheet →</button>
         </div>
+        <div class="google-signin-notice">⚠ When Google asks you to sign in, use <strong>tech@cyphr.studio</strong></div>
       </div>
 
       <!-- Step 3 -->
@@ -868,6 +871,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
           <button class="btn btn-ghost" onclick="sowShowStep(1)" style="flex:1">← Back</button>
           <button class="btn btn-primary" onclick="sowGenerate()" style="flex:2">Generate SOW →</button>
         </div>
+        <div class="google-signin-notice">⚠ When Google asks you to sign in, use <strong>tech@cyphr.studio</strong></div>
       </div>
 
       <!-- Step 3 -->
@@ -2171,7 +2175,8 @@ function estRenderStep2(fields, aiRoles) {
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-ghost" onclick="estShowStep(1)">← Back</button>
       <button class="btn btn-primary" id="btn-est-generate" onclick="estGenerate()">Generate estimate →</button>
-    </div>`;
+    </div>
+    <div class="google-signin-notice">⚠ When Google asks you to sign in, use <strong>tech@cyphr.studio</strong></div>`;
 
   estRenderPhaseTable('phase1');
   estRenderPhaseTable('phase2');
@@ -3904,7 +3909,7 @@ function propRenderStep2() {
     });
     html += `</div>`;
   });
-  html += `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-ghost" onclick="propShowStep(1)">← Back</button><button class="btn btn-primary" id="btn-prop-generate" onclick="propGenerate()">Generate proposal →</button></div>`;
+  html += `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-ghost" onclick="propShowStep(1)">← Back</button><button class="btn btn-primary" id="btn-prop-generate" onclick="propGenerate()">Generate proposal →</button></div><div class="google-signin-notice">⚠ When Google asks you to sign in, use <strong>tech@cyphr.studio</strong></div>`;
   $('prop-step-2').innerHTML = html;
 }
 
