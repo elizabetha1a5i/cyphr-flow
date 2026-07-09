@@ -361,6 +361,13 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
 </head>
 <body>
 
+<!-- TESTING BANNER -->
+<div id="testing-banner" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#d4380d;color:#fff;text-align:center;padding:10px 48px;font-size:13px;font-weight:600;letter-spacing:0.01em;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.18)">
+  ⚠ Testing only — please make sure you are signed in with <span style="text-decoration:underline;font-weight:800">tech@cyphr.studio</span> before using any of the generators
+  <button onclick="this.parentElement.style.display='none'" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:0.8;line-height:1">×</button>
+</div>
+<div id="testing-banner-spacer" style="height:42px"></div>
+
 <!-- LOGIN SCREEN -->
 <div id="view-login" style="display:none;position:fixed;inset:0;background:#f5f4f0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column">
   <div style="text-align:center;margin-bottom:32px">
