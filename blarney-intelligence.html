@@ -382,17 +382,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 
   <div class="tabs">
-    <button class="tab t-flags active" id="tab-flags" onclick="switchTab('flags')">
-      🚩 Flags &amp; alerts <span class="badge" id="flagBadge">0</span>
-    </button>
-    <button class="tab t-advert" onclick="switchTab('advert')">📣 Advertising</button>
+    <button class="tab t-advert active" id="tab-advert" onclick="switchTab('advert')">📣 Advertising</button>
     <button class="tab t-journey" onclick="switchTab('journey')">🗺 Journeys</button>
     <button class="tab t-internal" onclick="switchTab('internal')">📊 Internal</button>
     <button class="tab t-wins" onclick="switchTab('wins')">🏆 Your wins</button>
+    <button class="tab t-flags" id="tab-flags" onclick="switchTab('flags')">
+      🚩 Flags &amp; alerts <span class="badge" id="flagBadge">0</span>
+    </button>
   </div>
 
   <!-- PANEL: Flags -->
-  <div class="panel active" id="panel-flags">
+  <div class="panel" id="panel-flags">
     <div class="flag-controls">
       <span class="fc-label">Severity:</span>
       <button class="sev-pill active" onclick="filterFlags('sev','all',this)">All</button>
@@ -418,7 +418,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 
   <!-- PANEL: Advertising -->
-  <div class="panel" id="panel-advert">
+  <div class="panel active" id="panel-advert">
     <div class="g1">
       <div class="card">
         <div class="card-hd"><div class="hd-dot" style="background:var(--green)"></div>The moment they decided <span style="font-size:9px;color:var(--muted2);font-weight:400;margin-left:6px">Last message before conversion</span></div>
