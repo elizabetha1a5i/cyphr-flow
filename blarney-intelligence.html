@@ -669,14 +669,12 @@ function checkClearPw(){
     document.getElementById('clearPwInput').focus();
   }
 }
-document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closePwModal(); });
 document.getElementById('clearModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeClearModal(); });
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
-    if(document.getElementById('pwModal').classList.contains('open')) checkPw();
     if(document.getElementById('clearModal').classList.contains('open')) checkClearPw();
   }
-  if(e.key==='Escape'){ closePwModal(); closeClearModal(); }
+  if(e.key==='Escape'){ closeClearModal(); }
 });
 
 // ════════════════════════════════════
