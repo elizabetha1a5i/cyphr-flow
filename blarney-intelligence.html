@@ -279,7 +279,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Save snapshot
     </button>
-    <button class="h-upload-btn" id="uploadHeaderBtn2" style="display:none" onclick="requestUpload()">
+    <button class="h-upload-btn" id="uploadHeaderBtn2" style="display:none" onclick="requestUpload()" title="Export the latest Blarney user logs as a .csv, then click here and select that file to add the new sessions.">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Update data
     </button>
@@ -297,20 +297,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Upload CSV file
   </button>
-</div>
-
-<!-- Upload password modal -->
-<div class="overlay" id="pwModal">
-  <div class="modal">
-    <h3>🔒 Upload requires authorisation</h3>
-    <div class="modal-sub">Enter the password to upload a CSV or snapshot (.json) file.</div>
-    <input class="modal-input" type="password" id="pwInput" placeholder="Password" autocomplete="off">
-    <div class="modal-err" id="pwErr"></div>
-    <div class="modal-actions">
-      <button class="m-cancel" onclick="closePwModal()">Cancel</button>
-      <button class="m-confirm" onclick="checkPw()">Unlock</button>
-    </div>
-  </div>
 </div>
 
 <!-- Clear data modal -->
@@ -663,21 +649,7 @@ function getDateRange(rows){
 // Password / modal
 // ════════════════════════════════════
 function requestUpload(){
-  document.getElementById('pwInput').value='';
-  document.getElementById('pwErr').textContent='';
-  document.getElementById('pwModal').classList.add('open');
-  setTimeout(()=>document.getElementById('pwInput').focus(),60);
-}
-function closePwModal(){ document.getElementById('pwModal').classList.remove('open'); }
-function checkPw(){
-  if(document.getElementById('pwInput').value===UPLOAD_PASSWORD){
-    closePwModal();
-    document.getElementById('fileInput').click();
-  } else {
-    document.getElementById('pwErr').textContent='Incorrect password.';
-    document.getElementById('pwInput').value='';
-    document.getElementById('pwInput').focus();
-  }
+  document.getElementById('fileInput').click();
 }
 function requestClear(){
   document.getElementById('clearPwInput').value='';
@@ -953,8 +925,6 @@ function promptRetryAI(){
 }
 
 function promptReanalyseBenchmarks(){
-  const pw = prompt('Enter password to re-fetch benchmarks:');
-  if(pw !== UPLOAD_PASSWORD){ alert('Incorrect password.'); return; }
   localStorage.removeItem(WINS_CACHE_KEY);
   fetchWins();
 }
