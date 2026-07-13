@@ -285,6 +285,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </button>
   </div>
 </div>
+<div id="updateHint" style="display:none;color:#c0392b;font-size:12px;padding:6px 20px;text-align:right">
+  To add new data: export the latest Blarney user logs as a .csv, then click "Update data" and select that file.
+</div>
 
 <!-- Empty state -->
 <div class="empty-state" id="emptyState">
@@ -297,6 +300,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Upload CSV file
   </button>
+  <p style="color:#c0392b;font-size:12px;margin-top:14px;max-width:360px">
+    To add new data: export the latest Blarney user logs as a .csv file, then click "Upload CSV file" above and select that file.
+  </p>
 </div>
 
 <!-- Clear data modal -->
@@ -1024,6 +1030,7 @@ function showDashboard(rows){
   document.getElementById('main').style.display='block';
   document.getElementById('uploadHeaderBtn').style.display='flex';
   document.getElementById('uploadHeaderBtn2').style.display='flex';
+  document.getElementById('updateHint').style.display='block';
   document.getElementById('hdrStat').style.display='block';
   ALL_ROWS=rows;
   const sessions=rows.filter(r=>r.Mode==='Kiosk'||r.Mode==='QR');
