@@ -704,10 +704,12 @@ function clearData(){
 
 async function pushSnapshot(){
   try{
+    let aiFlags=[];
+    try{ aiFlags=JSON.parse(localStorage.getItem('blarney_ai_flags')||'[]'); }catch(e){}
     await fetch(`${RAILWAY_URL}/push-snapshot`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({rows:SAVED})
+      body:JSON.stringify({rows:SAVED, aiFlags})
     });
   }catch(e){ console.warn('Snapshot push failed:',e); }
 }
@@ -978,6 +980,7 @@ async function runAIFlagging(){
     try{ localStorage.setItem('blarney_ai_flags', JSON.stringify(ALL_FLAGS.map(f=>({
       cat:f.cat, sev:f.sev, message:f.message, reason:f.reason, sessionId:f.session['Session ID'], date:f.date
     })))); }catch(e){}
+    pushSnapshot();
   }
 }
 
@@ -1538,23 +1541,25 @@ function copyPilotSummary(btn){
 // Boot — show saved data immediately
 // ════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async function(){
+  // Always pull the shared snapshot first so everyone sees the same locked view
+  try{
+    const res = await fetch(`${RAILWAY_URL}/snapshot`);
+    if(res.ok){
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : (data.rows||[]);
+      const aiFlags = Array.isArray(data) ? [] : (data.aiFlags||[]);
+      if(rows.length>0){
+        SAVED=rows;
+        try{ localStorage.setItem('blarney_v2',JSON.stringify(SAVED)); }catch(e){}
+        try{ localStorage.setItem('blarney_ai_flags',JSON.stringify(aiFlags)); }catch(e){}
+        showDashboard(SAVED);
+        return;
+      }
+    }
+  }catch(e){ console.warn('Could not load shared snapshot:',e); }
+  // Shared snapshot unavailable or empty — fall back to whatever is stored locally
   if(SAVED.length>0){
     showDashboard(SAVED);
-  } else {
-    // No local data — fetch shared snapshot from Railway/Gist
-    try{
-      const res = await fetch(`${RAILWAY_URL}/snapshot`);
-      if(res.ok){
-        const rows = await res.json();
-        if(Array.isArray(rows) && rows.length>0){
-          SAVED=rows;
-          try{ localStorage.setItem('blarney_v2',JSON.stringify(SAVED)); }catch(e){}
-          showDashboard(SAVED);
-          return;
-        }
-      }
-    }catch(e){ console.warn('Could not load shared snapshot:',e); }
-    // Still nothing — show empty state
   }
 });
 </script>
