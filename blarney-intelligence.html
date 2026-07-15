@@ -925,8 +925,6 @@ function applyAIFlags(aiFlags, sessions){
 }
 
 function promptRetryAI(){
-  localStorage.removeItem('blarney_ai_flags');
-  ALL_FLAGS = [];
   runAIFlagging();
 }
 
@@ -1051,10 +1049,27 @@ function showDashboard(rows){
   const cachedFlags = (() => { try{ return JSON.parse(localStorage.getItem('blarney_ai_flags')||'null'); }catch(e){ return null; } })();
   if(cachedFlags && cachedFlags.length > 0){
     const sessionMap = new Map(rows.map(s=>[s['Session ID'],s]));
-    ALL_FLAGS = cachedFlags.map(f=>({
-      cat: f.cat, sev: f.sev, message: f.message, reason: f.reason,
-      match: f.reason, date: f.date, session: sessionMap.get(f.sessionId)||{}
+    const restoredAI = cachedFlags.map(f=>({
+      cat: f.cat, sev: f.sev,
+      label: {
+        jailbreak:'JAILBREAK ATTEMPT',offensive:'OFFENSIVE CONTENT',
+        hallucination:'HALLUCINATION SIGNAL',offbrand:'OFF-BRAND SIGNAL',frustration:'CUSTOMER FRUSTRATION'
+      }[f.cat] || (f.cat||'').toUpperCase(),
+      fb: {
+        jailbreak:'fb-jailbreak',offensive:'fb-offensive',
+        hallucination:'fb-hallucination',offbrand:'fb-offbrand',frustration:'fb-frustration'
+      }[f.cat] || 'fb-ai',
+      message: f.message, reason: f.reason,
+      match: f.reason, date: f.date, session: sessionMap.get(f.sessionId)||{},
+      source:'ai',
     }));
+    const existingKeys = new Set(ALL_FLAGS.map(f=>(f.session['Session ID']||'')+'|'+f.cat+'|'+(f.message||'').substring(0,40)));
+    restoredAI.forEach(f=>{
+      const key=(f.session['Session ID']||'')+'|'+f.cat+'|'+(f.message||'').substring(0,40);
+      if(!existingKeys.has(key)){ existingKeys.add(key); ALL_FLAGS.push(f); }
+    });
+    const sevOrder={high:0,medium:1,low:2};
+    ALL_FLAGS.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
     renderFlags();
     const kpiEl = document.getElementById('flagsKpi');
     if(kpiEl) kpiEl.textContent = `${ALL_FLAGS.length} flag${ALL_FLAGS.length!==1?'s':''} · ${ALL_FLAGS.filter(f=>f.sev==='high').length} high severity`;
