@@ -943,7 +943,7 @@ async function runAIFlagging(){
   );
   if(!sessions.length){ status.textContent='No transcripts to analyse'; return; }
 
-  const BATCH = 20;
+  const BATCH = 10;
   const batches = [];
   for(let i=0;i<sessions.length;i+=BATCH) batches.push(sessions.slice(i,i+BATCH));
 
