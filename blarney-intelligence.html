@@ -431,7 +431,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="quote-list" id="topQuestions"></div>
       </div>
       <div class="card">
-        <div class="card-hd"><div class="hd-dot" style="background:#16a34a"></div>Voice of the customer</div>
+        <div class="card-hd"><div class="hd-dot" style="background:#16a34a"></div>Voice of the customer <span style="font-size:9px;color:var(--muted2);font-weight:400;margin-left:6px">Spoken by voice only</span></div>
         <div class="quote-list" id="vocQuotes"></div>
       </div>
     </div>
@@ -1083,6 +1083,20 @@ function showDashboard(rows){
   fetchWins();
 }
 
+function getVoicePct(session){
+  if(session['Voice %']!==undefined && session['Voice %']!==''){
+    const v=parseFloat(session['Voice %']);
+    return isNaN(v)?0:v;
+  }
+  const mix=session['Input mix (text/voice/tap %)'];
+  if(mix){
+    const parts=String(mix).split('/');
+    const v=parseFloat(parts[1]);
+    return isNaN(v)?0:v;
+  }
+  return 0;
+}
+
 function applyFilter(){
   const from=document.getElementById('filterFrom').value;
   const to=document.getElementById('filterTo').value;
@@ -1169,12 +1183,20 @@ function runAnalysis(rows){
     ?questions.map(([m,ss])=>multiQuoteEl(m,ss,'ql-green')).join('')
     :'<div class="empty-msg">No questions detected yet</div>';
 
-  // ── Voice of customer ──
+  // ── Voice of customer (only messages from sessions where the customer actually spoke) ──
   const vocKw=['iphone','android','switch','upgrade','birthday','present','gift','mum','dad','daughter','son','abroad','camera','photo','trip','holiday','budget','afford','cheap','expensive','monthly','contract','price','£'];
-  const voc=sortedMsgs.filter(([m])=>m.length>25&&vocKw.some(k=>m.toLowerCase().includes(k))).slice(0,8);
+  const voiceMsgs=allMsgs.filter(({session})=>getVoicePct(session)>0);
+  const vocMsgMap=new Map();
+  voiceMsgs.forEach(({msg,session})=>{
+    if(!vocMsgMap.has(msg)) vocMsgMap.set(msg,[]);
+    const arr=vocMsgMap.get(msg);
+    if(!arr.some(s=>s['Session ID']===session['Session ID'])) arr.push(session);
+  });
+  const sortedVocMsgs=[...vocMsgMap.entries()].sort((a,b)=>b[1].length-a[1].length);
+  const voc=sortedVocMsgs.filter(([m])=>m.length>25&&vocKw.some(k=>m.toLowerCase().includes(k))).slice(0,8);
   document.getElementById('vocQuotes').innerHTML=voc.length
     ?voc.map(([m,ss])=>multiQuoteEl(m,ss,'ql-purple')).join('')
-    :'<div class="empty-msg">No customer quotes detected</div>';
+    :'<div class="empty-msg">No voice quotes detected</div>';
 
   // ── Products ──
   const products=['S26 Ultra','S26+','S26','S25 Ultra','S25 FE','S25','S24','A57','A56','A36','A17','A16','Z Fold7','Z Fold6','Z Flip7','Z Flip6','Watch Ultra','Watch8','Ring','Buds4','Tab S10','Galaxy AI'];
