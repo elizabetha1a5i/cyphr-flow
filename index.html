@@ -4120,27 +4120,31 @@ function saveProjectData(fields) {
 // Reuses the real template from the old DeckGenerator.gs Apps Script path:
 // slide 0 = title slide (literal [[title]]/[[date]] tokens), slide 1 = one
 // reusable content slide (filled as content slide #1, then duplicated via
-// the Slides REST API's duplicateObject for every additional outline item —
-// this is the real, already-designed deck, not a placeholder).
-// `layout` is kept as a label on each outline item for now (shown in the
-// outline review dropdown) but every slide is filled with the same simple
-// heading+body text-box treatment until a genuine multi-layout library
-// (distinct authored slides per layout type, per the original plan) gets
-// built — that's a separate follow-up, not a blocker for shipping this.
+// the Slides REST API's duplicateObject for every additional outline item).
+// Each of DeckGenerator.gs's 8 hand-drawn layout functions is ported below
+// as a REST request-builder (deckLayout*), so every layout type still
+// renders distinctly — same geometry/brand styling as the old Apps Script
+// path, just built with createShape/insertText/updateTextStyle batchUpdate
+// requests instead of the SlidesApp UI API.
 const DECK_TEMPLATE_ID       = '1SYcTXUmcg3ci2pg8kWrexzwiTgHdRrF0BCAwca5dBZ0';
 const DECK_PARENT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
 const DECK_LAYOUTS = [
-  { id: 'title',        label: 'Title' },
-  { id: 'stat-callout', label: 'Stat callout' },
-  { id: 'two-stat',     label: 'Two stat' },
-  { id: 'comparison',   label: 'Comparison' },
-  { id: 'quote',        label: 'Quote' },
-  { id: 'image-heavy',  label: 'Image-heavy' },
-  { id: 'timeline',     label: 'Timeline' },
-  { id: 'item-list',    label: 'Item list' },
-  { id: 'cost-table',   label: 'Cost table' },
-  { id: 'next-steps',   label: 'Next steps' },
+  { id: 'statement-trio', label: 'Statement trio' },
+  { id: 'item-list',      label: 'Item list' },
+  { id: 'timeline-list',  label: 'Timeline' },
+  { id: 'cost-table',     label: 'Cost table' },
+  { id: 'stat-callout',   label: 'Stat callout' },
+  { id: 'two-stat',       label: 'Two stat' },
+  { id: 'two-column',     label: 'Two column' },
+  { id: 'next-steps',     label: 'Next steps' },
 ];
+const DECK_BRAND_BLUE  = '#2323CC';
+const DECK_NEAR_BLACK  = '#070809';
+const DECK_CARD_BG     = '#F2F2F2';
+const DECK_MUTED       = '#555555';
+const DECK_ASSUMPTION_BG = '#F59E0B';
+const DECK_FONT_DISPLAY = 'Oswald';
+const DECK_FONT_BODY    = 'Inter';
 const DECK_RUBRIC = [
   { field: 'objective', label: 'Objective / goal',        test: t => /\b(goal|objective|outcome|aim)\b/i.test(t) },
   { field: 'audience',  label: 'Audience',                test: t => /\b(audience|stakeholder|decision.?maker|attendee)\b/i.test(t) },
@@ -4160,6 +4164,285 @@ function deckReset() {
   deckQuery = ''; deckProjectId = null;
   deckResults = { internal: [], web: [] };
   deckSelected = []; deckAssumptions = {}; deckOutline = [];
+}
+
+// ── Slide-building helpers (REST equivalents of the old SlidesApp calls) ──
+function deckHexToRgb(hex) {
+  hex = hex.replace('#', '');
+  return { red: parseInt(hex.slice(0,2),16)/255, green: parseInt(hex.slice(2,4),16)/255, blue: parseInt(hex.slice(4,6),16)/255 };
+}
+
+function deckDims(W, H) {
+  const MARGIN = W * 0.0422;
+  return {
+    W, H, MARGIN,
+    CONTENT_W:  W - MARGIN * 2,
+    HEADER_H:   H * 0.1431,
+    CONTENT_TOP:H * 0.1681,
+    COL_W:      W * 0.4063,
+    COL_R_LEFT: W * 0.5,
+    ITEM_GAP:   H * 0.039,
+    SECT_GAP:   H * 0.056,
+    STMT_GAP:   H * 0.044,
+  };
+}
+
+let deckElCounter = 0;
+function deckNextId() { return 'deck_el_' + (deckElCounter++); }
+
+// Single-run text box: one string, one style, at a given position.
+function deckMkTextBox(pageObjectId, x, y, w, h, text, style = {}) {
+  const id = deckNextId();
+  const reqs = [{ createShape: { objectId: id, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId, size: { width:{magnitude:w,unit:'EMU'}, height:{magnitude:h,unit:'EMU'} }, transform: { scaleX:1, scaleY:1, translateX:x, translateY:y, unit:'EMU' } } } }];
+  if (text) {
+    reqs.push({ insertText: { objectId: id, insertionIndex: 0, text } });
+    reqs.push(deckStyleRun(id, style, { type: 'ALL' }));
+  }
+  return { id, reqs };
+}
+
+// Two-run text box: e.g. a bold "Label — " prefix followed by a plain description.
+function deckMkTextBoxTwoRun(pageObjectId, x, y, w, h, runA, styleA, runB, styleB) {
+  const id = deckNextId();
+  const reqs = [{ createShape: { objectId: id, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId, size: { width:{magnitude:w,unit:'EMU'}, height:{magnitude:h,unit:'EMU'} }, transform: { scaleX:1, scaleY:1, translateX:x, translateY:y, unit:'EMU' } } } }];
+  if (runA) {
+    reqs.push({ insertText: { objectId: id, insertionIndex: 0, text: runA } });
+    reqs.push(deckStyleRun(id, styleA, { type: 'FIXED_RANGE', startIndex: 0, endIndex: runA.length }));
+  }
+  if (runB) {
+    reqs.push({ insertText: { objectId: id, insertionIndex: runA.length, text: runB } });
+    reqs.push(deckStyleRun(id, styleB, { type: 'FIXED_RANGE', startIndex: runA.length, endIndex: runA.length + runB.length }));
+  }
+  return { id, reqs };
+}
+
+function deckStyleRun(objectId, { bold, italic, fontSize, color, font, highlight } = {}, range) {
+  const style = {}; const fields = [];
+  if (bold !== undefined)     { style.bold = bold; fields.push('bold'); }
+  if (italic !== undefined)   { style.italic = italic; fields.push('italic'); }
+  if (fontSize !== undefined) { style.fontSize = { magnitude: fontSize, unit: 'PT' }; fields.push('fontSize'); }
+  if (color)                  { style.foregroundColor = { opaqueColor: { rgbColor: deckHexToRgb(color) } }; fields.push('foregroundColor'); }
+  if (font)                   { style.fontFamily = font; fields.push('fontFamily'); }
+  if (highlight)              { style.backgroundColor = { opaqueColor: { rgbColor: deckHexToRgb(highlight) } }; fields.push('backgroundColor'); }
+  return { updateTextStyle: { objectId, style, fields: fields.join(','), textRange: range } };
+}
+
+function deckMkRect(pageObjectId, x, y, w, h, fillColor, shapeType = 'RECTANGLE') {
+  const id = deckNextId();
+  return { id, reqs: [
+    { createShape: { objectId: id, shapeType, elementProperties: { pageObjectId, size: { width:{magnitude:w,unit:'EMU'}, height:{magnitude:h,unit:'EMU'} }, transform: { scaleX:1, scaleY:1, translateX:x, translateY:y, unit:'EMU' } } } },
+    { updateShapeProperties: { objectId: id, shapeProperties: { shapeBackgroundFill: { solidFill: { color: { rgbColor: deckHexToRgb(fillColor) } } }, outline: { propertyState: 'NOT_RENDERED' } }, fields: 'shapeBackgroundFill.solidFill.color,outline.propertyState' } },
+  ]};
+}
+
+function deckAddPillReqs(pageObjectId, text, d, color = DECK_BRAND_BLUE) {
+  const pillH = d.H * 0.055, pillW = d.W * 0.18;
+  const pillX = d.W - d.MARGIN - pillW, pillY = d.CONTENT_TOP;
+  const rect = deckMkRect(pageObjectId, pillX, pillY, pillW, pillH, color, 'ROUND_RECTANGLE');
+  const reqs = [...rect.reqs,
+    { insertText: { objectId: rect.id, insertionIndex: 0, text: text.toUpperCase() } },
+    deckStyleRun(rect.id, { bold: true, fontSize: 10, color: '#FFFFFF', font: DECK_FONT_BODY }, { type: 'ALL' }),
+    { updateParagraphStyle: { objectId: rect.id, style: { alignment: 'CENTER' }, fields: 'alignment', textRange: { type: 'ALL' } } },
+  ];
+  return reqs;
+}
+
+// Heading in brand blue (Oswald). Returns { top, reqs } — top is the y-coordinate content should start at below it.
+function deckAddHeadingReqs(pageObjectId, text, d) {
+  if (!text) return { top: d.CONTENT_TOP, reqs: [] };
+  const headH = d.H * 0.067;
+  const tb = deckMkTextBox(pageObjectId, d.MARGIN, d.CONTENT_TOP, d.CONTENT_W * 0.75, headH, text, { bold: true, fontSize: 32, color: DECK_BRAND_BLUE, font: DECK_FONT_DISPLAY });
+  return { top: d.CONTENT_TOP + headH + d.SECT_GAP, reqs: tb.reqs };
+}
+
+// ── Layout builders — one per DECK_LAYOUTS id, ported from DeckGenerator.gs ──
+function deckLayoutStatementTrio(pageObjectId, item, d) {
+  const reqs = []; const lines = item.lines || [];
+  let top = d.CONTENT_TOP;
+  if (item.heading) {
+    const htb = deckMkTextBox(pageObjectId, d.MARGIN, top, d.CONTENT_W, d.H * 0.05, item.heading, { bold: false, fontSize: 14, color: DECK_MUTED, font: DECK_FONT_BODY });
+    reqs.push(...htb.reqs); top += d.H * 0.05 + d.ITEM_GAP;
+  }
+  const stmtH = d.H * 0.1;
+  const colors = [DECK_NEAR_BLACK, DECK_BRAND_BLUE, DECK_NEAR_BLACK];
+  lines.forEach((line, i) => {
+    const tb = deckMkTextBox(pageObjectId, d.MARGIN, top, d.CONTENT_W, stmtH, line, { bold: true, fontSize: 32, color: colors[i] || DECK_NEAR_BLACK, font: DECK_FONT_DISPLAY });
+    reqs.push(...tb.reqs); top += stmtH + d.STMT_GAP;
+  });
+  return reqs;
+}
+
+function deckLayoutItemList(pageObjectId, item, d) {
+  const { top: startTop, reqs: headReqs } = deckAddHeadingReqs(pageObjectId, item.heading, d);
+  const reqs = [...headReqs]; const lines = item.lines || [];
+  const cardH = d.H * 0.1, padX = d.MARGIN * 0.6, padY = d.H * 0.018;
+  let top = startTop;
+  lines.forEach(line => {
+    const card = deckMkRect(pageObjectId, d.MARGIN, top, d.CONTENT_W, cardH, DECK_CARD_BG);
+    reqs.push(...card.reqs);
+    const parts = line.split(' — ');
+    const tb = parts.length >= 2
+      ? deckMkTextBoxTwoRun(pageObjectId, d.MARGIN + padX, top + padY, d.CONTENT_W - padX*2, cardH - padY*2, parts[0] + ' — ', { bold: true, fontSize: 17, color: DECK_NEAR_BLACK, font: DECK_FONT_BODY }, parts.slice(1).join(' — '), { bold: false, fontSize: 15, color: '#444444', font: DECK_FONT_BODY })
+      : deckMkTextBox(pageObjectId, d.MARGIN + padX, top + padY, d.CONTENT_W - padX*2, cardH - padY*2, line, { bold: false, fontSize: 15, color: DECK_NEAR_BLACK, font: DECK_FONT_BODY });
+    reqs.push(...tb.reqs); top += cardH + d.ITEM_GAP * 0.6;
+  });
+  return reqs;
+}
+
+function deckLayoutTimelineList(pageObjectId, item, d) {
+  const { top: startTop, reqs: headReqs } = deckAddHeadingReqs(pageObjectId, item.heading, d);
+  const reqs = [...headReqs]; const lines = item.lines || [];
+  const barW = 4, padL = barW + d.MARGIN * 0.5, cardH = d.H * 0.1, padY = d.H * 0.015;
+  let top = startTop;
+  lines.forEach(line => {
+    const card = deckMkRect(pageObjectId, d.MARGIN, top, d.CONTENT_W, cardH, DECK_CARD_BG);
+    reqs.push(...card.reqs);
+    const bar = deckMkRect(pageObjectId, d.MARGIN, top, barW, cardH, DECK_BRAND_BLUE);
+    reqs.push(...bar.reqs);
+    const colonIdx = line.indexOf(':');
+    const tb = colonIdx !== -1
+      ? deckMkTextBoxTwoRun(pageObjectId, d.MARGIN + padL, top + padY, d.CONTENT_W - padL - d.MARGIN*0.3, cardH - padY*2, line.slice(0, colonIdx+1) + '  ', { bold: true, fontSize: 14, color: DECK_BRAND_BLUE, font: DECK_FONT_DISPLAY }, line.slice(colonIdx+1).trim(), { bold: false, fontSize: 14, color: DECK_NEAR_BLACK, font: DECK_FONT_BODY })
+      : deckMkTextBox(pageObjectId, d.MARGIN + padL, top + padY, d.CONTENT_W - padL - d.MARGIN*0.3, cardH - padY*2, line, { bold: false, fontSize: 14, color: DECK_NEAR_BLACK, font: DECK_FONT_BODY });
+    reqs.push(...tb.reqs); top += cardH + d.ITEM_GAP * 0.6;
+  });
+  return reqs;
+}
+
+function deckLayoutCostTable(pageObjectId, item, d) {
+  const { top: startTop, reqs: headReqs } = deckAddHeadingReqs(pageObjectId, item.heading, d);
+  const reqs = [...headReqs]; const lines = item.lines || [];
+  const rowH = d.H * 0.072;
+  let top = startTop;
+  lines.forEach(line => {
+    const isTotal = line.toUpperCase().indexOf('TOTAL') === 0;
+    if (isTotal) {
+      const div = deckMkRect(pageObjectId, d.MARGIN, top - d.ITEM_GAP*0.5, d.CONTENT_W, 2, DECK_BRAND_BLUE);
+      reqs.push(...div.reqs); top += d.ITEM_GAP * 0.5;
+    }
+    const parts = line.split(' — ');
+    const label = parts.length >= 2 ? parts[0] : line;
+    const amount = parts.length >= 2 ? parts.slice(1).join(' — ') : '';
+    const fs = isTotal ? 24 : 18, color = isTotal ? DECK_BRAND_BLUE : DECK_NEAR_BLACK, font = isTotal ? DECK_FONT_DISPLAY : DECK_FONT_BODY;
+    const lbl = deckMkTextBox(pageObjectId, d.MARGIN, top, d.CONTENT_W * 0.65, rowH, label, { bold: isTotal, fontSize: fs, color, font });
+    reqs.push(...lbl.reqs);
+    if (amount) {
+      const amt = deckMkTextBox(pageObjectId, d.MARGIN + d.CONTENT_W*0.65, top, d.CONTENT_W*0.35, rowH, amount, { bold: isTotal, fontSize: fs, color, font });
+      reqs.push(...amt.reqs);
+    }
+    top += rowH + (isTotal ? 0 : d.ITEM_GAP * 0.5);
+  });
+  return reqs;
+}
+
+function deckLayoutStatCallout(pageObjectId, item, d) {
+  const reqs = []; let colTop = d.CONTENT_TOP;
+  if (item.heading) {
+    const htb = deckMkTextBox(pageObjectId, d.MARGIN, colTop, d.COL_W, d.H * 0.13, item.heading, { bold: true, fontSize: 40, color: DECK_NEAR_BLACK, font: DECK_FONT_DISPLAY });
+    reqs.push(...htb.reqs); colTop += d.H * 0.13 + d.SECT_GAP;
+  }
+  (item.lines || []).forEach(line => {
+    const tb = deckMkTextBox(pageObjectId, d.MARGIN, colTop, d.COL_W, d.H * 0.072, line, { bold: false, fontSize: 15, color: DECK_MUTED, font: DECK_FONT_BODY });
+    reqs.push(...tb.reqs); colTop += d.H * 0.072 + d.ITEM_GAP;
+  });
+  const stat = item.stat || '', statLabel = item.stat_label || item.description || '';
+  const statTop = d.CONTENT_TOP + (d.H - d.CONTENT_TOP) * 0.05;
+  const statTb = deckMkTextBox(pageObjectId, d.COL_R_LEFT, statTop, d.COL_W, d.H * 0.35, stat, { bold: true, fontSize: 120, color: DECK_BRAND_BLUE, font: DECK_FONT_DISPLAY });
+  reqs.push(...statTb.reqs);
+  if (statLabel) {
+    const lblTb = deckMkTextBox(pageObjectId, d.COL_R_LEFT, statTop + d.H*0.36, d.COL_W, d.H*0.12, statLabel, { bold: false, fontSize: 15, color: DECK_MUTED, font: DECK_FONT_BODY });
+    reqs.push(...lblTb.reqs);
+  }
+  return reqs;
+}
+
+function deckLayoutTwoStat(pageObjectId, item, d) {
+  const reqs = [];
+  let stats = item.stats || [];
+  if (!stats.length && item.lines && item.lines.length >= 2) {
+    stats = [];
+    for (let s = 0; s < item.lines.length; s += 2) stats.push({ value: item.lines[s], label: item.lines[s+1] || '' });
+  }
+  if (item.heading) {
+    const htb = deckMkTextBox(pageObjectId, d.MARGIN, d.CONTENT_TOP, d.CONTENT_W, d.H * 0.067, item.heading, { bold: true, fontSize: 28, color: DECK_NEAR_BLACK, font: DECK_FONT_DISPLAY });
+    reqs.push(...htb.reqs);
+  }
+  const statTop = d.CONTENT_TOP + (item.heading ? d.H * 0.13 : d.H * 0.05);
+  const positions = [d.MARGIN, d.COL_R_LEFT];
+  stats.slice(0, 2).forEach((s, i) => {
+    const xLeft = positions[i];
+    const card = deckMkRect(pageObjectId, xLeft, statTop - d.H*0.02, d.COL_W, d.H*0.42, DECK_CARD_BG);
+    reqs.push(...card.reqs);
+    const numTb = deckMkTextBox(pageObjectId, xLeft + d.MARGIN*0.4, statTop, d.COL_W - d.MARGIN*0.8, d.H*0.28, s.value || '', { bold: true, fontSize: 90, color: DECK_BRAND_BLUE, font: DECK_FONT_DISPLAY });
+    reqs.push(...numTb.reqs);
+    if (s.label) {
+      const descTb = deckMkTextBox(pageObjectId, xLeft + d.MARGIN*0.4, statTop + d.H*0.28, d.COL_W - d.MARGIN*0.8, d.H*0.1, s.label, { bold: false, fontSize: 15, color: DECK_MUTED, font: DECK_FONT_BODY });
+      reqs.push(...descTb.reqs);
+    }
+  });
+  return reqs;
+}
+
+function deckLayoutTwoColumn(pageObjectId, item, d) {
+  const { top, reqs: headReqs } = deckAddHeadingReqs(pageObjectId, item.heading, d);
+  const reqs = [...headReqs];
+  let cols = item.columns || [];
+  if (!cols.length && item.lines) {
+    const half = Math.ceil(item.lines.length / 2);
+    cols = [{ title: '', items: item.lines.slice(0, half) }, { title: '', items: item.lines.slice(half) }];
+  }
+  const colPositions = [d.MARGIN, d.COL_R_LEFT];
+  cols.slice(0, 2).forEach((col, c) => {
+    const cx = colPositions[c]; let cy = top;
+    if (col.title) {
+      const ctb = deckMkTextBox(pageObjectId, cx, cy, d.COL_W, d.H*0.067, col.title, { bold: true, fontSize: 20, color: DECK_BRAND_BLUE, font: DECK_FONT_DISPLAY });
+      reqs.push(...ctb.reqs); cy += d.H*0.067 + d.ITEM_GAP*0.5;
+    }
+    const itemCardH = d.H * 0.082, padX = d.MARGIN * 0.5, padY = d.H * 0.015;
+    (col.items || []).forEach(line => {
+      const bg = deckMkRect(pageObjectId, cx, cy, d.COL_W, itemCardH, DECK_CARD_BG);
+      reqs.push(...bg.reqs);
+      const itb = deckMkTextBox(pageObjectId, cx + padX, cy + padY, d.COL_W - padX*2, itemCardH - padY*2, line, { bold: false, fontSize: 14, color: DECK_NEAR_BLACK, font: DECK_FONT_BODY });
+      reqs.push(...itb.reqs); cy += itemCardH + d.ITEM_GAP*0.5;
+    });
+  });
+  return reqs;
+}
+
+function deckLayoutNextSteps(pageObjectId, item, d) {
+  const reqs = [];
+  const headH = d.H * 0.1;
+  const tb0 = deckMkTextBox(pageObjectId, d.MARGIN, d.CONTENT_TOP, d.CONTENT_W, headH, item.heading || 'What happens next.', { bold: true, fontSize: 48, color: DECK_NEAR_BLACK, font: DECK_FONT_DISPLAY });
+  reqs.push(...tb0.reqs);
+  let top = d.CONTENT_TOP + headH + d.SECT_GAP;
+  const lines = item.lines || [];
+  const stepH = d.H * 0.09, padX = d.MARGIN * 0.5, padY = d.H * 0.018;
+  lines.forEach((line, i) => {
+    const card = deckMkRect(pageObjectId, d.MARGIN, top, d.CONTENT_W, stepH, DECK_CARD_BG);
+    reqs.push(...card.reqs);
+    const tb = deckMkTextBoxTwoRun(pageObjectId, d.MARGIN + padX, top + padY, d.CONTENT_W - padX*2, stepH - padY*2, (i+1) + '.  ', { bold: true, fontSize: 20, color: DECK_BRAND_BLUE, font: DECK_FONT_DISPLAY }, line, { bold: false, fontSize: 17, color: DECK_NEAR_BLACK, font: DECK_FONT_BODY });
+    reqs.push(...tb.reqs); top += stepH + d.ITEM_GAP * 0.6;
+  });
+  return reqs;
+}
+
+const DECK_LAYOUT_FNS = {
+  'statement-trio': deckLayoutStatementTrio,
+  'item-list':      deckLayoutItemList,
+  'timeline-list':  deckLayoutTimelineList,
+  'cost-table':     deckLayoutCostTable,
+  'stat-callout':   deckLayoutStatCallout,
+  'two-stat':       deckLayoutTwoStat,
+  'two-column':     deckLayoutTwoColumn,
+  'next-steps':     deckLayoutNextSteps,
+};
+
+function deckBuildSlideRequests(pageObjectId, item, d) {
+  const fn = DECK_LAYOUT_FNS[item.layout] || deckLayoutItemList;
+  const reqs = [];
+  if (item.isAssumption) reqs.push(...deckAddPillReqs(pageObjectId, 'Assumption', d, DECK_ASSUMPTION_BG));
+  else if (item.eyebrow) reqs.push(...deckAddPillReqs(pageObjectId, item.eyebrow, d));
+  reqs.push(...fn(pageObjectId, item, d));
+  return reqs;
 }
 
 function deckShowStep(n) {
@@ -4378,9 +4661,7 @@ async function deckGenerateOutlineStep() {
     const cypherDoc = await readAgencyDetails(token);
     const material = deckSelected.map(i => `[${i.source}] ${i.title}: ${i.snippet}`).join('\n');
     const assumptionsText = Object.entries(deckAssumptions).map(([f,a]) => `${a.label}: ${a.value} (ASSUMPTION)`).join('\n');
-    const layoutIds = DECK_LAYOUTS.map(l => l.id).join(', ');
-    const prompt = `You are building a slide outline for a client deck. Choose a layout per slide from this set: ${layoutIds}.
-Base the content on the selected material and agency context below. Any assumption-flagged field must be marked isAssumption:true and its text must stay visibly framed as an assumption.
+    const prompt = `You are a deck strategist writing a proposal deck outline. Base it on the selected material and agency context below — do not invent facts not present in them (assumption-filled gaps are the one exception, and must be marked isAssumption:true).
 
 Selected material:
 ${material.slice(0, 4000)}
@@ -4392,12 +4673,27 @@ Agency context: ${JSON.stringify(cypherDoc).slice(0, 1000)}
 
 Query: ${deckQuery}
 
-Return ONLY a JSON array like:
-[{"layout":"title","heading":"...","body":"...","isAssumption":false}, ...]
-Produce as many slides as the content volume supports (do not pad).`;
-    const result = await callGemini(prompt, { maxTokens: 2500 });
+Decide how many slides (3–6), what each is about, and which layout fits. Vary the layouts — do not use item-list for every slide.
+
+LAYOUT TYPES — pick the one that fits each slide's content:
+statement-trio — three bold standalone statements. Best for insight/reframe slides. lines: 2-3 short fragments.
+item-list       — heading + line items "Phase name — description". For process, approach, milestones. lines: ["Label — description", ...]
+timeline-list   — heading + dated entries "Q1: Phase name". For chronological plans. lines: ["Q1: description", ...]
+cost-table      — heading + rows "Item — £amount", plus a "TOTAL — £amount" row. For investment breakdowns. lines: ["Item — £amount", ..., "TOTAL — £amount"]
+stat-callout    — heading + context lines on the left, one giant stat on the right. For problem/data slides. Needs stat, stat_label, lines (context items).
+two-stat        — two large numbers side by side. For evidence slides with two data points. Needs stats: [{"value":"3x","label":"..."}, {"value":"73%","label":"..."}]
+two-column      — heading + two equal columns. For comparisons, before/after, two audiences. Needs columns: [{"title":"...","items":["...","..."]}, {"title":"...","items":["...","..."]}]
+next-steps      — large heading + numbered steps. For what happens after sign-off. lines: ["action 1", "action 2", ...]
+
+Each slide needs: layout, heading (2-4 words, specific, not generic — "Seven months." not "Timeline"), and the fields that layout needs above. Optionally add "eyebrow" (a 1-3 word category tag) to 3-4 slides. Mark isAssumption:true only if the slide leans on an assumption-filled gap above.
+
+Return ONLY a JSON array, e.g.:
+[{"layout":"stat-callout","heading":"...","eyebrow":"Evidence","stat":"-40%","stat_label":"...","lines":["...","..."],"isAssumption":false}, ...]
+Produce as many slides as the content volume supports (do not pad). No markdown, no code fences, no explanation outside the JSON.`;
+    const result = await callGemini(prompt, { maxTokens: 3500, responseMimeType: 'application/json' });
     const m = result.match(/\[[\s\S]*\]/);
     deckOutline = m ? JSON.parse(m[0]) : [];
+    deckOutline.forEach(s => { if (!DECK_LAYOUT_FNS[s.layout]) s.layout = 'item-list'; });
     if (!deckOutline.length) throw new Error('Could not generate an outline — try adjusting your selection');
     deckRenderOutline();
   } catch(e) {
@@ -4405,16 +4701,54 @@ Produce as many slides as the content volume supports (do not pad).`;
   }
 }
 
+const fld = (cls, i, key) => `class="${cls}" data-idx="${i}" data-key="${key}"`;
+const inputBox = (cls, i, key, val, ph='') => `<input ${fld(cls,i,key)} value="${(val||'').toString().replace(/"/g,'&quot;')}" placeholder="${ph}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;box-sizing:border-box;margin-bottom:5px">`;
+const textareaBox = (cls, i, key, val, label, ph='') => `<label style="font-size:10px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:2px">${label}</label><textarea ${fld(cls,i,key)} placeholder="${ph}" style="width:100%;min-height:60px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;box-sizing:border-box;resize:vertical;margin-bottom:6px">${(val||[]).join('\n')}</textarea>`;
+
+function deckRenderLayoutFields(s, i) {
+  switch (s.layout) {
+    case 'statement-trio':
+      return textareaBox('deck-lines', i, 'lines', s.lines, 'Statements (one per line)', 'Fragment 1\nFragment 2\nFragment 3');
+    case 'item-list':
+      return textareaBox('deck-lines', i, 'lines', s.lines, 'Items (one per line, "Label — description")');
+    case 'timeline-list':
+      return textareaBox('deck-lines', i, 'lines', s.lines, 'Entries (one per line, "Q1: description")');
+    case 'cost-table':
+      return textareaBox('deck-lines', i, 'lines', s.lines, 'Rows (one per line, "Item — £amount"; end with "TOTAL — £amount")');
+    case 'next-steps':
+      return textareaBox('deck-lines', i, 'lines', s.lines, 'Steps (one per line)');
+    case 'stat-callout':
+      return `<div style="display:flex;gap:6px;margin-bottom:6px">
+        <div style="flex:1">${inputBox('deck-stat', i, 'stat', s.stat, 'e.g. -40%')}</div>
+        <div style="flex:2">${inputBox('deck-stat-label', i, 'stat_label', s.stat_label, 'What the stat means')}</div>
+      </div>${textareaBox('deck-lines', i, 'lines', s.lines, 'Context lines (one per line)')}`;
+    case 'two-stat': {
+      const val = (s.stats||[]).map(x => `${x.value}|${x.label}`);
+      return textareaBox('deck-stats', i, 'stats', val, 'Two stats — one per line, "value|label"', '3x|description\n73%|description');
+    }
+    case 'two-column': {
+      const cols = s.columns && s.columns.length === 2 ? s.columns : [{title:'',items:[]},{title:'',items:[]}];
+      return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>${inputBox('deck-col-title-0', i, 'col0title', cols[0].title, 'Column A title')}${textareaBox('deck-col-items-0', i, 'col0items', cols[0].items, 'Column A items (one per line)')}</div>
+        <div>${inputBox('deck-col-title-1', i, 'col1title', cols[1].title, 'Column B title')}${textareaBox('deck-col-items-1', i, 'col1items', cols[1].items, 'Column B items (one per line)')}</div>
+      </div>`;
+    }
+    default:
+      return textareaBox('deck-lines', i, 'lines', s.lines, 'Content (one per line)');
+  }
+}
+
 function deckRenderOutline() {
   const layoutOptions = l => DECK_LAYOUTS.map(x => `<option value="${x.id}" ${x.id===l?'selected':''}>${x.label}</option>`).join('');
   const rows = deckOutline.map((s, i) => `
     <div class="card" style="margin-bottom:10px" data-idx="${i}">
-      <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
-        <select class="deck-outline-layout" data-idx="${i}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px">${layoutOptions(s.layout)}</select>
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <select class="deck-outline-layout" data-idx="${i}" onchange="deckCollectOutline();deckOutline[${i}].layout=this.value;deckRenderOutline()" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px">${layoutOptions(s.layout)}</select>
+        <input class="deck-outline-eyebrow" data-idx="${i}" value="${(s.eyebrow||'').replace(/"/g,'&quot;')}" placeholder="Eyebrow tag (optional)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:160px">
         ${s.isAssumption ? '<span style="font-size:10px;font-family:var(--mono);color:#b45309;background:#fff8e1;padding:2px 6px;border-radius:4px">⚑ ASSUMPTION</span>' : ''}
       </div>
-      <input class="deck-outline-heading" data-idx="${i}" value="${(s.heading||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;box-sizing:border-box;margin-bottom:6px">
-      <textarea class="deck-outline-body" data-idx="${i}" style="width:100%;min-height:60px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;resize:vertical">${s.body||''}</textarea>
+      <input class="deck-outline-heading" data-idx="${i}" value="${(s.heading||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;box-sizing:border-box;margin-bottom:8px">
+      ${deckRenderLayoutFields(s, i)}
     </div>`).join('');
 
   $('deck-step-4').innerHTML = `
@@ -4427,8 +4761,23 @@ function deckRenderOutline() {
 
 function deckCollectOutline() {
   document.querySelectorAll('.deck-outline-heading').forEach(el => { deckOutline[Number(el.dataset.idx)].heading = el.value; });
-  document.querySelectorAll('.deck-outline-body').forEach(el => { deckOutline[Number(el.dataset.idx)].body = el.value; });
-  document.querySelectorAll('.deck-outline-layout').forEach(el => { deckOutline[Number(el.dataset.idx)].layout = el.value; });
+  document.querySelectorAll('.deck-outline-eyebrow').forEach(el => { deckOutline[Number(el.dataset.idx)].eyebrow = el.value; });
+  document.querySelectorAll('.deck-lines').forEach(el => { deckOutline[Number(el.dataset.idx)].lines = el.value.split('\n').map(x=>x.trim()).filter(Boolean); });
+  document.querySelectorAll('.deck-stat').forEach(el => { deckOutline[Number(el.dataset.idx)].stat = el.value; });
+  document.querySelectorAll('.deck-stat-label').forEach(el => { deckOutline[Number(el.dataset.idx)].stat_label = el.value; });
+  document.querySelectorAll('.deck-stats').forEach(el => {
+    deckOutline[Number(el.dataset.idx)].stats = el.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [value,label] = l.split('|'); return { value: (value||'').trim(), label: (label||'').trim() }; });
+  });
+  deckOutline.forEach((s, i) => {
+    const t0 = document.querySelector(`.deck-col-title-0[data-idx="${i}"]`), t1 = document.querySelector(`.deck-col-title-1[data-idx="${i}"]`);
+    const it0 = document.querySelector(`.deck-col-items-0[data-idx="${i}"]`), it1 = document.querySelector(`.deck-col-items-1[data-idx="${i}"]`);
+    if (t0 && t1) {
+      s.columns = [
+        { title: t0.value, items: (it0?.value||'').split('\n').map(x=>x.trim()).filter(Boolean) },
+        { title: t1.value, items: (it1?.value||'').split('\n').map(x=>x.trim()).filter(Boolean) },
+      ];
+    }
+  });
 }
 
 // ── Step 5: Generation ─────────────────────────────────────────────────────
@@ -4460,7 +4809,7 @@ async function deckGenerate() {
     if (!contentTemplateId) throw new Error('Template is missing its content slide (expected slide index 1)');
     const W = Number(pres.pageSize?.width?.magnitude || 9144000);
     const H = Number(pres.pageSize?.height?.magnitude || 5143500);
-    const MARGIN = W * 0.0422, CONTENT_W = W - MARGIN * 2, CONTENT_TOP = H * 0.1681;
+    const d = deckDims(W, H);
 
     log('Setting title slide…');
     const titleRequests = [
@@ -4486,18 +4835,7 @@ async function deckGenerate() {
     log('Filling slide content…');
     const fillRequests = [];
     deckOutline.forEach((s, i) => {
-      const slideId = slideIdsInOrder[i];
-      const headingId = `deck_heading_${i}`, bodyId = `deck_body_${i}`;
-      const heading = s.isAssumption ? `⚑ ASSUMPTION: ${s.heading || ''}` : (s.heading || '');
-      const body = s.isAssumption ? `⚑ ASSUMPTION: ${s.body || ''}` : (s.body || '');
-      fillRequests.push(
-        { createShape: { objectId: headingId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: slideId, size: { width: { magnitude: CONTENT_W, unit: 'EMU' }, height: { magnitude: H * 0.12, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: MARGIN, translateY: CONTENT_TOP, unit: 'EMU' } } } },
-        { insertText: { objectId: headingId, insertionIndex: 0, text: heading } },
-        { updateTextStyle: { objectId: headingId, style: { bold: true, fontSize: { magnitude: 28, unit: 'PT' }, ...(s.isAssumption ? { backgroundColor: { opaqueColor: { rgbColor: { red: 1, green: 0.95, blue: 0.8 } } } } : {}) }, fields: s.isAssumption ? 'bold,fontSize,backgroundColor' : 'bold,fontSize' } },
-        { createShape: { objectId: bodyId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: slideId, size: { width: { magnitude: CONTENT_W, unit: 'EMU' }, height: { magnitude: H * 0.55, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: MARGIN, translateY: CONTENT_TOP + H * 0.14, unit: 'EMU' } } } },
-        { insertText: { objectId: bodyId, insertionIndex: 0, text: body } },
-        ...(s.isAssumption ? [{ updateTextStyle: { objectId: bodyId, style: { italic: true, backgroundColor: { opaqueColor: { rgbColor: { red: 1, green: 0.95, blue: 0.8 } } } }, fields: 'italic,backgroundColor' } }] : [])
-      );
+      fillRequests.push(...deckBuildSlideRequests(slideIdsInOrder[i], s, d));
     });
     const fillRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}:batchUpdate`, {
       method: 'POST', headers: authHeaders,
