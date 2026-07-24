@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 3</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 4</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4582,7 +4582,7 @@ async function deckSearchWeb(query, clientName) {
   }), 20000, 'Web search');
   if (!res.ok) return [];
   const data = await res.json();
-  return (data.results || []).map(r => ({ source: 'web', title: r.title || r.url, snippet: r.snippet || '', url: r.url }));
+  return (data.results || []).map(r => ({ source: 'web', subSource: 'web', title: r.title || r.url, snippet: r.snippet || '', url: r.url }));
 }
 
 async function deckSearchDrive(query, clientName) {
@@ -4593,54 +4593,82 @@ async function deckSearchDrive(query, clientName) {
   }), 15000, 'Drive search');
   if (!res.ok) return [];
   const data = await res.json();
-  return (data.files || []).map(f => ({ source: 'internal', title: f.name, snippet: `Drive file, last modified ${new Date(f.modifiedTime).toLocaleDateString('en-GB')}`, url: f.webViewLink }));
+  return (data.files || []).map(f => ({ source: 'internal', subSource: 'drive', title: f.name, snippet: `Drive file, last modified ${new Date(f.modifiedTime).toLocaleDateString('en-GB')}`, url: f.webViewLink }));
 }
 
 async function deckSearchGmail(query, clientName) {
+  // Gmail's API doesn't support direct browser CORS calls the way Drive/Slides do — every
+  // other Gmail search in this app (propPullGmail, est-gmail, etc.) routes through the same
+  // Cloudflare Worker proxy for that reason. Calling gmail.googleapis.com directly here was
+  // the actual cause of "couldn't find Gmail" — it wasn't a permissions issue.
   const gToken = await deckWithTimeout(getGmailToken(), 45000, 'Gmail sign-in');
+  const workerUrl = settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev';
   const gq = `${query} ${clientName||''}`.trim();
-  const listRes = await deckWithTimeout(fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gq)}&maxResults=5`, {
-    headers: { Authorization: `Bearer ${gToken}` }
-  }), 15000, 'Gmail search');
-  if (!listRes.ok) return [];
-  const listData = await listRes.json();
-  const msgs = await Promise.all((listData.messages || []).map(m =>
-    fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject`, { headers: { Authorization: `Bearer ${gToken}` } }).then(r => r.json())
-  ));
-  return msgs.map(m => {
-    const subject = (m.payload?.headers || []).find(h => h.name === 'Subject')?.value || '(no subject)';
-    return { source: 'internal', title: subject, snippet: m.snippet || '', url: `https://mail.google.com/mail/u/0/#inbox/${m.id}` };
-  });
+  const res = await deckWithTimeout(fetch(`${workerUrl}/gmail`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: gq, token: gToken })
+  }), 20000, 'Gmail search');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.emails || []).map(e => ({ source: 'internal', subSource: 'gmail', title: e.subject || '(no subject)', snippet: `${e.sender || ''} · ${e.date ? new Date(e.date).toLocaleDateString('en-GB') : ''} — ${e.snippet || ''}`, url: '' }));
+}
+
+const DECK_SOURCE_META = {
+  drive: { label: 'Google Drive', icon: '📁' },
+  gmail: { label: 'Gmail', icon: '✉️' },
+  web:   { label: 'Live web research', icon: '🌐' },
+};
+
+// All results in one flat, stably-ordered list — deck-item-select data-idx indexes into this.
+function deckAllResults() {
+  return [...deckResults.internal, ...deckResults.web];
 }
 
 function deckRenderClientDoc() {
-  const renderGroup = (label, items, offset) => items.length ? `
-    <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--ink3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${label}</div>
-      ${items.map((it, i) => `
-        <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
-          <input type="checkbox" class="deck-item-select" data-source="${it.source}" data-idx="${offset+i}" style="margin-top:3px">
-          <div>
-            <div style="font-size:13px;color:var(--ink);font-weight:600">${it.title}</div>
-            <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
-          </div>
-        </label>`).join('')}
-    </div>` : '';
+  const all = deckAllResults();
+  const bySubSource = {};
+  all.forEach((it, i) => { const key = it.subSource || it.source; (bySubSource[key] = bySubSource[key] || []).push({ ...it, idx: i }); });
+
+  const groupHtml = Object.entries(bySubSource).map(([key, items]) => {
+    const meta = DECK_SOURCE_META[key] || { label: key, icon: '•' };
+    return `
+    <details open style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+      <summary style="cursor:pointer;font-size:12px;font-family:var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;justify-content:space-between">
+        <span>${meta.icon} ${meta.label} <span style="color:var(--ink3);text-transform:none">(${items.length})</span></span>
+        <span>
+          <a href="javascript:void(0)" onclick="event.preventDefault();deckToggleGroup('${key}',true)" style="font-size:11px;margin-right:8px">select all</a>
+          <a href="javascript:void(0)" onclick="event.preventDefault();deckToggleGroup('${key}',false)" style="font-size:11px">none</a>
+        </span>
+      </summary>
+      <div style="margin-top:8px">
+        ${items.map(it => `
+          <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+            <input type="checkbox" class="deck-item-select" data-group="${key}" data-idx="${it.idx}" style="margin-top:3px">
+            <div>
+              <div style="font-size:13px;color:var(--ink);font-weight:600">${it.url ? `<a href="${it.url}" target="_blank" style="color:inherit">${it.title}</a>` : it.title}</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
+            </div>
+          </label>`).join('')}
+      </div>
+    </details>`;
+  }).join('');
 
   $('deck-step-2').innerHTML = `
     <div class="card" style="margin-bottom:16px">
       <div class="card-title" style="margin-bottom:10px">Here's what we found</div>
-      <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Select what's relevant — everything else is left out of the deck.</div>
-      ${renderGroup('Internal notes', deckResults.internal, 0)}
-      ${renderGroup('Live web research', deckResults.web, deckResults.internal.length)}
-      ${(!deckResults.internal.length && !deckResults.web.length) ? '<div style="font-size:13px;color:var(--ink3)">Nothing found — you can still continue and fill gaps manually in the next step.</div>' : ''}
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Grouped by where it came from — pick what's relevant per source. Everything else is left out of the deck.</div>
+      ${groupHtml || '<div style="font-size:13px;color:var(--ink3)">Nothing found — you can still continue and fill gaps manually in the next step.</div>'}
     </div>
     <button class="btn btn-primary" onclick="deckRunConfidenceCheck()">Sound check →</button>
   `;
 }
 
+function deckToggleGroup(key, checked) {
+  document.querySelectorAll(`.deck-item-select[data-group="${key}"]`).forEach(el => { el.checked = checked; });
+}
+
 function deckCollectSelected() {
-  const all = [...deckResults.internal, ...deckResults.web];
+  const all = deckAllResults();
   deckSelected = [];
   document.querySelectorAll('.deck-item-select:checked').forEach(el => {
     const idx = Number(el.dataset.idx);
@@ -4793,6 +4821,25 @@ function deckRenderLayoutFields(s, i) {
   }
 }
 
+function deckImageCandidates() {
+  return deckSelected.filter(i => i.url).map(i => ({ url: i.url, title: i.title }));
+}
+
+function deckRenderImageField(s, i) {
+  const candidates = deckImageCandidates();
+  const options = candidates.map(c => `<option value="${c.url}">${(c.title||'').slice(0,60)}</option>`).join('');
+  const preview = s.image ? `<img src="${s.image}" alt="" style="max-width:120px;max-height:80px;border-radius:4px;margin-top:6px;display:block;object-fit:cover" onerror="this.style.display='none'">` : '';
+  return `
+    <div style="margin-top:8px">
+      <label style="font-size:10px;color:var(--ink3);font-family:var(--mono);display:block;margin-bottom:2px">Image / reference link (optional)</label>
+      <div style="display:flex;gap:6px">
+        <input class="deck-outline-image" data-idx="${i}" value="${(s.image||'').replace(/"/g,'&quot;')}" placeholder="Paste an image URL, or pick a source link from search results" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;box-sizing:border-box">
+        ${candidates.length ? `<select onchange="deckCollectOutline();deckOutline[${i}].image=this.value;deckRenderOutline()" style="font-size:11px;padding:4px;border:1px solid var(--border);border-radius:5px;max-width:150px"><option value="">From search…</option>${options}</select>` : ''}
+      </div>
+      ${preview}
+    </div>`;
+}
+
 function deckRenderOutline() {
   const layoutOptions = l => DECK_LAYOUTS.map(x => `<option value="${x.id}" ${x.id===l?'selected':''}>${x.label}</option>`).join('');
   const rows = deckOutline.map((s, i) => `
@@ -4804,6 +4851,7 @@ function deckRenderOutline() {
       </div>
       <input class="deck-outline-heading" data-idx="${i}" value="${(s.heading||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;box-sizing:border-box;margin-bottom:8px">
       ${deckRenderLayoutFields(s, i)}
+      ${deckRenderImageField(s, i)}
     </div>`).join('');
 
   $('deck-step-4').innerHTML = `
@@ -4817,6 +4865,7 @@ function deckRenderOutline() {
 function deckCollectOutline() {
   document.querySelectorAll('.deck-outline-heading').forEach(el => { deckOutline[Number(el.dataset.idx)].heading = el.value; });
   document.querySelectorAll('.deck-outline-eyebrow').forEach(el => { deckOutline[Number(el.dataset.idx)].eyebrow = el.value; });
+  document.querySelectorAll('.deck-outline-image').forEach(el => { deckOutline[Number(el.dataset.idx)].image = el.value; });
   document.querySelectorAll('.deck-lines').forEach(el => { deckOutline[Number(el.dataset.idx)].lines = el.value.split('\n').map(x=>x.trim()).filter(Boolean); });
   document.querySelectorAll('.deck-stat').forEach(el => { deckOutline[Number(el.dataset.idx)].stat = el.value; });
   document.querySelectorAll('.deck-stat-label').forEach(el => { deckOutline[Number(el.dataset.idx)].stat_label = el.value; });
