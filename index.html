@@ -1349,8 +1349,12 @@ function loadSettings() {
   $('s-slack').value   = settings.slackWebhook || '';
   $('s-slackchan').value = settings.slackChannel || '';
   $('s-name').value    = settings.userName     || '';
-  if (settings.deckTemplateId && $('deck-template-status')) {
-    $('deck-template-status').innerHTML = `✓ Built — <a href="https://docs.google.com/presentation/d/${settings.deckTemplateId}/edit" target="_blank">open it</a>`;
+  if ($('deck-template-status')) {
+    if (settings.deckTemplateId) {
+      $('deck-template-status').innerHTML = `✓ Built on this device — <a href="https://docs.google.com/presentation/d/${settings.deckTemplateId}/edit" target="_blank">open it</a>`;
+    } else if (DECK_TEMPLATE_ID_DEFAULT) {
+      $('deck-template-status').innerHTML = `Using the shared team template — <a href="https://docs.google.com/presentation/d/${DECK_TEMPLATE_ID_DEFAULT}/edit" target="_blank">open it</a>`;
+    }
   }
 }
 
@@ -4141,6 +4145,12 @@ function saveProjectData(fields) {
 // real headshots in the people grid (no photo pipeline exists yet) — all
 // simplified to plain rectangles/fixed heights for now.
 const DECK_PARENT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
+// Shared fallback so every teammate uses the same real template without each
+// having to click "Build deck layout template" themselves — settings.deckTemplateId
+// (per-browser, set only when someone runs the build) always wins if present.
+// Filled in once the current build is verified against the reference deck.
+const DECK_TEMPLATE_ID_DEFAULT = '';
+function deckActiveTemplateId() { return settings.deckTemplateId || DECK_TEMPLATE_ID_DEFAULT; }
 const DECK_LAYOUTS = [
   { id: 'divider',          label: 'Divider' },
   { id: 'title',            label: 'Title' },
@@ -5016,7 +5026,8 @@ function deckCollectOutline() {
 // ── Step 5: Generation ─────────────────────────────────────────────────────
 async function deckGenerate() {
   deckCollectOutline();
-  if (!settings.deckTemplateId) {
+  const templateId = deckActiveTemplateId();
+  if (!templateId) {
     deckShowStep(4);
     $('deck-step-4-status').innerHTML = `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:8px">✗ No deck layout template built yet — open Settings and click "Build deck layout template" first (one-time setup).</div>`;
     return;
@@ -5032,7 +5043,7 @@ async function deckGenerate() {
     const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
     log('Copying the layout library…');
-    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${settings.deckTemplateId}/copy`, {
+    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${templateId}/copy`, {
       method: 'POST', headers: authHeaders,
       body: JSON.stringify({ name: `${p.clientName} — ${p.projectName || 'Deck'}` })
     });
@@ -5136,7 +5147,7 @@ function deckDownloadBundle() {
     `## Approved outline`,
     ...deckOutline.map((s,i) => `${i+1}. [${s.layout}] ${s.heading}${s.isAssumption?' (ASSUMPTION)':''}\n   ${s.body}`),
     '',
-    `## Org template`, settings.deckTemplateId ? `https://docs.google.com/presentation/d/${settings.deckTemplateId}/edit` : '(not configured)',
+    `## Org template`, deckActiveTemplateId() ? `https://docs.google.com/presentation/d/${deckActiveTemplateId()}/edit` : '(not configured)',
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
   const url = URL.createObjectURL(blob);
