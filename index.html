@@ -4177,6 +4177,10 @@ const DECK_FONT_DISPLAY = 'Oswald';
 const DECK_FONT_BODY    = 'Inter';
 // Rotated per accent-bg slide (divider/quote) so a deck doesn't look monotone.
 const DECK_ACCENT_PALETTE = [DECK_BRAND_BLUE, DECK_CREAM, DECK_PALE_GREEN, DECK_PALE_PINK, DECK_KHAKI];
+// 1 point = 12700 EMU. Every x/y/w/h in this module is in EMU (matching pres.pageSize),
+// so any hairline/bar thickness meant to read as "N points" must be multiplied by this —
+// passing a bare small number (e.g. 1 or 2) is ~1/700th of a point and renders invisibly.
+const DECK_PT = 12700;
 const DECK_RUBRIC = [
   { field: 'objective', label: 'Objective / goal',        test: t => /\b(goal|objective|outcome|aim)\b/i.test(t) },
   { field: 'audience',  label: 'Audience',                test: t => /\b(audience|stakeholder|decision.?maker|attendee)\b/i.test(t) },
@@ -4285,13 +4289,14 @@ function deckAddPillReqs(pageObjectId, text, d, color = DECK_BRAND_BLUE) {
 // this fresh themselves instead).
 function deckHeaderChromeReqs(pageObjectId, d, color = DECK_NEAR_BLACK) {
   const reqs = [];
-  const logo = deckMkTextBox(pageObjectId, d.MARGIN, d.MARGIN * 0.4, d.CONTENT_W * 0.15, d.H * 0.05, 'CYPHR', { bold: true, fontSize: 20, color, font: DECK_FONT_DISPLAY });
+  const chromeTop = d.MARGIN * 0.4;
+  const logo = deckMkTextBox(pageObjectId, d.MARGIN, chromeTop, d.CONTENT_W * 0.15, d.H * 0.035, 'CYPHR', { bold: true, fontSize: 13, color, font: DECK_FONT_DISPLAY });
   reqs.push(...logo.reqs);
   const metaW = d.CONTENT_W * 0.15;
-  const meta = deckMkTextBox(pageObjectId, d.W - d.MARGIN - metaW, d.MARGIN * 0.4, metaW, d.H * 0.05, 'PRESENTATION', { bold: false, fontSize: 8, color, font: DECK_FONT_BODY });
+  const meta = deckMkTextBox(pageObjectId, d.W - d.MARGIN - metaW, chromeTop, metaW, d.H * 0.035, 'PRESENTATION\nPAGE', { bold: false, fontSize: 7, color, font: DECK_FONT_BODY });
   reqs.push(...meta.reqs);
   reqs.push({ updateParagraphStyle: { objectId: meta.id, style: { alignment: 'END' }, fields: 'alignment', textRange: { type: 'ALL' } } });
-  const rule = deckMkRect(pageObjectId, d.MARGIN, d.MARGIN * 0.4 + d.H * 0.055, d.CONTENT_W, 1, color);
+  const rule = deckMkRect(pageObjectId, d.MARGIN, chromeTop + d.H * 0.045, d.CONTENT_W, DECK_PT, color);
   reqs.push(...rule.reqs);
   return reqs;
 }
@@ -4382,7 +4387,7 @@ function deckLayoutStatColumns(pageObjectId, item, d) {
       reqs.push(...btb.reqs);
     }
     top += d.H * 0.12;
-    const rule = deckMkRect(pageObjectId, d.MARGIN, top, d.CONTENT_W, 1, DECK_NEAR_BLACK);
+    const rule = deckMkRect(pageObjectId, d.MARGIN, top, d.CONTENT_W, DECK_PT, DECK_NEAR_BLACK);
     reqs.push(...rule.reqs);
     top += d.SECT_GAP;
   } else {
@@ -4531,7 +4536,7 @@ function deckLayoutCostTable(pageObjectId, item, d) {
   lines.forEach(line => {
     const isTotal = line.toUpperCase().indexOf('TOTAL') === 0;
     if (isTotal) {
-      const div = deckMkRect(pageObjectId, d.MARGIN, top - d.ITEM_GAP*0.5, d.CONTENT_W, 2, DECK_BRAND_BLUE);
+      const div = deckMkRect(pageObjectId, d.MARGIN, top - d.ITEM_GAP*0.5, d.CONTENT_W, 2 * DECK_PT, DECK_BRAND_BLUE);
       reqs.push(...div.reqs); top += d.ITEM_GAP * 0.5;
     }
     const parts = line.split(' — ');
