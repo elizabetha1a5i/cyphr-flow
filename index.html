@@ -984,6 +984,26 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
       <div id="prop-step-3" style="display:none"></div>
     </div>
 
+    <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Query -->
+      <div id="deck-step-1"></div>
+      <!-- Step 2: Client Doc / click-and-select -->
+      <div id="deck-step-2" style="display:none"></div>
+      <!-- Step 3: Confidence check -->
+      <div id="deck-step-3" style="display:none"></div>
+      <!-- Step 4: Outline / structure review -->
+      <div id="deck-step-4" style="display:none"></div>
+      <!-- Step 5: Generation & result -->
+      <div id="deck-step-5" style="display:none"></div>
+    </div>
+
     <div id="view-flow" style="display:none">
       <div class="topbar">
         <div class="topbar-title" id="flow-title">New project</div>
@@ -1800,8 +1820,15 @@ function showProposal() {
 }
 
 function showBrandedDeck() {
-  // TODO(Phase 3): replace with the real view-branded-deck flow (search & scrape -> client doc -> confidence check -> outline review -> generate)
-  toast('Branded Deck rebuild in progress — coming soon', 'info');
+  $('view-dashboard').style.display = 'none';
+  $('view-flow').style.display = 'none';
+  if ($('view-reports')) $('view-reports').style.display = 'none';
+  $('view-docs').style.display = 'none';
+  $('view-estimate').style.display = 'none';
+  $('view-proposal').style.display = 'none';
+  $('view-branded-deck').style.display = 'block';
+  deckReset();
+  deckShowStep(1);
 }
 
 // ── COST ESTIMATE GENERATOR ───────────────────────────────────────────────
@@ -4089,6 +4116,462 @@ function saveProjectData(fields) {
   updateFlowTitle();
 }
 
+// ── BRANDED DECK GENERATOR ─────────────────────────────────────────────────
+// Reuses the real template from the old DeckGenerator.gs Apps Script path:
+// slide 0 = title slide (literal [[title]]/[[date]] tokens), slide 1 = one
+// reusable content slide (filled as content slide #1, then duplicated via
+// the Slides REST API's duplicateObject for every additional outline item —
+// this is the real, already-designed deck, not a placeholder).
+// `layout` is kept as a label on each outline item for now (shown in the
+// outline review dropdown) but every slide is filled with the same simple
+// heading+body text-box treatment until a genuine multi-layout library
+// (distinct authored slides per layout type, per the original plan) gets
+// built — that's a separate follow-up, not a blocker for shipping this.
+const DECK_TEMPLATE_ID       = '1SYcTXUmcg3ci2pg8kWrexzwiTgHdRrF0BCAwca5dBZ0';
+const DECK_PARENT_FOLDER_ID  = '1kTvIOM06sQh5tk2cK0697xLjs9nPyERR';
+const DECK_LAYOUTS = [
+  { id: 'title',        label: 'Title' },
+  { id: 'stat-callout', label: 'Stat callout' },
+  { id: 'two-stat',     label: 'Two stat' },
+  { id: 'comparison',   label: 'Comparison' },
+  { id: 'quote',        label: 'Quote' },
+  { id: 'image-heavy',  label: 'Image-heavy' },
+  { id: 'timeline',     label: 'Timeline' },
+  { id: 'item-list',    label: 'Item list' },
+  { id: 'cost-table',   label: 'Cost table' },
+  { id: 'next-steps',   label: 'Next steps' },
+];
+const DECK_RUBRIC = [
+  { field: 'objective', label: 'Objective / goal',        test: t => /\b(goal|objective|outcome|aim)\b/i.test(t) },
+  { field: 'audience',  label: 'Audience',                test: t => /\b(audience|stakeholder|decision.?maker|attendee)\b/i.test(t) },
+  { field: 'stats',     label: 'Key stats / proof points',test: t => /(%|\$|£|\b\d{2,}\b)/.test(t) },
+  { field: 'timeline',  label: 'Timeline',                test: t => /\b(week|month|deadline|timeline|by\s+\d{4})\b/i.test(t) },
+  { field: 'budget',    label: 'Budget signal',           test: t => /\b(budget|cost|price|£|\$)\b/i.test(t) },
+];
+
+let deckQuery = '';
+let deckProjectId = null;
+let deckResults = { internal: [], web: [] };
+let deckSelected = [];
+let deckAssumptions = {}; // { [rubricField]: { value, isAssumption:true, label } }
+let deckOutline = [];     // [{ layout, heading, body, isAssumption }]
+
+function deckReset() {
+  deckQuery = ''; deckProjectId = null;
+  deckResults = { internal: [], web: [] };
+  deckSelected = []; deckAssumptions = {}; deckOutline = [];
+}
+
+function deckShowStep(n) {
+  [1,2,3,4,5].forEach(i => {
+    const el = $('deck-step-' + i);
+    if (el) el.style.display = (i === n) ? 'block' : 'none';
+  });
+  if (n === 1) deckRenderStep1();
+}
+
+function deckVinylSpinner(label) {
+  return `<div style="display:flex;align-items:center;gap:12px;padding:20px 0">
+    <div style="width:34px;height:34px;border-radius:50%;background:repeating-radial-gradient(circle,#111 0 2px,#333 2px 4px);animation:deck-spin 1.1s linear infinite;flex-shrink:0"></div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--ink3)">${label}</div>
+  </div>
+  <style>@keyframes deck-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>`;
+}
+
+function deckRenderStep1() {
+  const projectOptions = projects.map(p => `<option value="${p.id}">${(p.clientName||'Untitled')} — ${p.projectName||''}</option>`).join('');
+  $('deck-step-1').innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">Project</div>
+      <select id="deck-project" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
+        <option value="">Select a project…</option>${projectOptions}
+      </select>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">What's this deck for?</div>
+      <textarea id="deck-query" placeholder="e.g. Q3 growth review for the John Lewis / Samsung partnership, focused on kiosk engagement wins" style="width:100%;min-height:90px;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="deckSearchAndScrape()" id="btn-deck-search">Drop it →</button>
+    <div id="deck-step-1-status"></div>
+  `;
+}
+
+async function deckSearchAndScrape() {
+  const projectId = sv('deck-project');
+  const query = sv('deck-query').trim();
+  if (!projectId) { toast('Select a project first', 'error'); return; }
+  if (!query) { toast('Describe what the deck is for', 'error'); return; }
+  deckProjectId = projectId; deckQuery = query;
+  const p = projects.find(x => x.id === projectId);
+  const status = $('deck-step-1-status');
+  status.innerHTML = deckVinylSpinner('Digging in the crates…');
+  $('btn-deck-search').disabled = true;
+
+  try {
+    const [webResults, internalResults] = await Promise.all([
+      deckSearchWeb(query, p.clientName),
+      deckSearchInternal(query, p.clientName),
+    ]);
+    deckResults = { web: webResults, internal: internalResults };
+    status.innerHTML = '';
+    deckRenderClientDoc();
+    deckShowStep(2);
+  } catch(e) {
+    status.innerHTML = `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:8px">✗ ${e.message}</div>`;
+  } finally {
+    $('btn-deck-search').disabled = false;
+  }
+}
+
+async function deckSearchWeb(query, clientName) {
+  const fileApiUrl = settings.fileApiUrl || 'https://cyphr-api-production.up.railway.app';
+  try {
+    const res = await fetch(fileApiUrl + '/deck/search-web', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, clientName }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).map(r => ({ source: 'web', title: r.title || r.url, snippet: r.snippet || '', url: r.url }));
+  } catch(e) {
+    console.warn('Web search failed', e);
+    return [];
+  }
+}
+
+async function deckSearchInternal(query, clientName) {
+  const results = [];
+  try {
+    const token = await getProposalToken();
+    const q = `fullText contains '${(clientName||'').replace(/'/g,"\\'")}' and fullText contains '${query.replace(/'/g,"\\'")}' and trashed = false`;
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,webViewLink,modifiedTime)`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      (data.files || []).forEach(f => results.push({ source: 'internal', title: f.name, snippet: `Drive file, last modified ${new Date(f.modifiedTime).toLocaleDateString('en-GB')}`, url: f.webViewLink }));
+    }
+  } catch(e) { console.warn('Drive search failed', e); }
+
+  try {
+    const gToken = await getGmailToken();
+    const gq = `${query} ${clientName||''}`.trim();
+    const listRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gq)}&maxResults=5`, {
+      headers: { Authorization: `Bearer ${gToken}` }
+    });
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const msgs = await Promise.all((listData.messages || []).map(m =>
+        fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject`, { headers: { Authorization: `Bearer ${gToken}` } }).then(r => r.json())
+      ));
+      msgs.forEach(m => {
+        const subject = (m.payload?.headers || []).find(h => h.name === 'Subject')?.value || '(no subject)';
+        results.push({ source: 'internal', title: subject, snippet: m.snippet || '', url: `https://mail.google.com/mail/u/0/#inbox/${m.id}` });
+      });
+    }
+  } catch(e) { console.warn('Gmail search failed', e); }
+
+  return results;
+}
+
+function deckRenderClientDoc() {
+  const renderGroup = (label, items, offset) => items.length ? `
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--ink3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${label}</div>
+      ${items.map((it, i) => `
+        <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+          <input type="checkbox" class="deck-item-select" data-source="${it.source}" data-idx="${offset+i}" style="margin-top:3px">
+          <div>
+            <div style="font-size:13px;color:var(--ink);font-weight:600">${it.title}</div>
+            <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
+          </div>
+        </label>`).join('')}
+    </div>` : '';
+
+  $('deck-step-2').innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">Here's what we found</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Select what's relevant — everything else is left out of the deck.</div>
+      ${renderGroup('Internal notes', deckResults.internal, 0)}
+      ${renderGroup('Live web research', deckResults.web, deckResults.internal.length)}
+      ${(!deckResults.internal.length && !deckResults.web.length) ? '<div style="font-size:13px;color:var(--ink3)">Nothing found — you can still continue and fill gaps manually in the next step.</div>' : ''}
+    </div>
+    <button class="btn btn-primary" onclick="deckRunConfidenceCheck()">Sound check →</button>
+  `;
+}
+
+function deckCollectSelected() {
+  const all = [...deckResults.internal, ...deckResults.web];
+  deckSelected = [];
+  document.querySelectorAll('.deck-item-select:checked').forEach(el => {
+    const idx = Number(el.dataset.idx);
+    if (all[idx]) deckSelected.push(all[idx]);
+  });
+}
+
+// ── Step 3: Confidence check ──────────────────────────────────────────────
+function deckConfidence() {
+  const text = deckSelected.map(i => `${i.title} ${i.snippet}`).join('\n') + '\n' + deckQuery;
+  let score = 0; const gaps = [];
+  const max = DECK_RUBRIC.length;
+  DECK_RUBRIC.forEach(r => {
+    if (deckAssumptions[r.field] || r.test(text)) score++; else gaps.push(r);
+  });
+  const pct = score / max;
+  const level = pct >= 0.85 ? 'high' : pct >= 0.5 ? 'medium' : 'low';
+  return { score, max, level, gaps };
+}
+
+async function deckRunConfidenceCheck() {
+  deckCollectSelected();
+  if (!deckSelected.length) { toast('Select at least one item', 'error'); return; }
+  deckShowStep(3);
+  deckRenderConfPanel();
+}
+
+function deckRenderConfPanel() {
+  const conf = deckConfidence();
+  const colour = conf.level === 'high' ? '#22c55e' : conf.level === 'medium' ? '#f59e0b' : '#ef4444';
+  const label  = conf.level === 'high' ? 'Ready' : conf.level === 'medium' ? 'Mostly ready' : 'Missing context';
+  const pct = Math.round(conf.score / conf.max * 100);
+
+  const gapRows = conf.gaps.map(g => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--ink)">${g.label}</span>
+      <button class="btn btn-ghost" style="font-size:11px" onclick="deckFreestyleFill('${g.field}','${g.label}')">Freestyle it</button>
+    </div>`).join('');
+
+  const assumptionRows = Object.entries(deckAssumptions).map(([field, a]) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);background:#fff8e1">
+      <span style="font-size:13px;color:var(--ink)">⚑ ${a.label}: <em>${a.value}</em></span>
+      <span style="font-size:10px;font-family:var(--mono);color:#b45309">ASSUMPTION</span>
+    </div>`).join('');
+
+  $('deck-step-3').innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">Sound check</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="flex:1;height:8px;border-radius:4px;background:var(--bg)"><div style="height:100%;width:${pct}%;border-radius:4px;background:${colour}"></div></div>
+        <span style="font-size:12px;color:${colour};font-weight:700">${label}</span>
+      </div>
+      ${gapRows}
+      ${assumptionRows}
+    </div>
+    <button class="btn btn-primary" onclick="deckGenerateOutlineStep()">Track listing →</button>
+  `;
+}
+
+async function deckFreestyleFill(field, label) {
+  const text = deckSelected.map(i => `${i.title} ${i.snippet}`).join('\n');
+  const result = await callGemini(`Based on this material, give a short, plausible one-line placeholder value for "${label}" for a client deck. Return ONLY the value, no explanation.\n\nMaterial:\n${text.slice(0, 2000)}\n\nQuery: ${deckQuery}`, { maxTokens: 60 });
+  deckAssumptions[field] = { value: (result || '').replace(/^Error:.*/,'—').trim(), isAssumption: true, label };
+  deckRenderConfPanel();
+}
+
+// ── Step 4: Outline / structure review ────────────────────────────────────
+async function deckGenerateOutlineStep() {
+  deckShowStep(4);
+  $('deck-step-4').innerHTML = deckVinylSpinner('Cueing up a track listing…');
+  try {
+    const token = await getProposalToken();
+    const cypherDoc = await readAgencyDetails(token);
+    const material = deckSelected.map(i => `[${i.source}] ${i.title}: ${i.snippet}`).join('\n');
+    const assumptionsText = Object.entries(deckAssumptions).map(([f,a]) => `${a.label}: ${a.value} (ASSUMPTION)`).join('\n');
+    const layoutIds = DECK_LAYOUTS.map(l => l.id).join(', ');
+    const prompt = `You are building a slide outline for a client deck. Choose a layout per slide from this set: ${layoutIds}.
+Base the content on the selected material and agency context below. Any assumption-flagged field must be marked isAssumption:true and its text must stay visibly framed as an assumption.
+
+Selected material:
+${material.slice(0, 4000)}
+
+Assumption-filled gaps:
+${assumptionsText || 'none'}
+
+Agency context: ${JSON.stringify(cypherDoc).slice(0, 1000)}
+
+Query: ${deckQuery}
+
+Return ONLY a JSON array like:
+[{"layout":"title","heading":"...","body":"...","isAssumption":false}, ...]
+Produce as many slides as the content volume supports (do not pad).`;
+    const result = await callGemini(prompt, { maxTokens: 2500 });
+    const m = result.match(/\[[\s\S]*\]/);
+    deckOutline = m ? JSON.parse(m[0]) : [];
+    if (!deckOutline.length) throw new Error('Could not generate an outline — try adjusting your selection');
+    deckRenderOutline();
+  } catch(e) {
+    $('deck-step-4').innerHTML = `<div style="color:var(--danger,#c0392b);font-size:13px">✗ ${e.message}</div><button class="btn btn-ghost" onclick="deckGenerateOutlineStep()">Retry</button>`;
+  }
+}
+
+function deckRenderOutline() {
+  const layoutOptions = l => DECK_LAYOUTS.map(x => `<option value="${x.id}" ${x.id===l?'selected':''}>${x.label}</option>`).join('');
+  const rows = deckOutline.map((s, i) => `
+    <div class="card" style="margin-bottom:10px" data-idx="${i}">
+      <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+        <select class="deck-outline-layout" data-idx="${i}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px">${layoutOptions(s.layout)}</select>
+        ${s.isAssumption ? '<span style="font-size:10px;font-family:var(--mono);color:#b45309;background:#fff8e1;padding:2px 6px;border-radius:4px">⚑ ASSUMPTION</span>' : ''}
+      </div>
+      <input class="deck-outline-heading" data-idx="${i}" value="${(s.heading||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;box-sizing:border-box;margin-bottom:6px">
+      <textarea class="deck-outline-body" data-idx="${i}" style="width:100%;min-height:60px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;resize:vertical">${s.body||''}</textarea>
+    </div>`).join('');
+
+  $('deck-step-4').innerHTML = `
+    <div style="margin-bottom:10px;font-size:12px;color:var(--ink3)">Fully editable — nothing touches the real deck until you confirm.</div>
+    ${rows}
+    <button class="btn btn-primary" onclick="deckGenerate()" id="btn-deck-generate">Ready to spin →</button>
+    <div id="deck-step-4-status"></div>
+  `;
+}
+
+function deckCollectOutline() {
+  document.querySelectorAll('.deck-outline-heading').forEach(el => { deckOutline[Number(el.dataset.idx)].heading = el.value; });
+  document.querySelectorAll('.deck-outline-body').forEach(el => { deckOutline[Number(el.dataset.idx)].body = el.value; });
+  document.querySelectorAll('.deck-outline-layout').forEach(el => { deckOutline[Number(el.dataset.idx)].layout = el.value; });
+}
+
+// ── Step 5: Generation ─────────────────────────────────────────────────────
+async function deckGenerate() {
+  deckCollectOutline();
+  deckShowStep(5);
+  $('deck-step-5').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Cueing up…</div><div id="deck-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="deck-result" style="display:none;margin-top:20px"></div></div>`;
+  const log = msg => { const el = $('deck-log'); if (el) el.innerHTML += `<div>→ ${msg}</div>`; };
+  const p = projects.find(x => x.id === deckProjectId);
+
+  try {
+    log('Requesting Google permissions…');
+    const token = await getProposalToken();
+    const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    log('Copying the branded template…');
+    const copyRes = await fetch(`https://www.googleapis.com/drive/v3/files/${DECK_TEMPLATE_ID}/copy`, {
+      method: 'POST', headers: authHeaders,
+      body: JSON.stringify({ name: `${p.clientName} — ${p.projectName || 'Deck'}` })
+    });
+    if (!copyRes.ok) throw new Error('Could not copy the branded template');
+    const { id: deckId } = await copyRes.json();
+
+    log('Reading the template layout…');
+    const getRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const pres = await getRes.json();
+    const titleSlideId = pres.slides?.[0]?.objectId;
+    const contentTemplateId = pres.slides?.[1]?.objectId;
+    if (!contentTemplateId) throw new Error('Template is missing its content slide (expected slide index 1)');
+    const W = Number(pres.pageSize?.width?.magnitude || 9144000);
+    const H = Number(pres.pageSize?.height?.magnitude || 5143500);
+    const MARGIN = W * 0.0422, CONTENT_W = W - MARGIN * 2, CONTENT_TOP = H * 0.1681;
+
+    log('Setting title slide…');
+    const titleRequests = [
+      { replaceAllText: { containsText: { text: '[[title]]', matchCase: true }, replaceText: p.projectName || p.clientName || 'Deck' } },
+      { replaceAllText: { containsText: { text: '[[date]]', matchCase: true }, replaceText: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) } },
+    ];
+
+    log('Duplicating the content slide for each approved item…');
+    // deckOutline[0] fills the template's own content slide (slide 1); the rest are duplicates of it, in order.
+    const dupRequests = deckOutline.slice(1).map(() => ({ duplicateObject: { objectId: contentTemplateId } }));
+    const dupRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}:batchUpdate`, {
+      method: 'POST', headers: authHeaders,
+      body: JSON.stringify({ requests: [...titleRequests, ...dupRequests] })
+    });
+    if (!dupRes.ok) throw new Error('Could not duplicate the content slide');
+    const dupData = await dupRes.json();
+    const newSlideIds = dupData.replies.slice(titleRequests.length).map(r => r.duplicateObject.objectId);
+    const slideIdsInOrder = [contentTemplateId, ...newSlideIds];
+
+    log('Ordering slides to match the approved outline…');
+    const orderRequests = slideIdsInOrder.map((id, i) => ({ updateSlidesPosition: { slideObjectIds: [id], insertionIndex: i + 1 } }));
+
+    log('Filling slide content…');
+    const fillRequests = [];
+    deckOutline.forEach((s, i) => {
+      const slideId = slideIdsInOrder[i];
+      const headingId = `deck_heading_${i}`, bodyId = `deck_body_${i}`;
+      const heading = s.isAssumption ? `⚑ ASSUMPTION: ${s.heading || ''}` : (s.heading || '');
+      const body = s.isAssumption ? `⚑ ASSUMPTION: ${s.body || ''}` : (s.body || '');
+      fillRequests.push(
+        { createShape: { objectId: headingId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: slideId, size: { width: { magnitude: CONTENT_W, unit: 'EMU' }, height: { magnitude: H * 0.12, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: MARGIN, translateY: CONTENT_TOP, unit: 'EMU' } } } },
+        { insertText: { objectId: headingId, insertionIndex: 0, text: heading } },
+        { updateTextStyle: { objectId: headingId, style: { bold: true, fontSize: { magnitude: 28, unit: 'PT' }, ...(s.isAssumption ? { backgroundColor: { opaqueColor: { rgbColor: { red: 1, green: 0.95, blue: 0.8 } } } } : {}) }, fields: s.isAssumption ? 'bold,fontSize,backgroundColor' : 'bold,fontSize' } },
+        { createShape: { objectId: bodyId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: slideId, size: { width: { magnitude: CONTENT_W, unit: 'EMU' }, height: { magnitude: H * 0.55, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: MARGIN, translateY: CONTENT_TOP + H * 0.14, unit: 'EMU' } } } },
+        { insertText: { objectId: bodyId, insertionIndex: 0, text: body } },
+        ...(s.isAssumption ? [{ updateTextStyle: { objectId: bodyId, style: { italic: true, backgroundColor: { opaqueColor: { rgbColor: { red: 1, green: 0.95, blue: 0.8 } } } }, fields: 'italic,backgroundColor' } }] : [])
+      );
+    });
+    const fillRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}:batchUpdate`, {
+      method: 'POST', headers: authHeaders,
+      body: JSON.stringify({ requests: [...orderRequests, ...fillRequests] })
+    });
+    if (!fillRes.ok) { const errBody = await fillRes.json().catch(()=>({})); throw new Error('Could not fill slide content: ' + (errBody.error?.message || fillRes.status)); }
+
+    log('Moving into client folder…');
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST', headers: authHeaders,
+      body: JSON.stringify({ name: p.clientName, mimeType: 'application/vnd.google-apps.folder', parents: [DECK_PARENT_FOLDER_ID] })
+    });
+    if (folderRes.ok) {
+      const { id: folderId } = await folderRes.json();
+      await fetch(`https://www.googleapis.com/drive/v3/files/${deckId}?addParents=${folderId}&removeParents=root&fields=id`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+    }
+
+    log('Running QA pass…');
+    const qa = await deckRunQA(deckId, token, deckOutline.length + 1); // +1 for the title slide
+
+    $('deck-result').style.display = 'block';
+    $('deck-result').innerHTML = `
+      <div style="font-size:13px;color:var(--ink);margin-bottom:8px">Ready to spin — <a href="https://docs.google.com/presentation/d/${deckId}/edit" target="_blank">open the deck</a></div>
+      <div style="font-size:12px;color:${qa.ok?'#22c55e':'#ef4444'};margin-bottom:12px">${qa.ok ? '✓ QA passed' : '⚠ ' + qa.issues.join(' · ')}</div>
+      <button class="btn btn-ghost" onclick="deckDownloadBundle()">Download handoff bundle</button>
+    `;
+  } catch(e) {
+    log(`Error: ${e.message}`);
+  }
+}
+
+async function deckRunQA(deckId, token, expectedSlideCount) {
+  try {
+    const res = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    const issues = [];
+    if ((data.slides || []).length !== expectedSlideCount) issues.push(`slide count is ${data.slides.length}, expected ${expectedSlideCount}`);
+    const leftoverTokens = new Set();
+    (data.slides || []).forEach(slide => (slide.pageElements || []).forEach(el => {
+      (el.shape?.text?.textElements || []).forEach(t => {
+        const m = (t.textRun?.content || '').match(/(\[\[[a-z0-9_]+\]\]|\{\{[a-z0-9_]+\}\})/gi);
+        if (m) m.forEach(x => leftoverTokens.add(x));
+      });
+    }));
+    if (leftoverTokens.size) issues.push(`unfilled placeholders: ${[...leftoverTokens].join(', ')}`);
+    return { ok: issues.length === 0, issues };
+  } catch(e) { return { ok: false, issues: ['QA check failed: ' + e.message] }; }
+}
+
+function deckDownloadBundle() {
+  const p = projects.find(x => x.id === deckProjectId);
+  const lines = [
+    `# Deck handoff bundle — ${p?.clientName || ''}`,
+    '',
+    `## Query`, deckQuery, '',
+    `## Selected material`,
+    ...deckSelected.map(i => `- [${i.source}] ${i.title}: ${i.snippet} (${i.url||''})`),
+    '',
+    `## Assumption-filled gaps`,
+    ...Object.values(deckAssumptions).map(a => `- ${a.label}: ${a.value} (ASSUMPTION)`),
+    '',
+    `## Approved outline`,
+    ...deckOutline.map((s,i) => `${i+1}. [${s.layout}] ${s.heading}${s.isAssumption?' (ASSUMPTION)':''}\n   ${s.body}`),
+    '',
+    `## Org template`, `https://docs.google.com/presentation/d/${DECK_TEMPLATE_ID}/edit`,
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${(p?.clientName||'deck')}-handoff-bundle.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── NAV ────────────────────────────────────────────────────────────────────
 // ── NEXT-ACTION HIGHLIGHT ────────────────────────────────────────────────────
 const NEXT_ACTION_MAP = {
@@ -5679,49 +6162,6 @@ function rSetup() {
   </div>
 
   <div class="card">
-    <div class="card-title">Presentation deck</div>
-    <div class="card-sub">Brief the deck before generating — this shapes everything Gemini writes.</div>
-    <div style="display:grid;gap:10px;margin-bottom:14px">
-      <div>
-        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Goal — what should the client do after this deck?</label>
-        <select id="deck-goal" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink1);font-size:13px">
-          <option value="">Select a goal…</option>
-          <option value="Fund it — approve budget or investment">Fund it (approve budget / investment)</option>
-          <option value="Approve it — sign off on the approach">Approve it (sign off on approach)</option>
-          <option value="Understand it — grasp the concept and buy in intellectually">Understand it (buy in intellectually)</option>
-          <option value="Align internally — get the team on the same page">Align internally (team alignment)</option>
-        </select>
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Who's in the room?</label>
-        <input id="deck-audience" type="text" placeholder="e.g. Founder + Head of Product, both technical" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink1);font-size:13px;box-sizing:border-box">
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Biggest objection — what could kill this?</label>
-        <input id="deck-risk" type="text" placeholder="e.g. They'll think it's too expensive" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink1);font-size:13px;box-sizing:border-box">
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;color:var(--ink3);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em">Tone</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Rigorous & data-driven" style="accent-color:var(--blue)"> Rigorous</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Energetic & visionary" style="accent-color:var(--blue)"> Energetic</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Matter-of-fact & grounded" style="accent-color:var(--blue)"> Matter-of-fact</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="deck-tone" value="Consultative & collaborative" style="accent-color:var(--blue)"> Collaborative</label>
-        </div>
-      </div>
-    </div>
-    <div id="deck-gen-out" style="display:none;margin-bottom:10px"></div>
-    <div id="deck-gen-load" class="loading-row" style="display:none">
-      <div class="spinner"></div>
-      <span>Generating deck…</span>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-primary" id="btn-gen-deck" onclick="generateDeck()">✦ Generate Slides deck</button>
-      ${!settings.deckWebAppUrl ? '<span style="font-size:11px;color:var(--ink3)">Add Apps Script URL in Settings to enable</span>' : ''}
-    </div>
-  </div>
-
-  <div class="card">
     <div class="card-title" style="margin-bottom:12px">Next steps</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
       <button class="action-btn" onclick="generateJiraCSV()">🗂 Download Jira CSV</button>
@@ -5732,162 +6172,6 @@ function rSetup() {
     <button class="btn btn-ghost" onclick="back()">← Back</button>
     <button class="btn btn-primary" onclick="completeProject()">✓ Mark complete</button>
   </div>`;
-}
-
-async function generateDeck() {
-  const p = gp();
-  const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbzaEdzIkogPwTZ4fpxPncugrvRLTkpagEuKEMnGsb7w3f5hNQEVGkR-rm1Q-y6QbHh2CA/exec';
-  const btn = document.getElementById('btn-gen-deck');
-  const load = document.getElementById('deck-gen-load');
-  const out = document.getElementById('deck-gen-out');
-  if (btn) btn.disabled = true;
-  if (load) load.style.display = 'flex';
-  if (out) out.style.display = 'none';
-  try {
-    // Step 1: call Gemini here (frontend) to compress project data into slide copy
-    const rawContext = [
-      'Client Name: '      + (p.clientName    || ''),
-      'Project Name: '     + (p.projectName   || ''),
-      'Sector: '           + (p.sector         || ''),
-      'Budget: '           + (p.budget         || ''),
-      'Timeline: '         + (p.timeline       || ''),
-      'Requirements: '     + (p.requirements   || ''),
-      'Background Notes: ' + (p.bgNotes        || ''),
-      'Stakeholders: '     + (p.stakeholders   || ''),
-      'Next Steps: '       + (p.nextSteps      || ''),
-      'AI Brief Output: '  + (p.briefOutput    || ''),
-      'Estimate Output: '  + (p.estimateOutput || ''),
-    ].join('\n');
-
-    const deckGoal     = (document.getElementById('deck-goal')?.value     || '').trim();
-    const deckAudience = (document.getElementById('deck-audience')?.value || '').trim();
-    const deckRisk     = (document.getElementById('deck-risk')?.value     || '').trim();
-    const deckTone     = (document.querySelector('input[name="deck-tone"]:checked')?.value || '').trim();
-
-    const briefBlock = (deckGoal || deckAudience || deckRisk || deckTone) ? `
-DECK BRIEF (use this to shape every word you write):
-${deckGoal     ? `Goal: ${deckGoal}`                                    : ''}
-${deckAudience ? `Audience: ${deckAudience}`                            : ''}
-${deckRisk     ? `Biggest objection to address: ${deckRisk}`            : ''}
-${deckTone     ? `Tone: ${deckTone}`                                    : ''}
-${deckRisk     ? `\nCritical: The objection above must be named and defanged in the Key_Takeaway slide — address it head-on, not defensively, not by ignoring it.` : ''}
-` : '';
-
-    const geminiPrompt = `You are a deck strategist at Cyphr, an AI creative strategy studio. Your job is to write a proposal deck that gets sent directly to the client. This is real work — write it as if you are the person presenting it in the room.
-${briefBlock}
-Here is everything you know about the project:
-
-${rawContext}
-
-Before you write anything, work through this analysis:
-
-1. What is the core problem this project solves? (stated and implied)
-2. What is the urgency signal — why does this need to happen now?
-3. Who is the primary decision-maker and what do they most fear getting wrong?
-4. What is the strongest proof point available in this data?
-5. What is the biggest objection the client will have — and how do you defang it?
-
-Now write the deck as a complete narrative. You decide how many slides (3–6 content slides), what each is about, and which layout fits best. Do not follow a fixed structure — follow the story the project needs to tell.
-
-LAYOUT TYPES — pick the one that fits the content of each slide:
-
-statement-trio — three bold standalone statements (32pt). Best for insight/reframe slides. No bullets, no prose — fragments that hit.
-item-list       — heading + line items "Phase name — description" (20pt/18pt). For process, approach, milestones.
-timeline-list   — heading + dated entries "Q1: Phase name" with left border bars (16pt label + 18pt text). For chronological plans.
-cost-table      — heading + rows "Item — £amount" with right-aligned amounts, divider line, TOTAL row (18pt, TOTAL 24pt). For investment breakdowns.
-stat-callout    — left column: heading (48pt) + context items (18pt). Right column: one giant stat (120pt) + label (18pt). For problem + data slides.
-two-stat        — two large numbers side by side (90pt each) with descriptions (20pt). For evidence/proof slides with two data points.
-two-column      — heading (32pt) + two equal columns each with title (26pt) + items (18pt). For comparisons, before/after, two audiences.
-next-steps      — large heading (48pt) + numbered steps "1. action" (22pt number + 20pt text). For what happens after sign-off.
-
-For two-stat, return a "stats" array instead of "lines":
-  "stats": [{"value": "3x", "label": "description"}, {"value": "73%", "label": "description"}]
-
-For two-column, return a "columns" array instead of "lines":
-  "columns": [{"title": "Column A", "items": ["item 1", "item 2"]}, {"title": "Column B", "items": ["item 1", "item 2"]}]
-
-For stat-callout, add "stat" and "stat_label" fields:
-  "stat": "-40%", "stat_label": "description of the stat", "lines": ["left col item 1", "left col item 2"]
-
-EYEBROW LABELS (optional but encouraged):
-Each slide can have an "eyebrow" field — a 1–3 word category tag that appears as a small blue pill label, e.g. "Discovery", "Investment", "The Problem", "Evidence", "Next Steps". Use it to categorise the slide at a glance. Not every slide needs one, but at least 3–4 should have one.
-
-WRITING RULES:
-
-- Each slide has a heading: 2–4 words, specific to this project. Not a generic label. "What's actually true." / "Seven months." / "£77,600." are headings. "Milestones" / "Timeline" / "Cost" are not.
-- The insight slide (statement-trio) must shift how the client thinks, not just inform. Three fragments that hit.
-- The cost slide heading should use the actual total figure if available.
-- speaker_note is written for the presenter — what to say, what NOT to read off the slide, what reaction to watch for. 2–4 sentences.
-- Do not invent numbers or names not in the project data. If something is missing, infer intelligently or leave it out.
-- Vary the layouts — do not use item-list for every slide. A strong deck uses 3–4 different layout types.
-
-Voice: Direct and sharp. Short sentences. No hedging. No corporate language. Match the tone in the brief if given.
-
-Return a JSON object with this exact structure:
-
-{
-  "Client_Name": "exact client name",
-  "Project_Title": "deck title — name the project, not describe it",
-  "Sector": "two to four words, no jargon",
-  "slides": [
-    {
-      "heading": "2–4 word slide heading",
-      "eyebrow": "Category Tag",
-      "layout": "one of the layout types above",
-      "lines": ["line 1", "line 2"],
-      "speaker_note": "presenter notes, 2–4 sentences"
-    },
-    {
-      "heading": "stat slide heading",
-      "layout": "stat-callout",
-      "stat": "-40%",
-      "stat_label": "description of the stat",
-      "lines": ["left col item 1", "left col item 2"]
-    },
-    {
-      "heading": "evidence heading",
-      "layout": "two-stat",
-      "stats": [{"value": "3x", "label": "description"}, {"value": "73%", "label": "description"}],
-      "speaker_note": "..."
-    },
-    {
-      "heading": "comparison heading",
-      "layout": "two-column",
-      "columns": [{"title": "Column A", "items": ["item 1", "item 2"]}, {"title": "Column B", "items": ["item 1", "item 2"]}],
-      "speaker_note": "..."
-    }
-  ],
-  "Next_Steps": "what happens after sign-off, concrete steps, one per line separated by \\n"
-}
-
-Only include the fields relevant to each layout type. Every slide needs heading, layout, and speaker_note. Add eyebrow to at least 3–4 slides. Use lines[] for statement-trio, item-list, timeline-list, cost-table, next-steps. Use stats[] for two-stat. Use columns[] for two-column. Use stat + stat_label + lines[] for stat-callout.
-Return ONLY the JSON object. No markdown, no code fences, no explanation outside the JSON.`;
-
-    const slideData = await callGemini(geminiPrompt, { maxTokens: 6000, responseMimeType: 'application/json' });
-
-    let parsed;
-    try { parsed = JSON.parse(slideData); }
-    catch(e) { throw new Error('Gemini returned invalid JSON for slide copy'); }
-
-    // Step 2: send pre-processed slide copy to Apps Script via Railway proxy
-    const railwayUrl = settings.fileApiUrl || 'https://cyphr-api-production.up.railway.app';
-    const res = await fetch(railwayUrl + '/proxy-deck', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deckWebAppUrl: appsScriptUrl, ...parsed })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    if (out) {
-      out.innerHTML = `<a href="${data.deckUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none;display:inline-flex">↗ Open deck — ${esc(data.deckName || 'View deck')}</a>`;
-      out.style.display = 'block';
-    }
-    toast('Deck generated ✓', 'success');
-  } catch(err) {
-    toast('Deck generation failed: ' + err.message);
-  }
-  if (load) load.style.display = 'none';
-  if (btn) btn.disabled = false;
 }
 
 function toggleIntel() {
