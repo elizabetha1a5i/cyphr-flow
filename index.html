@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 2</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 3</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4472,11 +4472,61 @@ function deckRenderStep1() {
     </div>
     <div class="card" style="margin-bottom:16px">
       <div class="card-title" style="margin-bottom:10px">What's this deck for?</div>
-      <textarea id="deck-query" placeholder="e.g. Q3 growth review for the John Lewis / Samsung partnership, focused on kiosk engagement wins" style="width:100%;min-height:90px;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
+      <div style="position:relative">
+        <textarea id="deck-query" placeholder="e.g. Q3 growth review for the John Lewis / Samsung partnership, focused on kiosk engagement wins" style="width:100%;min-height:90px;font-size:13px;padding:12px 44px 12px 12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
+        <button type="button" id="btn-deck-mic" onclick="deckToggleMic()" title="Speak instead of typing" style="position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--paper);cursor:pointer;font-size:14px;line-height:1">🎤</button>
+      </div>
+      <div id="deck-mic-status" style="font-size:11px;color:var(--ink3);margin-top:4px"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">Search these sources</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="deck-src-drive" checked> Google Drive</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="deck-src-gmail" checked> Gmail</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink3);cursor:not-allowed"><input type="checkbox" disabled> Slack <span style="font-size:10px;font-family:var(--mono);background:var(--bg);padding:1px 6px;border-radius:8px">coming soon</span></label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="deck-src-web" checked> Live web research</label>
+      </div>
     </div>
     <button class="btn btn-primary" onclick="deckSearchAndScrape()" id="btn-deck-search">Drop it →</button>
     <div id="deck-step-1-status"></div>
   `;
+}
+
+let deckMicRecognition = null;
+function deckToggleMic() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micStatus = $('deck-mic-status');
+  if (!SpeechRec) { micStatus.textContent = 'Voice input isn\'t supported in this browser — try Chrome.'; return; }
+  const btn = $('btn-deck-mic');
+  if (deckMicRecognition) { deckMicRecognition.stop(); return; }
+  deckMicRecognition = new SpeechRec();
+  deckMicRecognition.continuous = true;
+  deckMicRecognition.interimResults = false;
+  deckMicRecognition.lang = 'en-GB';
+  const baseText = sv('deck-query');
+  btn.style.background = '#ef4444'; btn.style.color = '#fff';
+  micStatus.textContent = 'Listening… click the mic again to stop.';
+  deckMicRecognition.onresult = (e) => {
+    let transcript = '';
+    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+    $('deck-query').value = (baseText ? baseText + ' ' : '') + transcript;
+  };
+  deckMicRecognition.onerror = (e) => { micStatus.textContent = 'Voice input error: ' + e.error; };
+  deckMicRecognition.onend = () => {
+    btn.style.background = 'var(--paper)'; btn.style.color = 'inherit';
+    micStatus.textContent = '';
+    deckMicRecognition = null;
+  };
+  deckMicRecognition.start();
+}
+
+// Wraps a promise with a timeout so a hung OAuth popup (blocked, dismissed,
+// never actioned) fails loudly instead of leaving the UI stuck spinning forever.
+function deckWithTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out — check for a Google sign-in popup and allow the permissions`)), ms)),
+  ]);
 }
 
 async function deckSearchAndScrape() {
@@ -4484,23 +4534,40 @@ async function deckSearchAndScrape() {
   const query = sv('deck-query').trim();
   if (!projectId) { toast('Select a project first', 'error'); return; }
   if (!query) { toast('Describe what the deck is for', 'error'); return; }
+  if (deckMicRecognition) deckMicRecognition.stop();
   deckProjectId = projectId; deckQuery = query;
   const p = projects.find(x => x.id === projectId);
+  const wantDrive = $('deck-src-drive').checked;
+  const wantGmail = $('deck-src-gmail').checked;
+  const wantWeb = $('deck-src-web').checked;
+
   const status = $('deck-step-1-status');
-  status.innerHTML = deckVinylSpinner('Digging in the crates…');
   $('btn-deck-search').disabled = true;
+  const sourceLine = (label, state) => `<div data-src="${label}" style="font-size:12px;color:var(--ink3);margin-top:2px">${state}</div>`;
+  status.innerHTML = deckVinylSpinner('Digging in the crates…') +
+    (wantDrive ? sourceLine('drive', '→ Drive: searching…') : '') +
+    (wantGmail ? sourceLine('gmail', '→ Gmail: searching…') : '') +
+    (wantWeb   ? sourceLine('web', '→ Web: searching…') : '');
+  const setLine = (src, text) => { const el = status.querySelector(`[data-src="${src}"]`); if (el) el.textContent = text; };
+
+  const tasks = [];
+  if (wantWeb)   tasks.push(deckSearchWeb(query, p.clientName).then(r => { setLine('web', `✓ Web: ${r.length} found`); return r; }).catch(e => { setLine('web', `✗ Web: ${e.message}`); return []; }));
+  if (wantDrive) tasks.push(deckSearchDrive(query, p.clientName).then(r => { setLine('drive', `✓ Drive: ${r.length} found`); return r; }).catch(e => { setLine('drive', `✗ Drive: ${e.message}`); return []; }));
+  if (wantGmail) tasks.push(deckSearchGmail(query, p.clientName).then(r => { setLine('gmail', `✓ Gmail: ${r.length} found`); return r; }).catch(e => { setLine('gmail', `✗ Gmail: ${e.message}`); return []; }));
 
   try {
-    const [webResults, internalResults] = await Promise.all([
-      deckSearchWeb(query, p.clientName),
-      deckSearchInternal(query, p.clientName),
-    ]);
+    const resultSets = await Promise.all(tasks);
+    // Sources run conditionally, so read resultSets back out in the same order tasks[] was built.
+    let webResults = [], internalResults = [];
+    let ti = 0;
+    if (wantWeb)   { webResults = resultSets[ti++]; }
+    if (wantDrive) { internalResults = internalResults.concat(resultSets[ti++]); }
+    if (wantGmail) { internalResults = internalResults.concat(resultSets[ti++]); }
     deckResults = { web: webResults, internal: internalResults };
-    status.innerHTML = '';
     deckRenderClientDoc();
     deckShowStep(2);
   } catch(e) {
-    status.innerHTML = `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:8px">✗ ${e.message}</div>`;
+    status.innerHTML += `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:8px">✗ ${e.message}</div>`;
   } finally {
     $('btn-deck-search').disabled = false;
   }
@@ -4508,54 +4575,42 @@ async function deckSearchAndScrape() {
 
 async function deckSearchWeb(query, clientName) {
   const fileApiUrl = settings.fileApiUrl || 'https://cyphr-api-production.up.railway.app';
-  try {
-    const res = await fetch(fileApiUrl + '/deck/search-web', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, clientName }),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results || []).map(r => ({ source: 'web', title: r.title || r.url, snippet: r.snippet || '', url: r.url }));
-  } catch(e) {
-    console.warn('Web search failed', e);
-    return [];
-  }
+  const res = await deckWithTimeout(fetch(fileApiUrl + '/deck/search-web', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, clientName }),
+  }), 20000, 'Web search');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).map(r => ({ source: 'web', title: r.title || r.url, snippet: r.snippet || '', url: r.url }));
 }
 
-async function deckSearchInternal(query, clientName) {
-  const results = [];
-  try {
-    const token = await getProposalToken();
-    const q = `fullText contains '${(clientName||'').replace(/'/g,"\\'")}' and fullText contains '${query.replace(/'/g,"\\'")}' and trashed = false`;
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,webViewLink,modifiedTime)`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      (data.files || []).forEach(f => results.push({ source: 'internal', title: f.name, snippet: `Drive file, last modified ${new Date(f.modifiedTime).toLocaleDateString('en-GB')}`, url: f.webViewLink }));
-    }
-  } catch(e) { console.warn('Drive search failed', e); }
+async function deckSearchDrive(query, clientName) {
+  const token = await deckWithTimeout(getProposalToken(), 45000, 'Google sign-in');
+  const q = `fullText contains '${(clientName||'').replace(/'/g,"\\'")}' and fullText contains '${query.replace(/'/g,"\\'")}' and trashed = false`;
+  const res = await deckWithTimeout(fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,webViewLink,modifiedTime)`, {
+    headers: { Authorization: `Bearer ${token}` }
+  }), 15000, 'Drive search');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.files || []).map(f => ({ source: 'internal', title: f.name, snippet: `Drive file, last modified ${new Date(f.modifiedTime).toLocaleDateString('en-GB')}`, url: f.webViewLink }));
+}
 
-  try {
-    const gToken = await getGmailToken();
-    const gq = `${query} ${clientName||''}`.trim();
-    const listRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gq)}&maxResults=5`, {
-      headers: { Authorization: `Bearer ${gToken}` }
-    });
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      const msgs = await Promise.all((listData.messages || []).map(m =>
-        fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject`, { headers: { Authorization: `Bearer ${gToken}` } }).then(r => r.json())
-      ));
-      msgs.forEach(m => {
-        const subject = (m.payload?.headers || []).find(h => h.name === 'Subject')?.value || '(no subject)';
-        results.push({ source: 'internal', title: subject, snippet: m.snippet || '', url: `https://mail.google.com/mail/u/0/#inbox/${m.id}` });
-      });
-    }
-  } catch(e) { console.warn('Gmail search failed', e); }
-
-  return results;
+async function deckSearchGmail(query, clientName) {
+  const gToken = await deckWithTimeout(getGmailToken(), 45000, 'Gmail sign-in');
+  const gq = `${query} ${clientName||''}`.trim();
+  const listRes = await deckWithTimeout(fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gq)}&maxResults=5`, {
+    headers: { Authorization: `Bearer ${gToken}` }
+  }), 15000, 'Gmail search');
+  if (!listRes.ok) return [];
+  const listData = await listRes.json();
+  const msgs = await Promise.all((listData.messages || []).map(m =>
+    fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject`, { headers: { Authorization: `Bearer ${gToken}` } }).then(r => r.json())
+  ));
+  return msgs.map(m => {
+    const subject = (m.payload?.headers || []).find(h => h.name === 'Subject')?.value || '(no subject)';
+    return { source: 'internal', title: subject, snippet: m.snippet || '', url: `https://mail.google.com/mail/u/0/#inbox/${m.id}` };
+  });
 }
 
 function deckRenderClientDoc() {
