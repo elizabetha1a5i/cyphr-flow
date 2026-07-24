@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 5</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 6</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4300,13 +4300,14 @@ function deckAddPillReqs(pageObjectId, text, d, color = DECK_BRAND_BLUE) {
 function deckHeaderChromeReqs(pageObjectId, d, color = DECK_NEAR_BLACK) {
   const reqs = [];
   const chromeTop = d.MARGIN * 0.4;
-  const logo = deckMkTextBox(pageObjectId, d.MARGIN, chromeTop, d.CONTENT_W * 0.15, d.H * 0.035, 'CYPHR', { bold: true, fontSize: 13, color, font: DECK_FONT_DISPLAY });
+  const chromeH = d.H * 0.045;
+  const logo = deckMkTextBox(pageObjectId, d.MARGIN, chromeTop, d.CONTENT_W * 0.15, chromeH, 'CYPHR', { bold: true, fontSize: 13, color, font: DECK_FONT_DISPLAY });
   reqs.push(...logo.reqs);
   const metaW = d.CONTENT_W * 0.15;
-  const meta = deckMkTextBox(pageObjectId, d.W - d.MARGIN - metaW, chromeTop, metaW, d.H * 0.035, 'PRESENTATION\nPAGE', { bold: false, fontSize: 7, color, font: DECK_FONT_BODY });
+  const meta = deckMkTextBox(pageObjectId, d.W - d.MARGIN - metaW, chromeTop, metaW, chromeH, 'PRESENTATION\nPAGE', { bold: false, fontSize: 7, color, font: DECK_FONT_BODY });
   reqs.push(...meta.reqs);
   reqs.push({ updateParagraphStyle: { objectId: meta.id, style: { alignment: 'END' }, fields: 'alignment', textRange: { type: 'ALL' } } });
-  const rule = deckMkRect(pageObjectId, d.MARGIN, chromeTop + d.H * 0.045, d.CONTENT_W, DECK_PT, color);
+  const rule = deckMkRect(pageObjectId, d.MARGIN, chromeTop + chromeH + d.H * 0.012, d.CONTENT_W, DECK_PT, color);
   reqs.push(...rule.reqs);
   return reqs;
 }
