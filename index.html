@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 7</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 8</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4201,14 +4201,14 @@ const DECK_RUBRIC = [
 
 let deckQuery = '';
 let deckProjectId = null;
-let deckResults = { internal: [], web: [] };
+let deckSourceItems = { gmail: [], drive: [], web: [] }; // raw results per source, indexed for checkbox selection
 let deckSelected = [];
 let deckAssumptions = {}; // { [rubricField]: { value, isAssumption:true, label } }
 let deckOutline = [];     // [{ layout, heading, body, isAssumption }]
 
 function deckReset() {
   deckQuery = ''; deckProjectId = null;
-  deckResults = { internal: [], web: [] };
+  deckSourceItems = { gmail: [], drive: [], web: [] };
   deckSelected = []; deckAssumptions = {}; deckOutline = [];
 }
 
@@ -4608,33 +4608,47 @@ function deckVinylSpinner(label) {
   <style>@keyframes deck-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>`;
 }
 
+const DECK_SOURCE_META = {
+  gmail: { label: 'Gmail', icon: '✉️', placeholder: 'e.g. brief, kick-off, discovery…' },
+  drive: { label: 'Drive', icon: '📁', placeholder: 'e.g. brief, proposal, notes…' },
+  web:   { label: 'Live web', icon: '🌐', placeholder: 'e.g. company news, industry stats…' },
+};
+
 function deckRenderStep1() {
   const projectOptions = projects.map(p => `<option value="${p.id}">${(p.clientName||'Untitled')} — ${p.projectName||''}</option>`).join('');
+  const sourceRow = (key) => { const m = DECK_SOURCE_META[key]; return `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">${m.icon} ${m.label}</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="text" id="deck-src-input-${key}" placeholder="${m.placeholder}" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
+        <button class="btn btn-ghost" id="btn-deck-src-${key}" onclick="deckRunSourceSearch('${key}')" style="white-space:nowrap;font-size:12px">Search ${m.label}</button>
+      </div>
+      <div id="deck-src-results-${key}"></div>
+    </div>`; };
+
   $('deck-step-1').innerHTML = `
     <div class="card" style="margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:10px">Project</div>
+      <div class="card-title" style="margin-bottom:10px">Project <span style="font-weight:400;color:var(--ink3);font-size:11px">(optional)</span></div>
       <select id="deck-project" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
-        <option value="">Select a project…</option>${projectOptions}
+        <option value="">No project</option>${projectOptions}
       </select>
     </div>
     <div class="card" style="margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:10px">What's this deck for?</div>
+      <div class="card-title" style="margin-bottom:10px">What's this deck for? <span style="font-weight:400;color:var(--ink3);font-size:11px">(optional — prefills the searches below)</span></div>
       <div style="position:relative">
-        <textarea id="deck-query" placeholder="e.g. Q3 growth review for the John Lewis / Samsung partnership, focused on kiosk engagement wins" style="width:100%;min-height:90px;font-size:13px;padding:12px 44px 12px 12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
+        <textarea id="deck-query" placeholder="e.g. Q3 growth review for the John Lewis / Samsung partnership, focused on kiosk engagement wins" style="width:100%;min-height:70px;font-size:13px;padding:12px 44px 12px 12px;border:1px solid var(--border);border-radius:8px;resize:vertical;box-sizing:border-box;background:var(--paper);color:var(--ink);line-height:1.6"></textarea>
         <button type="button" id="btn-deck-mic" onclick="deckToggleMic()" title="Speak instead of typing" style="position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--paper);cursor:pointer;font-size:14px;line-height:1">🎤</button>
       </div>
       <div id="deck-mic-status" style="font-size:11px;color:var(--ink3);margin-top:4px"></div>
     </div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:10px">Search these sources</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="deck-src-drive" checked> Google Drive</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="deck-src-gmail" checked> Gmail</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink3);cursor:not-allowed"><input type="checkbox" disabled> Slack <span style="font-size:10px;font-family:var(--mono);background:var(--bg);padding:1px 6px;border-radius:8px">coming soon</span></label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="deck-src-web" checked> Live web research</label>
-      </div>
+    ${sourceRow('gmail')}
+    ${sourceRow('drive')}
+    ${sourceRow('web')}
+    <div class="card" style="margin-bottom:16px;opacity:0.6">
+      <div class="card-title" style="margin-bottom:4px">💬 Slack <span style="font-size:10px;font-family:var(--mono);background:var(--bg);padding:1px 6px;border-radius:8px;margin-left:6px">coming soon</span></div>
+      <div style="font-size:12px;color:var(--ink3)">Needs a Slack app connection — not wired up yet.</div>
     </div>
-    <button class="btn btn-primary" onclick="deckSearchAndScrape()" id="btn-deck-search">Drop it →</button>
+    <button class="btn btn-primary" onclick="deckContinueToOutline()" id="btn-deck-continue">Cue it up →</button>
     <div id="deck-step-1-status"></div>
   `;
 }
@@ -4676,48 +4690,58 @@ function deckWithTimeout(promise, ms, label) {
   ]);
 }
 
-async function deckSearchAndScrape() {
+async function deckRunSourceSearch(key) {
+  const btn = $('btn-deck-src-' + key);
+  const resultsEl = $('deck-src-results-' + key);
+  const input = $('deck-src-input-' + key);
+  const query = (input.value || sv('deck-query')).trim();
+  if (!query) { toast('Enter a search term, or fill in "what\'s this deck for" above', 'error'); return; }
   const projectId = sv('deck-project');
-  const query = sv('deck-query').trim();
-  if (!projectId) { toast('Select a project first', 'error'); return; }
-  if (!query) { toast('Describe what the deck is for', 'error'); return; }
-  if (deckMicRecognition) deckMicRecognition.stop();
-  deckProjectId = projectId; deckQuery = query;
   const p = projects.find(x => x.id === projectId);
-  const wantDrive = $('deck-src-drive').checked;
-  const wantGmail = $('deck-src-gmail').checked;
-  const wantWeb = $('deck-src-web').checked;
-
-  const status = $('deck-step-1-status');
-  $('btn-deck-search').disabled = true;
-  const sourceLine = (label, state) => `<div data-src="${label}" style="font-size:12px;color:var(--ink3);margin-top:2px">${state}</div>`;
-  status.innerHTML = deckVinylSpinner('Digging in the crates…') +
-    (wantDrive ? sourceLine('drive', '→ Drive: searching…') : '') +
-    (wantGmail ? sourceLine('gmail', '→ Gmail: searching…') : '') +
-    (wantWeb   ? sourceLine('web', '→ Web: searching…') : '');
-  const setLine = (src, text) => { const el = status.querySelector(`[data-src="${src}"]`); if (el) el.textContent = text; };
-
-  const tasks = [];
-  if (wantWeb)   tasks.push(deckSearchWeb(query, p.clientName).then(r => { setLine('web', `✓ Web: ${r.length} found`); return r; }).catch(e => { setLine('web', `✗ Web: ${e.message}`); return []; }));
-  if (wantDrive) tasks.push(deckSearchDrive(query, p.clientName).then(r => { setLine('drive', `✓ Drive: ${r.length} found`); return r; }).catch(e => { setLine('drive', `✗ Drive: ${e.message}`); return []; }));
-  if (wantGmail) tasks.push(deckSearchGmail(query, p.clientName).then(r => { setLine('gmail', `✓ Gmail: ${r.length} found`); return r; }).catch(e => { setLine('gmail', `✗ Gmail: ${e.message}`); return []; }));
-
+  const clientName = p?.clientName || '';
+  const label = DECK_SOURCE_META[key].label;
+  btn.disabled = true; btn.textContent = 'Searching…';
+  resultsEl.innerHTML = deckVinylSpinner('Digging in the crates…');
   try {
-    const resultSets = await Promise.all(tasks);
-    // Sources run conditionally, so read resultSets back out in the same order tasks[] was built.
-    let webResults = [], internalResults = [];
-    let ti = 0;
-    if (wantWeb)   { webResults = resultSets[ti++]; }
-    if (wantDrive) { internalResults = internalResults.concat(resultSets[ti++]); }
-    if (wantGmail) { internalResults = internalResults.concat(resultSets[ti++]); }
-    deckResults = { web: webResults, internal: internalResults };
-    deckRenderClientDoc();
-    deckShowStep(2);
+    let items = [];
+    if (key === 'gmail') items = await deckSearchGmail(query, clientName);
+    else if (key === 'drive') items = await deckSearchDrive(query, clientName);
+    else if (key === 'web') items = await deckSearchWeb(query, clientName);
+    deckSourceItems[key] = items;
+    if (!items.length) {
+      resultsEl.innerHTML = `<div style="font-size:12px;color:var(--ink3);margin-top:6px">No results — try a different term.</div>`;
+    } else {
+      resultsEl.innerHTML = `
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${items.length} found — select what's relevant:</div>
+        ${items.map((it, i) => `
+          <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+            <input type="checkbox" class="deck-src-item" data-source="${key}" data-idx="${i}" style="margin-top:3px">
+            <div>
+              <div style="font-size:13px;color:var(--ink);font-weight:600">${it.url ? `<a href="${it.url}" target="_blank" style="color:inherit">${it.title}</a>` : it.title}</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
+            </div>
+          </label>`).join('')}
+      `;
+    }
   } catch(e) {
-    status.innerHTML += `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:8px">✗ ${e.message}</div>`;
+    resultsEl.innerHTML = `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:6px">✗ ${e.message}</div>`;
   } finally {
-    $('btn-deck-search').disabled = false;
+    btn.disabled = false; btn.textContent = 'Search ' + label;
   }
+}
+
+async function deckContinueToOutline() {
+  if (deckMicRecognition) deckMicRecognition.stop();
+  deckProjectId = sv('deck-project') || null;
+  deckQuery = sv('deck-query').trim();
+  deckSelected = [];
+  ['gmail','drive','web'].forEach(key => {
+    document.querySelectorAll(`.deck-src-item[data-source="${key}"]:checked`).forEach(el => {
+      const idx = Number(el.dataset.idx);
+      if (deckSourceItems[key][idx]) deckSelected.push(deckSourceItems[key][idx]);
+    });
+  });
+  deckGenerateOutlineStep();
 }
 
 async function deckSearchWeb(query, clientName) {
@@ -4734,8 +4758,11 @@ async function deckSearchWeb(query, clientName) {
 
 async function deckSearchDrive(query, clientName) {
   const token = await deckWithTimeout(getProposalToken(), 45000, 'Google sign-in');
-  const q = `fullText contains '${(clientName||'').replace(/'/g,"\\'")}' and fullText contains '${query.replace(/'/g,"\\'")}' and trashed = false`;
-  const res = await deckWithTimeout(fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,webViewLink,modifiedTime)`, {
+  // Match EITHER the query terms OR the client name — requiring both in the same
+  // file's full text (the old "and" version) almost never matched anything real.
+  const terms = [query, clientName].filter(Boolean).map(t => `fullText contains '${t.replace(/'/g,"\\'")}'`);
+  const q = `(${terms.join(' or ')}) and trashed = false`;
+  const res = await deckWithTimeout(fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,webViewLink,modifiedTime)&orderBy=modifiedTime desc`, {
     headers: { Authorization: `Bearer ${token}` }
   }), 15000, 'Drive search');
   if (!res.ok) return [];
@@ -4760,72 +4787,10 @@ async function deckSearchGmail(query, clientName) {
   return (data.emails || []).map(e => ({ source: 'internal', subSource: 'gmail', title: e.subject || '(no subject)', snippet: `${e.sender || ''} · ${e.date ? new Date(e.date).toLocaleDateString('en-GB') : ''} — ${e.snippet || ''}`, url: '' }));
 }
 
-const DECK_SOURCE_META = {
-  drive: { label: 'Google Drive', icon: '📁' },
-  gmail: { label: 'Gmail', icon: '✉️' },
-  web:   { label: 'Live web research', icon: '🌐' },
-};
-
-// All results in one flat, stably-ordered list — deck-item-select data-idx indexes into this.
-function deckAllResults() {
-  return [...deckResults.internal, ...deckResults.web];
-}
-
-function deckRenderClientDoc() {
-  const all = deckAllResults();
-  const bySubSource = {};
-  all.forEach((it, i) => { const key = it.subSource || it.source; (bySubSource[key] = bySubSource[key] || []).push({ ...it, idx: i }); });
-
-  const groupHtml = Object.entries(bySubSource).map(([key, items]) => {
-    const meta = DECK_SOURCE_META[key] || { label: key, icon: '•' };
-    return `
-    <details open style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:10px 12px">
-      <summary style="cursor:pointer;font-size:12px;font-family:var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;justify-content:space-between">
-        <span>${meta.icon} ${meta.label} <span style="color:var(--ink3);text-transform:none">(${items.length})</span></span>
-        <span>
-          <a href="javascript:void(0)" onclick="event.preventDefault();deckToggleGroup('${key}',true)" style="font-size:11px;margin-right:8px">select all</a>
-          <a href="javascript:void(0)" onclick="event.preventDefault();deckToggleGroup('${key}',false)" style="font-size:11px">none</a>
-        </span>
-      </summary>
-      <div style="margin-top:8px">
-        ${items.map(it => `
-          <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
-            <input type="checkbox" class="deck-item-select" data-group="${key}" data-idx="${it.idx}" style="margin-top:3px">
-            <div>
-              <div style="font-size:13px;color:var(--ink);font-weight:600">${it.url ? `<a href="${it.url}" target="_blank" style="color:inherit">${it.title}</a>` : it.title}</div>
-              <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
-            </div>
-          </label>`).join('')}
-      </div>
-    </details>`;
-  }).join('');
-
-  $('deck-step-2').innerHTML = `
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:10px">Here's what we found</div>
-      <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Grouped by where it came from — pick what's relevant per source. Everything else is left out of the deck.</div>
-      ${groupHtml || '<div style="font-size:13px;color:var(--ink3)">Nothing found — you can still continue and fill gaps manually in the next step.</div>'}
-    </div>
-    <button class="btn btn-primary" onclick="deckRunConfidenceCheck()">Sound check →</button>
-  `;
-}
-
-function deckToggleGroup(key, checked) {
-  document.querySelectorAll(`.deck-item-select[data-group="${key}"]`).forEach(el => { el.checked = checked; });
-}
-
-function deckCollectSelected() {
-  const all = deckAllResults();
-  deckSelected = [];
-  document.querySelectorAll('.deck-item-select:checked').forEach(el => {
-    const idx = Number(el.dataset.idx);
-    if (all[idx]) deckSelected.push(all[idx]);
-  });
-}
-
-// ── Step 3: Confidence check ──────────────────────────────────────────────
+// ── Confidence check — a persistent sidebar next to the outline editor, not its own step ──
 function deckConfidence() {
-  const text = deckSelected.map(i => `${i.title} ${i.snippet}`).join('\n') + '\n' + deckQuery;
+  const outlineText = (deckOutline||[]).map(s => `${s.heading||''} ${s.body||''} ${(s.lines||[]).join(' ')}`).join('\n');
+  const text = deckSelected.map(i => `${i.title} ${i.snippet}`).join('\n') + '\n' + deckQuery + '\n' + outlineText;
   let score = 0; const gaps = [];
   const max = DECK_RUBRIC.length;
   DECK_RUBRIC.forEach(r => {
@@ -4836,50 +4801,44 @@ function deckConfidence() {
   return { score, max, level, gaps };
 }
 
-async function deckRunConfidenceCheck() {
-  deckCollectSelected();
-  if (!deckSelected.length) { toast('Select at least one item', 'error'); return; }
-  deckShowStep(3);
-  deckRenderConfPanel();
-}
-
-function deckRenderConfPanel() {
+function deckRenderConfSidebar() {
+  const el = $('deck-conf-sidebar');
+  if (!el) return;
   const conf = deckConfidence();
   const colour = conf.level === 'high' ? '#22c55e' : conf.level === 'medium' ? '#f59e0b' : '#ef4444';
   const label  = conf.level === 'high' ? 'Ready' : conf.level === 'medium' ? 'Mostly ready' : 'Missing context';
   const pct = Math.round(conf.score / conf.max * 100);
 
   const gapRows = conf.gaps.map(g => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:13px;color:var(--ink)">${g.label}</span>
-      <button class="btn btn-ghost" style="font-size:11px" onclick="deckFreestyleFill('${g.field}','${g.label}')">Freestyle it</button>
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--ink);margin-bottom:6px">${g.label}</div>
+      <button class="btn btn-ghost" style="font-size:11px;width:100%;justify-content:center" onclick="deckFreestyleFill('${g.field}','${g.label}')">✨ Fill with AI</button>
     </div>`).join('');
 
   const assumptionRows = Object.entries(deckAssumptions).map(([field, a]) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);background:#fff8e1">
-      <span style="font-size:13px;color:var(--ink)">⚑ ${a.label}: <em>${a.value}</em></span>
-      <span style="font-size:10px;font-family:var(--mono);color:#b45309">ASSUMPTION</span>
+    <div style="padding:10px 8px;border-bottom:1px solid var(--border);background:#fff8e1;border-radius:4px;margin-bottom:2px">
+      <div style="font-size:11px;color:#b45309;font-family:var(--mono)">⚑ ASSUMPTION — ${a.label}</div>
+      <div style="font-size:12px;color:var(--ink);font-style:italic;margin-top:3px">${a.value}</div>
     </div>`).join('');
 
-  $('deck-step-3').innerHTML = `
-    <div class="card" style="margin-bottom:16px">
+  el.innerHTML = `
+    <div class="card">
       <div class="card-title" style="margin-bottom:10px">Sound check</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="flex:1;height:8px;border-radius:4px;background:var(--bg)"><div style="height:100%;width:${pct}%;border-radius:4px;background:${colour}"></div></div>
-        <span style="font-size:12px;color:${colour};font-weight:700">${label}</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="flex:1;height:8px;border-radius:4px;background:var(--bg)"><div style="height:100%;width:${pct}%;border-radius:4px;background:${colour};transition:width 0.3s"></div></div>
+        <span style="font-size:12px;color:${colour};font-weight:700">${pct}%</span>
       </div>
+      <div style="font-size:12px;color:${colour};font-weight:700;margin-bottom:12px">${label}</div>
       ${gapRows}
       ${assumptionRows}
-    </div>
-    <button class="btn btn-primary" onclick="deckGenerateOutlineStep()">Track listing →</button>
-  `;
+    </div>`;
 }
 
 async function deckFreestyleFill(field, label) {
   const text = deckSelected.map(i => `${i.title} ${i.snippet}`).join('\n');
   const result = await callGemini(`Based on this material, give a short, plausible one-line placeholder value for "${label}" for a client deck. Return ONLY the value, no explanation.\n\nMaterial:\n${text.slice(0, 2000)}\n\nQuery: ${deckQuery}`, { maxTokens: 60 });
   deckAssumptions[field] = { value: (result || '').replace(/^Error:.*/,'—').trim(), isAssumption: true, label };
-  deckRenderConfPanel();
+  deckRenderConfSidebar();
 }
 
 // ── Step 4: Outline / structure review ────────────────────────────────────
@@ -5006,11 +4965,17 @@ function deckRenderOutline() {
     </div>`).join('');
 
   $('deck-step-4').innerHTML = `
-    <div style="margin-bottom:10px;font-size:12px;color:var(--ink3)">Fully editable — nothing touches the real deck until you confirm.</div>
-    ${rows}
-    <button class="btn btn-primary" onclick="deckGenerate()" id="btn-deck-generate">Ready to spin →</button>
-    <div id="deck-step-4-status"></div>
+    <div style="display:flex;gap:20px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="margin-bottom:10px;font-size:12px;color:var(--ink3)">Fully editable — nothing touches the real deck until you confirm.</div>
+        ${rows}
+        <button class="btn btn-primary" onclick="deckGenerate()" id="btn-deck-generate">Ready to spin →</button>
+        <div id="deck-step-4-status"></div>
+      </div>
+      <div id="deck-conf-sidebar" style="width:220px;flex-shrink:0;position:sticky;top:16px"></div>
+    </div>
   `;
+  deckRenderConfSidebar();
 }
 
 function deckCollectOutline() {
@@ -5036,7 +5001,7 @@ async function deckGenerate() {
   deckShowStep(5);
   $('deck-step-5').innerHTML = `<div class="card" style="max-width:520px"><div style="font-family:'Bandit Condensed',var(--serif);font-size:18px;font-weight:700;text-transform:uppercase;color:var(--ink);margin-bottom:16px">Cueing up…</div><div id="deck-log" style="font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.9"></div><div id="deck-result" style="display:none;margin-top:20px"></div></div>`;
   const log = msg => { const el = $('deck-log'); if (el) el.innerHTML += `<div>→ ${msg}</div>`; };
-  const p = projects.find(x => x.id === deckProjectId);
+  const p = projects.find(x => x.id === deckProjectId) || { clientName: 'Untitled', projectName: deckQuery.slice(0, 40) || 'Deck' };
 
   try {
     log('Requesting Google permissions…');
