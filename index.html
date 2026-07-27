@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 12</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 13</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4187,6 +4187,9 @@ const DECK_FONT_DISPLAY = 'Oswald';
 const DECK_FONT_BODY    = 'Inter';
 // Rotated per accent-bg slide (divider/quote) so a deck doesn't look monotone.
 const DECK_ACCENT_PALETTE = [DECK_BRAND_BLUE, DECK_CREAM, DECK_PALE_GREEN, DECK_PALE_PINK, DECK_KHAKI];
+// Lets the outline name a section's divider color semantically (e.g. "blue" for the
+// AI/strategy section) instead of colors just being assigned by slide position.
+const DECK_COLOR_NAMES = { blue: DECK_BRAND_BLUE, cream: DECK_CREAM, green: DECK_PALE_GREEN, pink: DECK_PALE_PINK, khaki: DECK_KHAKI };
 // 1 point = 12700 EMU. Every x/y/w/h in this module is in EMU (matching pres.pageSize),
 // so any hairline/bar thickness meant to read as "N points" must be multiplied by this —
 // passing a bare small number (e.g. 1 or 2) is ~1/700th of a point and renders invisibly.
@@ -4382,9 +4385,11 @@ function deckLayoutTitle(pageObjectId, item, d) {
 }
 
 function deckLayoutQuote(pageObjectId, item, d) {
+  // No header on quote slides — matches the reference deck exactly (quote pages
+  // have no "PRESENTATION / PAGE" mark, unlike divider/content/data slides).
   const accent = item.accentColor || DECK_CREAM;
   const textColor = deckContrastColor(accent);
-  const reqs = [...deckHeaderChromeReqs(pageObjectId, d, textColor)];
+  const reqs = [];
   const quoteTop = d.H * 0.32, quoteH = d.H * 0.22;
   const qtb = deckMkTextBox(pageObjectId, d.W * 0.18, quoteTop, d.W * 0.64, quoteH, item.heading || '', { bold: true, fontSize: 40, color: textColor, font: DECK_FONT_DISPLAY });
   reqs.push(...qtb.reqs);
@@ -4943,12 +4948,24 @@ Agency context: ${JSON.stringify(cypherDoc).slice(0, 1000)}
 
 Query: ${deckQuery}
 
-Decide how many slides (5–10), what each is about, and which layout fits. Vary the layouts — do not repeat the same one back to back. Always open with a "divider" or "title" slide and consider closing with "next-steps-grid".
+Work in two passes, mentally, before you output anything:
 
-LAYOUT TYPES — pick the one that fits each slide's content:
-divider          — full-color statement slide, opens a new deck section. heading (short, punchy), optional body (short subtitle).
-title            — deck's opening slide. heading (deck title), optional body (one-line subtitle).
-quote            — a testimonial or pull-quote, centered. heading (the quote text itself, in quotation marks), body (attribution — name/role).
+PASS 1 — build a sectioned outline. Group the material into 2-4 named sections (e.g. "Landscape", "Our Approach", "Investment", "Next Steps" — name them for THIS content, don't reuse these examples literally). Every section starts with a "divider" slide, and nothing else opens a section. Do not put two dividers back to back, and do not open a section without one.
+
+PASS 2 — for every content slide within a section, classify what kind of content it actually is before picking a layout — don't pick arbitrarily or rotate through layouts for variety's sake:
+- A section transition → divider (see above)
+- A list of 3-6 related items/themes → capability-grid
+- Numbers/metrics/KPIs → stat-columns or budget-bars
+- A cost/investment breakdown → cost-table
+- A single powerful insight or testimonial → quote
+- A workflow, phased plan, or "what happens next" → next-steps-grid
+- People/contacts → people-grid
+- A narrative point best paired with a real image → case-study or media-grid
+
+LAYOUT FIELDS — what each needs once chosen:
+divider          — opens a section. heading = the section name (short, punchy). optional body (short subtitle). Also include "color": one of "blue","cream","green","pink","khaki" — pick a DIFFERENT color per section (never reuse the previous section's color).
+title            — deck's opening slide (used once, before the first section divider, only if the deck needs a formal cover — otherwise skip straight to the first divider). heading (deck title), optional body (subtitle).
+quote            — a testimonial or pull-quote, centered. heading (the quote text itself, in quotation marks), body (attribution — name/role). No color field — always neutral.
 stat-columns     — up to 3 giant numbers side by side. Optional heading+body as a header row above them. stats: [{"value":"95%","label":"Conversion"}, ...] (max 3)
 case-study       — text on the left, image on the right. heading, body (2-3 sentences), optional image (a URL from the selected material if one fits).
 media-grid       — up to 3 images side by side, optional short text column. optional heading, body, image (one or more URLs, newline or comma separated).
@@ -4958,10 +4975,10 @@ cost-table       — heading + rows "Item — £amount", plus a "TOTAL — £amo
 budget-bars      — up to 5 labeled bars with a value each. Optional heading+body header row. stats: [{"value":"55%","label":"Development"}, ...] (max 5)
 people-grid      — up to 5 people/contacts side by side. lines: ["Name — Role — contact info", ...] (max 5)
 
-Each slide needs: layout, heading (2-4 words unless it's a quote/title, specific not generic — "Seven months." not "Timeline"), and the fields that layout needs above. Optionally add "eyebrow" (a 1-3 word category tag) to non-divider/title/quote slides. Mark isAssumption:true only if the slide leans on an assumption-filled gap above.
+Each slide needs: layout, heading (2-4 words unless it's a quote/title, specific not generic — "Seven months." not "Timeline"), the fields that layout needs above, and "section" (the name of the section it belongs to — every slide, including dividers, carries this). Optionally add "eyebrow" (a 1-3 word category tag) to non-divider/title/quote slides. Mark isAssumption:true only if the slide leans on an assumption-filled gap above.
 
 Return ONLY a JSON array, e.g.:
-[{"layout":"title","heading":"...","body":"...","isAssumption":false}, {"layout":"stat-columns","heading":"...","stats":[{"value":"95%","label":"..."}],"isAssumption":false}, ...]
+[{"layout":"divider","heading":"Landscape","color":"blue","section":"Landscape","isAssumption":false}, {"layout":"stat-columns","heading":"...","section":"Landscape","stats":[{"value":"95%","label":"..."}],"isAssumption":false}, ...]
 Produce as many slides as the content volume supports (do not pad). No markdown, no code fences, no explanation outside the JSON.`;
     const result = await callGemini(prompt, { maxTokens: 3500, responseMimeType: 'application/json' });
     const m = result.match(/\[[\s\S]*\]/);
@@ -5124,9 +5141,13 @@ async function deckGenerate() {
       const reqs = [];
       deckOutline.forEach((s, i) => {
         const slideId = newSlideIds[i];
-        if (s.layout === 'divider' || s.layout === 'quote') {
-          s.accentColor = DECK_ACCENT_PALETTE[accentIdx % DECK_ACCENT_PALETTE.length];
-          accentIdx++;
+        if (s.layout === 'divider') {
+          // The outline names a color per section (so dividers are semantically
+          // color-coded by topic, not just cycled in slide order) — fall back to
+          // rotation only if the model didn't supply one.
+          const named = DECK_COLOR_NAMES[s.color];
+          s.accentColor = named || DECK_ACCENT_PALETTE[accentIdx % DECK_ACCENT_PALETTE.length];
+          if (!named) accentIdx++;
           reqs.push({ updatePageProperties: { objectId: slideId, pageProperties: { pageBackgroundFill: { solidFill: { color: { rgbColor: deckHexToRgb(s.accentColor) } } } }, fields: 'pageBackgroundFill.solidFill.color' } });
         }
         reqs.push(...deckBuildSlideRequests(slideId, s, d));
@@ -5254,10 +5275,14 @@ async function deckBuildTemplateLibrary() {
       const slideId = DECK_TEMPLATE_SLIDE_ID[archetype];
       requests.push({ createSlide: { objectId: slideId, insertionIndex: i + 1, slideLayoutReference: { predefinedLayout: 'BLANK' } } });
     });
-    // Bake the static header chrome onto every archetype except divider/quote
-    // (those draw their own chrome at generation time, matched to their bg color).
+    // Header rule from the reference deck: divider slides carry it (drawn fresh at
+    // generation time, matched to their bg color — see deckLayoutDivider). Quote and
+    // pure image-grid slides carry NO header at all in the reference. Everything else
+    // (title, case-study, stat-columns, capability-grid, cost-table, budget-bars,
+    // people-grid) keeps it, baked once here so it survives duplicateObject.
+    const NO_HEADER_ARCHETYPES = new Set(['divider', 'quote', 'media-grid']);
     archetypeIds.forEach(archetype => {
-      if (archetype === 'divider' || archetype === 'quote') return;
+      if (NO_HEADER_ARCHETYPES.has(archetype)) return;
       requests.push(...deckHeaderChromeReqs(DECK_TEMPLATE_SLIDE_ID[archetype], d, DECK_NEAR_BLACK));
     });
     if (defaultSlideId) requests.push({ deleteObject: { objectId: defaultSlideId } });
