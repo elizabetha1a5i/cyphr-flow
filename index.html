@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 13</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 14</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -5067,7 +5067,10 @@ function deckRenderOutline() {
       <div style="flex:1;min-width:0">
         <div style="margin-bottom:10px;font-size:12px;color:var(--ink3)">Fully editable — nothing touches the real deck until you confirm.</div>
         ${rows}
-        <button class="btn btn-primary" onclick="deckGenerate()" id="btn-deck-generate">Ready to spin →</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="deckGenerate()" id="btn-deck-generate">Ready to spin →</button>
+          <button class="btn btn-ghost" onclick="deckOpenInClaude()" id="btn-deck-claude">✨ Open in Claude</button>
+        </div>
         <div id="deck-step-4-status"></div>
       </div>
       <div id="deck-conf-sidebar" style="width:220px;flex-shrink:0;position:sticky;top:16px"></div>
@@ -5241,6 +5244,66 @@ function deckDownloadBundle() {
   a.href = url; a.download = `${(p?.clientName||'deck')}-handoff-bundle.md`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+const DECK_TEMPLATE_PDF_URL = 'https://drive.google.com/file/d/1QSSeUogB_rgmBAmxuAeKf76sx1jXD304/view?usp=sharing';
+
+// ── "Open in Claude" handoff — self-contained per click, no persistent Project.
+// Reuses launchSkill()'s exact copy-to-clipboard + open-new-tab mechanism, but
+// targets a fresh claude.ai/new chat instead of a fixed Project, since nothing
+// here relies on Claude remembering anything between handoffs.
+async function deckOpenInClaude() {
+  deckCollectOutline();
+  const p = projects.find(x => x.id === deckProjectId);
+  let cypherDoc = {};
+  try { cypherDoc = await readAgencyDetails(await getProposalToken()); } catch(e) { /* best-effort — proceed without it */ }
+
+  const imageUrls = [...deckSelected, ...deckSourceItems.web]
+    .map(i => i.url).filter(u => u && deckLooksLikeImageUrl(u));
+  const uniqueImageUrls = [...new Set(imageUrls)];
+
+  const lines = [
+    `Build a client presentation deck for ${p?.clientName || 'this client'}${p?.projectName ? ' — ' + p.projectName : ''}. I've already done the research and approved the structure below — your job is to populate it well, not redesign it.`,
+    '',
+    `IMPORTANT: I've attached the reference template PDF to this message — match its exact visual style (colors, fonts, layout density, spacing). If I forgot to attach it, ask me for it before proceeding.`,
+    '',
+    `DESIGN RULES (from the reference template):`,
+    `- Brand colors: electric blue #2323CC, near-black #070809, cream #ECECE9, pale green #E3F7C9, pale pink #F3E3F5, khaki #B0B2A6. Fonts: a bold condensed display face for headings (Oswald is a close free substitute), a clean sans for body text (Inter).`,
+    `- Every slide belongs to a section. Each section opens with ONE divider slide (big colored background, punchy heading) — never two dividers back to back, and give each section a different accent color from the palette above.`,
+    `- Header rule: only divider slides and dense content/data/team slides show a small "PRESENTATION / PAGE N" mark in the corner (matches the template). Quote slides and full-bleed image slides carry NO header — keep them clean.`,
+    `- If you have to fill a gap with an assumption rather than real data, mark it visibly on the slide (e.g. a small "ASSUMPTION" flag) — never blend an assumption in as if it were confirmed fact.`,
+    `- Produce an actual file (e.g. a .pptx via python-pptx using your code execution), not just a chat description of slides.`,
+    '',
+    `Query: ${deckQuery}`,
+    '',
+    `## Selected material (source-tagged — cite these, don't invent facts)`,
+    ...deckSelected.map(i => `- [${i.source}${i.subSource ? '/' + i.subSource : ''}] ${i.title}: ${i.snippet} ${i.url ? '(' + i.url + ')' : ''}`),
+    '',
+    `## Assumption-filled gaps (mark these visibly per the rule above)`,
+    ...(Object.values(deckAssumptions).length ? Object.values(deckAssumptions).map(a => `- ${a.label}: ${a.value} (ASSUMPTION)`) : ['none']),
+    '',
+    `## Approved outline — build exactly this structure`,
+    ...deckOutline.map((s,i) => `${i+1}. [${s.layout}]${s.section ? ' (section: ' + s.section + (s.color ? ', color: ' + s.color : '') + ')' : ''} ${s.heading}${s.isAssumption?' (ASSUMPTION)':''}${s.body ? '\n   ' + s.body : ''}${s.lines?.length ? '\n   - ' + s.lines.join('\n   - ') : ''}`),
+    '',
+    uniqueImageUrls.length ? `## Real images already found — use these instead of inventing imagery\n${uniqueImageUrls.map(u => `- ${u}`).join('\n')}` : '## No specific images were found — use the attached template\'s image placeholders as a style guide only',
+    '',
+    `## Agency context`, JSON.stringify(cypherDoc),
+  ];
+  const ctx = lines.join('\n');
+
+  const ta = document.createElement('textarea');
+  ta.value = ctx;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  let copied = false;
+  try { copied = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+
+  window.open(DECK_TEMPLATE_PDF_URL, '_blank');
+  window.open('https://claude.ai/new', '_blank');
+  toast(copied ? 'Brief copied — in the Claude tab: attach the template PDF (other new tab), paste (Ctrl+V), then Send' : 'Claude opened — copy the brief manually and attach the template PDF', copied ? 'success' : 'warn');
 }
 
 // ── One-time: build the real layout-library Slides template ──────────────
