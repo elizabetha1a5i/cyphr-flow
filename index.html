@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 11</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 12</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4632,7 +4632,9 @@ function deckRenderStep1() {
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <input type="text" id="deck-src-input-${key}" placeholder="${m.placeholder}" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--paper)">
         <button class="btn btn-ghost" id="btn-deck-src-${key}" onclick="deckRunSourceSearch('${key}')" style="white-space:nowrap;font-size:12px">Search ${m.label}</button>
+        ${key === 'web' ? `<button class="btn btn-ghost" id="btn-deck-src-web-kw" onclick="deckRunSourceSearch('web', true)" title="Search using only the typed keyword, ignoring gathered context" style="white-space:nowrap;font-size:12px">🔑 Keyword only</button>` : ''}
       </div>
+      ${key === 'web' ? `<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">"Search Web" blends in what's already gathered from Gmail/Drive/uploads. "Keyword only" ignores that and searches just the typed term. Both add to the results below.</div>` : ''}
       <div id="deck-src-results-${key}"></div>
     </div>`; };
 
@@ -4775,8 +4777,8 @@ async function deckHandleUploadFiles(files) {
   deckRenderSourceResults('upload', deckSourceItems.upload);
 }
 
-async function deckRunSourceSearch(key) {
-  const btn = $('btn-deck-src-' + key);
+async function deckRunSourceSearch(key, keywordOnly) {
+  const btn = $(keywordOnly ? 'btn-deck-src-web-kw' : 'btn-deck-src-' + key);
   const resultsEl = $('deck-src-results-' + key);
   const input = $('deck-src-input-' + key);
   const query = (input.value || sv('deck-query')).trim();
@@ -4785,19 +4787,27 @@ async function deckRunSourceSearch(key) {
   const p = projects.find(x => x.id === projectId);
   const clientName = p?.clientName || '';
   const label = DECK_SOURCE_META[key].label;
+  const btnLabel = btn.textContent;
   btn.disabled = true; btn.textContent = 'Searching…';
   resultsEl.innerHTML = deckVinylSpinner('Digging in the crates…');
   try {
     let items = [];
     if (key === 'gmail') items = await deckSearchGmail(query);
     else if (key === 'drive') items = await deckSearchDrive(query);
-    else if (key === 'web') items = await deckSearchWeb(query, clientName, deckGatheredContext());
-    deckSourceItems[key] = items;
-    deckRenderSourceResults(key, items);
+    else if (key === 'web') items = await deckSearchWeb(query, clientName, keywordOnly ? '' : deckGatheredContext());
+    if (key === 'web') {
+      // Both web buttons (context-grounded + keyword-only) add to the same pool,
+      // deduped by URL, instead of one overwriting the other's results.
+      const existingUrls = new Set(deckSourceItems.web.map(i => i.url));
+      deckSourceItems.web = [...deckSourceItems.web, ...items.filter(i => !existingUrls.has(i.url))];
+    } else {
+      deckSourceItems[key] = items;
+    }
+    deckRenderSourceResults(key, deckSourceItems[key]);
   } catch(e) {
     resultsEl.innerHTML = `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:6px">✗ ${e.message}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'Search ' + label;
+    btn.disabled = false; btn.textContent = btnLabel;
   }
 }
 
