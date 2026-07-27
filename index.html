@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 8</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 9</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4704,8 +4704,8 @@ async function deckRunSourceSearch(key) {
   resultsEl.innerHTML = deckVinylSpinner('Digging in the crates…');
   try {
     let items = [];
-    if (key === 'gmail') items = await deckSearchGmail(query, clientName);
-    else if (key === 'drive') items = await deckSearchDrive(query, clientName);
+    if (key === 'gmail') items = await deckSearchGmail(query);
+    else if (key === 'drive') items = await deckSearchDrive(query);
     else if (key === 'web') items = await deckSearchWeb(query, clientName);
     deckSourceItems[key] = items;
     if (!items.length) {
@@ -4756,12 +4756,12 @@ async function deckSearchWeb(query, clientName) {
   return (data.results || []).map(r => ({ source: 'web', subSource: 'web', title: r.title || r.url, snippet: r.snippet || '', url: r.url }));
 }
 
-async function deckSearchDrive(query, clientName) {
+async function deckSearchDrive(query) {
+  // Pure manual keyword search — exactly what's typed in the box, nothing blended
+  // in automatically (auto-adding the client name made the query stricter/stranger
+  // than what the user actually asked for).
   const token = await deckWithTimeout(getProposalToken(), 45000, 'Google sign-in');
-  // Match EITHER the query terms OR the client name — requiring both in the same
-  // file's full text (the old "and" version) almost never matched anything real.
-  const terms = [query, clientName].filter(Boolean).map(t => `fullText contains '${t.replace(/'/g,"\\'")}'`);
-  const q = `(${terms.join(' or ')}) and trashed = false`;
+  const q = `fullText contains '${query.replace(/'/g,"\\'")}' and trashed = false`;
   const res = await deckWithTimeout(fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,webViewLink,modifiedTime)&orderBy=modifiedTime desc`, {
     headers: { Authorization: `Bearer ${token}` }
   }), 15000, 'Drive search');
@@ -4770,17 +4770,17 @@ async function deckSearchDrive(query, clientName) {
   return (data.files || []).map(f => ({ source: 'internal', subSource: 'drive', title: f.name, snippet: `Drive file, last modified ${new Date(f.modifiedTime).toLocaleDateString('en-GB')}`, url: f.webViewLink }));
 }
 
-async function deckSearchGmail(query, clientName) {
+async function deckSearchGmail(query) {
   // Gmail's API doesn't support direct browser CORS calls the way Drive/Slides do — every
   // other Gmail search in this app (propPullGmail, est-gmail, etc.) routes through the same
   // Cloudflare Worker proxy for that reason. Calling gmail.googleapis.com directly here was
   // the actual cause of "couldn't find Gmail" — it wasn't a permissions issue.
+  // Pure manual keyword search — exactly what's typed in the box, no client name blended in.
   const gToken = await deckWithTimeout(getGmailToken(), 45000, 'Gmail sign-in');
   const workerUrl = settings.proxyUrl || 'https://cyphr-proxy.elizabeth-537.workers.dev';
-  const gq = `${query} ${clientName||''}`.trim();
   const res = await deckWithTimeout(fetch(`${workerUrl}/gmail`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: gq, token: gToken })
+    body: JSON.stringify({ query, token: gToken })
   }), 20000, 'Gmail search');
   if (!res.ok) return [];
   const data = await res.json();
