@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 9</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 10</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4337,8 +4337,18 @@ function deckPlaceholderImage(pageObjectId, x, y, w, h) {
   return reqs;
 }
 
+// Slides' createImage needs a direct, publicly-fetchable image file — a "reference
+// link" from search results (article page, Drive doc) almost never qualifies, and
+// one bad URL fails the ENTIRE batchUpdate (Slides API applies it atomically). Only
+// attempt real images for URLs that look like actual image files; everything else
+// (or when deckSkipImages is on, used as a retry fallback) gets the placeholder.
+function deckLooksLikeImageUrl(url) {
+  return /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/i.test((url || '').trim());
+}
+let deckSkipImages = false;
+
 function deckImageOrPlaceholder(pageObjectId, url, x, y, w, h) {
-  if (url) {
+  if (url && deckLooksLikeImageUrl(url) && !deckSkipImages) {
     const id = deckNextId();
     return [{ createImage: { objectId: id, url, elementProperties: { pageObjectId, size: { width:{magnitude:w,unit:'EMU'}, height:{magnitude:h,unit:'EMU'} }, transform: { scaleX:1, scaleY:1, translateX:x, translateY:y, unit:'EMU' } } } }];
   }
@@ -5038,23 +5048,41 @@ async function deckGenerate() {
     const orderRequests = newSlideIds.map((id, i) => ({ updateSlidesPosition: { slideObjectIds: [id], insertionIndex: i } }));
     const deleteTemplateRequests = templateSlideIds.map(id => ({ deleteObject: { objectId: id } }));
 
+    const buildFillRequests = () => {
+      let accentIdx = 0;
+      const reqs = [];
+      deckOutline.forEach((s, i) => {
+        const slideId = newSlideIds[i];
+        if (s.layout === 'divider' || s.layout === 'quote') {
+          s.accentColor = DECK_ACCENT_PALETTE[accentIdx % DECK_ACCENT_PALETTE.length];
+          accentIdx++;
+          reqs.push({ updatePageProperties: { objectId: slideId, pageProperties: { pageBackgroundFill: { solidFill: { color: { rgbColor: deckHexToRgb(s.accentColor) } } } }, fields: 'pageBackgroundFill.solidFill.color' } });
+        }
+        reqs.push(...deckBuildSlideRequests(slideId, s, d));
+      });
+      return reqs;
+    };
+
     log('Filling slide content…');
-    let accentIdx = 0;
-    const fillRequests = [];
-    deckOutline.forEach((s, i) => {
-      const slideId = newSlideIds[i];
-      if (s.layout === 'divider' || s.layout === 'quote') {
-        s.accentColor = DECK_ACCENT_PALETTE[accentIdx % DECK_ACCENT_PALETTE.length];
-        accentIdx++;
-        fillRequests.push({ updatePageProperties: { objectId: slideId, pageProperties: { pageBackgroundFill: { solidFill: { color: { rgbColor: deckHexToRgb(s.accentColor) } } } }, fields: 'pageBackgroundFill.solidFill.color' } });
-      }
-      fillRequests.push(...deckBuildSlideRequests(slideId, s, d));
-    });
-    const fillRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}:batchUpdate`, {
+    deckSkipImages = false;
+    let fillRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}:batchUpdate`, {
       method: 'POST', headers: authHeaders,
-      body: JSON.stringify({ requests: [...orderRequests, ...deleteTemplateRequests, ...fillRequests] })
+      body: JSON.stringify({ requests: [...orderRequests, ...deleteTemplateRequests, ...buildFillRequests()] })
     });
-    if (!fillRes.ok) { const errBody = await fillRes.json().catch(()=>({})); throw new Error('Could not fill slide content: ' + (errBody.error?.message || fillRes.status)); }
+    if (!fillRes.ok) {
+      const errBody = await fillRes.json().catch(()=>({}));
+      const msg = errBody.error?.message || '';
+      if (msg.includes('createImage') || msg.toLowerCase().includes('image')) {
+        log('An image failed to load — retrying with placeholders instead…');
+        deckSkipImages = true;
+        fillRes = await fetch(`https://slides.googleapis.com/v1/presentations/${deckId}:batchUpdate`, {
+          method: 'POST', headers: authHeaders,
+          body: JSON.stringify({ requests: [...orderRequests, ...deleteTemplateRequests, ...buildFillRequests()] })
+        });
+        deckSkipImages = false;
+      }
+      if (!fillRes.ok) { const retryErr = await fillRes.json().catch(()=>({})); throw new Error('Could not fill slide content: ' + (retryErr.error?.message || msg || fillRes.status)); }
+    }
 
     log('Moving into client folder…');
     const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
