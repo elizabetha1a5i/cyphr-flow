@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 10</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 11</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -4201,14 +4201,14 @@ const DECK_RUBRIC = [
 
 let deckQuery = '';
 let deckProjectId = null;
-let deckSourceItems = { gmail: [], drive: [], web: [] }; // raw results per source, indexed for checkbox selection
+let deckSourceItems = { gmail: [], drive: [], web: [], upload: [] }; // raw results per source, indexed for checkbox selection
 let deckSelected = [];
 let deckAssumptions = {}; // { [rubricField]: { value, isAssumption:true, label } }
 let deckOutline = [];     // [{ layout, heading, body, isAssumption }]
 
 function deckReset() {
   deckQuery = ''; deckProjectId = null;
-  deckSourceItems = { gmail: [], drive: [], web: [] };
+  deckSourceItems = { gmail: [], drive: [], web: [], upload: [] };
   deckSelected = []; deckAssumptions = {}; deckOutline = [];
 }
 
@@ -4654,6 +4654,15 @@ function deckRenderStep1() {
     ${sourceRow('gmail')}
     ${sourceRow('drive')}
     ${sourceRow('web')}
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">📄 Upload documentation</div>
+      <div id="deck-upload-dropzone" ondragover="event.preventDefault();this.style.borderColor='var(--brand)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="deckHandleUploadDrop(event)" onclick="$('deck-upload-input').click()" style="border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color 0.15s">
+        <div style="font-size:13px;color:var(--ink3)">↑ Upload or drag files here</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">.txt · .docx · .pdf</div>
+      </div>
+      <input type="file" id="deck-upload-input" accept=".txt,.docx,.pdf" multiple style="display:none" onchange="deckHandleUploadInput(event)">
+      <div id="deck-src-results-upload"></div>
+    </div>
     <div class="card" style="margin-bottom:16px;opacity:0.6">
       <div class="card-title" style="margin-bottom:4px">💬 Slack <span style="font-size:10px;font-family:var(--mono);background:var(--bg);padding:1px 6px;border-radius:8px;margin-left:6px">coming soon</span></div>
       <div style="font-size:12px;color:var(--ink3)">Needs a Slack app connection — not wired up yet.</div>
@@ -4700,6 +4709,72 @@ function deckWithTimeout(promise, ms, label) {
   ]);
 }
 
+// Everything already gathered from Gmail/Drive/uploads, as short text — fed into the
+// web search so it's grounded by what's already known, not just the typed keywords.
+function deckGatheredContext() {
+  const items = [...deckSourceItems.gmail, ...deckSourceItems.drive, ...(deckSourceItems.upload||[])];
+  return items.map(i => `${i.title}: ${i.snippet}`).join('\n').slice(0, 3000);
+}
+
+function deckRenderSourceResults(key, items) {
+  const resultsEl = $('deck-src-results-' + key);
+  if (!items.length) {
+    resultsEl.innerHTML = `<div style="font-size:12px;color:var(--ink3);margin-top:6px">No results — try a different term.</div>`;
+    return;
+  }
+  resultsEl.innerHTML = `
+    <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${items.length} found — select what's relevant:</div>
+    ${items.map((it, i) => `
+      <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+        <input type="checkbox" class="deck-src-item" data-source="${key}" data-idx="${i}" style="margin-top:3px">
+        <div>
+          <div style="font-size:13px;color:var(--ink);font-weight:600">${it.url ? `<a href="${it.url}" target="_blank" style="color:inherit">${it.title}</a>` : it.title}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
+        </div>
+      </label>`).join('')}
+  `;
+}
+
+function deckHandleUploadDrop(e) {
+  e.preventDefault();
+  $('deck-upload-dropzone').style.borderColor = 'var(--border)';
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) deckHandleUploadFiles(files);
+}
+
+function deckHandleUploadInput(e) {
+  const files = Array.from(e.target.files);
+  if (files.length) deckHandleUploadFiles(files);
+  e.target.value = '';
+}
+
+async function deckHandleUploadFiles(files) {
+  const resultsEl = $('deck-src-results-upload');
+  resultsEl.innerHTML = deckVinylSpinner('Reading files…');
+  for (const file of files) {
+    try {
+      const ext = file.name.split('.').pop().toLowerCase();
+      let text;
+      if (ext === 'txt') {
+        text = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = e => res(e.target.result);
+          r.onerror = rej;
+          r.readAsText(file);
+        });
+      } else {
+        text = await readFileText(file);
+        if (text.startsWith('[')) throw new Error('Could not extract text — try pasting manually');
+      }
+      if (!text.trim()) throw new Error('No text found in file');
+      deckSourceItems.upload.push({ source: 'internal', subSource: 'upload', title: file.name, snippet: text.trim().slice(0, 500), url: '' });
+    } catch(e) {
+      toast(`${file.name}: ${e.message}`, 'error');
+    }
+  }
+  deckRenderSourceResults('upload', deckSourceItems.upload);
+}
+
 async function deckRunSourceSearch(key) {
   const btn = $('btn-deck-src-' + key);
   const resultsEl = $('deck-src-results-' + key);
@@ -4716,23 +4791,9 @@ async function deckRunSourceSearch(key) {
     let items = [];
     if (key === 'gmail') items = await deckSearchGmail(query);
     else if (key === 'drive') items = await deckSearchDrive(query);
-    else if (key === 'web') items = await deckSearchWeb(query, clientName);
+    else if (key === 'web') items = await deckSearchWeb(query, clientName, deckGatheredContext());
     deckSourceItems[key] = items;
-    if (!items.length) {
-      resultsEl.innerHTML = `<div style="font-size:12px;color:var(--ink3);margin-top:6px">No results — try a different term.</div>`;
-    } else {
-      resultsEl.innerHTML = `
-        <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${items.length} found — select what's relevant:</div>
-        ${items.map((it, i) => `
-          <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
-            <input type="checkbox" class="deck-src-item" data-source="${key}" data-idx="${i}" style="margin-top:3px">
-            <div>
-              <div style="font-size:13px;color:var(--ink);font-weight:600">${it.url ? `<a href="${it.url}" target="_blank" style="color:inherit">${it.title}</a>` : it.title}</div>
-              <div style="font-size:12px;color:var(--ink3);margin-top:2px">${it.snippet}</div>
-            </div>
-          </label>`).join('')}
-      `;
-    }
+    deckRenderSourceResults(key, items);
   } catch(e) {
     resultsEl.innerHTML = `<div style="color:var(--danger,#c0392b);font-size:12px;margin-top:6px">✗ ${e.message}</div>`;
   } finally {
@@ -4745,7 +4806,7 @@ async function deckContinueToOutline() {
   deckProjectId = sv('deck-project') || null;
   deckQuery = sv('deck-query').trim();
   deckSelected = [];
-  ['gmail','drive','web'].forEach(key => {
+  ['gmail','drive','web','upload'].forEach(key => {
     document.querySelectorAll(`.deck-src-item[data-source="${key}"]:checked`).forEach(el => {
       const idx = Number(el.dataset.idx);
       if (deckSourceItems[key][idx]) deckSelected.push(deckSourceItems[key][idx]);
@@ -4754,12 +4815,12 @@ async function deckContinueToOutline() {
   deckGenerateOutlineStep();
 }
 
-async function deckSearchWeb(query, clientName) {
+async function deckSearchWeb(query, clientName, context) {
   const fileApiUrl = settings.fileApiUrl || 'https://cyphr-api-production.up.railway.app';
   const res = await deckWithTimeout(fetch(fileApiUrl + '/deck/search-web', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, clientName }),
+    body: JSON.stringify({ query, clientName, context }),
   }), 20000, 'Web search');
   if (!res.ok) return [];
   const data = await res.json();
