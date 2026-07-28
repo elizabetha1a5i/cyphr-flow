@@ -987,7 +987,7 @@ return i=this.parent.children.indexOf(this),removed=this.parent.children.splice(
     <div id="view-branded-deck" style="display:none;padding:32px;max-width:860px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
-          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 14</span></div>
+          <div style="font-family:'Bandit Condensed',var(--serif);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink)">Branded Deck <span style="font-size:10px;font-family:var(--mono);color:#fff;background:#22c55e;padding:2px 7px;border-radius:10px;vertical-align:middle;text-transform:none">build 15</span></div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tell us what you're building the deck for — we'll dig up what's relevant, then hand it back for review before anything gets generated.</div>
         </div>
       </div>
@@ -5301,9 +5301,13 @@ async function deckOpenInClaude() {
   try { copied = document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
 
-  window.open(DECK_TEMPLATE_PDF_URL, '_blank');
+  // Browsers reliably allow only one window.open() per click — a second call
+  // gets silently popup-blocked. Auto-open just the essential tab (Claude);
+  // the template link is a real <a> the user clicks themselves (never blocked).
   window.open('https://claude.ai/new', '_blank');
-  toast(copied ? 'Brief copied — in the Claude tab: attach the template PDF (other new tab), paste (Ctrl+V), then Send' : 'Claude opened — copy the brief manually and attach the template PDF', copied ? 'success' : 'warn');
+  const statusEl = $('deck-step-4-status');
+  if (statusEl) statusEl.innerHTML = `<div style="font-size:12px;color:var(--ink3);margin-top:8px">${copied ? '✓ Brief copied.' : '⚠ Could not copy automatically — select the brief text manually.'} Paste (Ctrl+V) into the Claude tab, then <a href="${DECK_TEMPLATE_PDF_URL}" target="_blank">click here to open the reference template</a> and attach it before sending.</div>`;
+  toast(copied ? 'Brief copied — paste into Claude, then open + attach the template link below' : 'Claude opened — copy the brief manually', copied ? 'success' : 'warn');
 }
 
 // ── One-time: build the real layout-library Slides template ──────────────
